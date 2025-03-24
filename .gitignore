@@ -1,0 +1,10 @@
+*.log
+.cache
+*.tgz
+*.tar.gz
+*.tar
+bin
+pkg/bin
+.venv
+_build
+*.swp

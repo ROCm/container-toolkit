@@ -1,0 +1,152 @@
+-include dev.env
+
+## Set all the environment variables here
+# Docker Registry
+DOCKER_REGISTRY ?= docker.io/rocm
+
+# Build Container environment
+DOCKER_BUILDER_TAG ?= v1.0
+BUILD_BASE_IMAGE ?= ubuntu:22.04
+BUILD_CONTAINER ?= $(DOCKER_REGISTRY)/container-toolkit-build:$(DOCKER_BUILDER_TAG)
+
+# export environment variables used across project
+export DOCKER_REGISTRY
+export BUILD_CONTAINER
+export BUILD_BASE_IMAGE
+
+CUR_USER:=$(shell whoami)
+CUR_TIME:=$(shell date +%Y-%m-%d_%H.%M.%S)
+CONTAINER_NAME:=${CUR_USER}_container_toolkit-bld
+CONTAINER_WORKDIR := /usr/src/github.com/ROCm/container-toolkit
+
+TOP_DIR := $(PWD)
+GOINSECURE='github.com, google.golang.org, golang.org'
+GOFLAGS ='-buildvcs=false'
+BUILD_DATE ?= $(shell date   +%Y-%m-%dT%H:%M:%S%z)
+GIT_COMMIT ?= $(shell git rev-list -1 HEAD --abbrev-commit)
+VERSION ?=$(RELEASE)
+
+export ${GOROOT}
+export ${GOPATH}
+export ${TOP_DIR}
+export ${GOFLAGS}
+export ${GOINSECURE}
+export ${BUILD_VER_ENV}
+
+# 22.04 - jammy
+# 24.04 - noble
+UBUNTU_VERSION ?= jammy
+UBUNTU_VERSION_NUMBER = 22.04
+ifeq (${UBUNTU_VERSION}, noble)
+UBUNTU_VERSION_NUMBER = 24.04
+endif
+
+DEBIAN_VERSION := "1.2.0"
+
+DEBIAN_CONTROL = ${TOP_DIR}/build/debian/DEBIAN/control
+BUILD_VER_ENV = ${DEBIAN_VERSION}~$(UBUNTU_VERSION_NUMBER)
+PKG_PATH := ${TOP_DIR}/build/debian/DEBIAN/usr/local/bin
+
+##################
+# Makefile targets
+#
+##@ QuickStart
+.PHONY: default
+default: build-dev-container ## Quick start to build everything from docker shell container
+
+# create development build container only if there is changes done on
+# tools/base-image/Dockerfile
+.PHONY: build-dev-container
+build-dev-container:
+	${MAKE} -C tools/base-image all INSECURE_REGISTRY=$(INSECURE_REGISTRY)
+	$(MAKE) docker-compile
+
+.PHONY: docker-compile
+docker-compile:
+	docker run --rm -it --privileged \
+		--name ${CONTAINER_NAME} \
+		-e "USER_NAME=$(shell whoami)" \
+		-e "USER_UID=$(shell id -u)" \
+		-e "USER_GID=$(shell id -g)" \
+		-e "GIT_COMMIT=${GIT_COMMIT}" \
+		-e "GIT_VERSION=${GIT_VERSION}" \
+		-e "BUILD_DATE=${BUILD_DATE}" \
+		-v $(CURDIR):$(CONTAINER_WORKDIR) \
+		-v $(HOME)/.ssh:/home/$(shell whoami)/.ssh \
+		-w $(CONTAINER_WORKDIR) \
+		$(BUILD_CONTAINER) \
+		bash -c "cd $(CONTAINER_WORKDIR) && source ~/.bashrc && git config --global --add safe.directory $(CONTAINER_WORKDIR) && make all"
+
+.PHONY: all
+all:
+	${MAKE} gen checks container-toolkit
+
+.PHONY: pkg pkg-clean
+pkg-clean:
+	rm -rf ${TOP_DIR}/bin/*.deb
+
+pkg: pkg-clean
+	${MAKE} container-toolkit
+	@echo "Building debian for $(BUILD_VER_ENV)"
+
+	# copy and strip files
+	mkdir -p ${PKG_PATH}
+	cp -vf $(CURDIR)/bin/amd-container-runtime ${PKG_PATH}/
+	cd ${TOP_DIR}
+	sed -i "s/BUILD_VER_ENV/$(BUILD_VER_ENV)/g" $(DEBIAN_CONTROL)
+	dpkg-deb -Zxz --build build/debian ${TOP_DIR}/bin
+
+	# revert the dynamic version set file
+	git checkout $(DEBIAN_CONTROL)
+
+	# rename for internal build
+	mv -vf ${TOP_DIR}/bin/amd-container-toolkit*~${UBUNTU_VERSION_NUMBER}_amd64.deb ${TOP_DIR}/bin/amd-container-toolkit_${UBUNTU_VERSION_NUMBER}_amd64.deb
+
+.PHONY: gen
+gen: gopkglist
+
+.PHONY: gopkglist
+gopkglist:
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.1
+	go install golang.org/x/tools/cmd/goimports@latest
+
+.PHONY:checks
+checks: vet fmt
+
+.PHONY: fmt
+fmt: ## Run go fmt against code.
+	go fmt ./...
+
+.PHONY: vet
+vet: ## Run go vet against code.
+	go vet ./...
+
+GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
+.PHONY: golangci-lint
+golangci-lint: ## Download golangci-lint locally if necessary.
+	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.1)
+
+
+GOFILES_NO_VENDOR = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
+.PHONY: lint
+lint: golangci-lint ## Run golangci-lint against code.
+	@if [ `gofmt -l $(GOFILES_NO_VENDOR) | wc -l` -ne 0 ]; then \
+		echo There are some malformed files, please make sure to run \'make fmt\'; \
+		gofmt -l $(GOFILES_NO_VENDOR); \
+		exit 1; \
+	fi
+	$(GOLANGCI_LINT) run -v --timeout 5m0s
+
+# go-get-tool will 'go install' any package $2 and install it to $1.
+PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
+define go-get-tool
+@[ -f $(1) ] || { \
+set -e ;\
+echo "Downloading $(2)" ;\
+GOBIN=$(PROJECT_DIR)/bin go install $(2) ;\
+}
+endef
+
+container-toolkit:
+	@echo "building amd container toolkit"
+	CGO_ENABLED=0 go build  -C cmd/container-runtime -ldflags "-X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE} -X main.Publish=${DISABLE_DEBUG}" -o $(CURDIR)/bin/amd-container-runtime
