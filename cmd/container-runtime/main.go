@@ -26,6 +26,7 @@ import (
 func main() {
 	logger.Init(false)
 	logger.Log.Printf("Creating ROCm container runtime with args %v", os.Args)
+
 	rt, err := runtime.New(os.Args)
 	if err != nil {
 		logger.Log.Printf("Failed to create container runtime, err = %v", err)

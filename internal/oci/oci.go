@@ -104,7 +104,7 @@ func (oci *oci_t) getSpec() error {
 		return nil
 	}
 
-	f := oci.origSpecPath
+	f := oci.origSpecPath + "/config.json"
 
 	file, err := os.Open(f)
 	if err != nil {

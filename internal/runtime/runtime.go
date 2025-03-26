@@ -64,8 +64,8 @@ func New(args []string) (Interface, error) {
 // Run starts the runtime
 func (rt *runtm) Run() error {
 	var err error
+
 	if rt.oci.IsCreate() {
-		logger.Log.Printf("Handling container create")
 		/*
 			// Add runtime OCI hook
 			err = rt.oci.UpdateSpec(oci.AddHook)
@@ -91,10 +91,10 @@ func (rt *runtm) Run() error {
 	}
 
 	// Call runc with updated oci spec
-	logger.Log.Printf("Running runc with args: %v", rt.args)
+	logger.Log.Printf("Running runc with args: %v, environ: %v", rt.args, os.Environ())
 	err = syscall.Exec(RUNC, rt.args, os.Environ())
 	if err != nil {
-		logger.Log.Printf("Failed to call ruc, err = %v", err)
+		logger.Log.Printf("Failed to call runc, err = %v", err)
 		return err
 	}
 

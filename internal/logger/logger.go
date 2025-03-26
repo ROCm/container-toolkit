@@ -25,9 +25,9 @@ import (
 
 var (
 	Log       *log.Logger
-	logdir    = "/var/run/"
-	logfile   = "container-runtime.log"
-	logPrefix = "container-runtime "
+	logdir    = "/var/log/"
+	logfile   = "amd-container-runtime.log"
+	logPrefix = "amd-container-runtime "
 	once      sync.Once
 )
 
@@ -53,7 +53,14 @@ func initLogger(console bool) {
 		if os.Getenv("LOGDIR") != "" {
 			logdir = os.Getenv("LOGDIR")
 		}
-		outfile, _ := os.Create(filepath.Join(logdir, logfile))
+
+		outfile, err := os.OpenFile(filepath.Join(logdir, logfile),
+			os.O_CREATE|os.O_APPEND|os.O_WRONLY,
+			0644)
+		if err != nil {
+			return
+		}
+
 		Log = log.New(outfile, "", 0)
 	}
 
