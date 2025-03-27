@@ -94,13 +94,28 @@ func (oci *oci_t) parseArgs() {
 		return false
 	}
 
-	isEnvOption := func(arg string) bool {
-		if arg == "-e" || arg == "-env" || arg == "--e" || arg == "--env" {
-			return true
+	args := oci.args
+	for i := 0; i < len(args)-1; i++ {
+		parts := strings.SplitN(args[i], "=", 2)
+		if isBundlePathOption(parts[0]) {
+			if len(parts) == 2 {
+				oci.origSpecPath = parts[1]
+			} else {
+				oci.origSpecPath = args[i+1]
+				i++
+			}
+		} else if args[i] == "create" {
+			oci.isCreate = true
 		}
-		return false
 	}
 
+	// By default, updateSpecPath is the same as origSpecPath
+	oci.updatedSpecPath = oci.origSpecPath
+}
+
+// getAMDEnv reads the value of "AMD_VISIBLE_DEVICES" environment variable
+// in the spec.
+func (oci *oci_t) getAMDEnv() {
 	getDevs := func(devs string) []int {
 		dl := []int{}
 
@@ -121,30 +136,15 @@ func (oci *oci_t) parseArgs() {
 		return dl
 	}
 
-	args := oci.args
-	for i := 0; i < len(args)-1; i++ {
-		parts := strings.SplitN(args[i], "=", 2)
-		if isBundlePathOption(parts[0]) {
-			if len(parts) == 2 {
-				oci.origSpecPath = parts[1]
-			} else {
-				oci.origSpecPath = args[i+1]
-				i++
-			}
-		} else if isEnvOption(args[i]) {
-			envVar := args[i+1]
-			pts := strings.SplitN(envVar, "=", 2)
+	if oci.spec.Process != nil {
+		envs := oci.spec.Process.Env
+		for _, env := range envs {
+			pts := strings.SplitN(env, "=", 2)
 			if len(pts) == 2 && pts[0] == "AMD_VISIBLE_DEVICES" {
 				oci.amdDevices = getDevs(pts[1])
-				i++
 			}
-		} else if args[i] == "create" {
-			oci.isCreate = true
 		}
 	}
-
-	// By default, updateSpecPath is the same as origSpecPath
-	oci.updatedSpecPath = oci.origSpecPath
 }
 
 // getSpec reads the input OCI spec file into memory
@@ -201,6 +201,15 @@ func (oci *oci_t) isAddAllGPUs() bool {
 	return false
 }
 
+// isAddNoGPUs returns true if no GPUs need to be added to OCI spec
+func (oci *oci_t) isAddNoGPUs() bool {
+	if len(oci.amdDevices) == 0 {
+		return true
+	}
+
+	return false
+}
+
 // addGPUDevices adds requested GPUs to the OCI spec
 func (oci *oci_t) addGPUDevices() error {
 	addGpus := func(gpus []string) error {
@@ -216,6 +225,11 @@ func (oci *oci_t) addGPUDevices() error {
 			}
 		}
 
+		return nil
+	}
+
+	if oci.isAddNoGPUs() {
+		logger.Log.Printf("No GPUs to be added to OCI spec")
 		return nil
 	}
 
@@ -299,6 +313,8 @@ func New(argv []string) (Interface, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	oci.getAMDEnv()
 
 	return oci, nil
 }
