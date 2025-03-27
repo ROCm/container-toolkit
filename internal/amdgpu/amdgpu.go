@@ -93,9 +93,14 @@ func GetAMDGPU(dev string) (AMDGPU, error) {
 			return 0
 		}
 
-		ret, err := strconv.ParseInt(out, base, width)
+		var ret int64
+		if base == 8 {
+			ret, err = strconv.ParseInt("020"+out, base, width)
+		} else {
+			ret, err = strconv.ParseInt(out, base, width)
+		}
 		if err != nil {
-			logger.Log.Printf("Failed to convert string %v to hex, Error: %v", ret, err)
+			logger.Log.Printf("Failed to convert string %v to (%v, %v), Error: %v", ret, base, width, err)
 			return 0
 		}
 
@@ -105,7 +110,7 @@ func GetAMDGPU(dev string) (AMDGPU, error) {
 	gpu := AMDGPU{
 		Path:     dev,
 		Major:    convStat(dev, "%t", 16, 64),
-		Minor:    convStat(dev, "%T", 8, 64),
+		Minor:    convStat(dev, "%T", 16, 64),
 		FileMode: os.FileMode(convStat(dev, "%a", 8, 64)),
 		Allow:    true,
 		DevType:  "c",

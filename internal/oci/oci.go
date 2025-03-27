@@ -136,7 +136,7 @@ func (oci *oci_t) getAMDEnv() {
 		return dl
 	}
 
-	if oci.spec.Process != nil {
+	if oci.spec != nil && oci.spec.Process != nil {
 		envs := oci.spec.Process.Env
 		for _, env := range envs {
 			pts := strings.SplitN(env, "=", 2)
