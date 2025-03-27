@@ -1,4 +1,4 @@
-module github.com/ROCm/container-runtime
+module github.com/ROCm/container-toolkit
 
 go 1.22.0
 

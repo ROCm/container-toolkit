@@ -19,8 +19,8 @@ package main
 import (
 	"os"
 
-	"github.com/ROCm/container-runtime/internal/logger"
-	"github.com/ROCm/container-runtime/internal/runtime"
+	"github.com/ROCm/container-toolkit/internal/logger"
+	"github.com/ROCm/container-toolkit/internal/runtime"
 )
 
 func main() {
