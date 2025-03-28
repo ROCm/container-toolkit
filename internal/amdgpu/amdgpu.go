@@ -33,6 +33,7 @@ type AMDGPU struct {
 	Minor    int64
 	FileMode os.FileMode
 	Gid      uint32
+	Uid      uint32
 	Allow    bool
 	DevType  string
 	Access   string
@@ -95,7 +96,7 @@ func GetAMDGPU(dev string) (AMDGPU, error) {
 
 		var ret int64
 		if base == 8 {
-			ret, err = strconv.ParseInt("020"+out, base, width)
+			ret, err = strconv.ParseInt("0"+out, base, width)
 		} else {
 			ret, err = strconv.ParseInt(out, base, width)
 		}
@@ -120,44 +121,8 @@ func GetAMDGPU(dev string) (AMDGPU, error) {
 	gid := convStat(dev, "%g", 10, 32)
 	gpu.Gid = uint32(gid)
 
+	uid := 0
+	gpu.Uid = uint32(uid)
+
 	return gpu, nil
 }
-
-/*
-func getHexStat(dev, format string) int64 {
-	out, err := exec.Command("stat", "-c", format, dev).Output()
-	if err != nil {
-		fmt.Println("Error:", err)
-		os.Exit(1)
-	}
-	value, err := strconv.ParseInt(strings.TrimSpace(string(out)), 16, 64)
-	if err != nil {
-		fmt.Println("Error:", err)
-		os.Exit(1)
-	}
-	return value
-}
-
-func getOctalStat(dev, format string) int64 {
-	out, err := exec.Command("stat", "-c", format, dev).Output()
-	if err != nil {
-		fmt.Println("Error:", err)
-		os.Exit(1)
-	}
-	value, err := strconv.ParseInt("020"+strings.TrimSpace(string(out)), 8, 64)
-	if err != nil {
-		fmt.Println("Error:", err)
-		os.Exit(1)
-	}
-	return value
-}
-
-func getStat(dev, format string) string {
-	out, err := exec.Command("stat", "-c", format, dev).Output()
-	if err != nil {
-		fmt.Println("Error:", err)
-		os.Exit(1)
-	}
-	return strings.TrimSpace(string(out))
-}
-*/

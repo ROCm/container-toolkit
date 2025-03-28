@@ -88,6 +88,13 @@ func (rt *runtm) Run() error {
 			logger.Log.Printf("Failed to print rutime OCI spec, Error: %v", err)
 			return err
 		}
+
+		// Write updated OCI spec
+		err = rt.oci.WriteSpec()
+		if err != nil {
+			logger.Log.Printf("Failed to write updated rutime OCI spec, Error: %v", err)
+			return err
+		}
 	}
 
 	// Call runc with updated oci spec

@@ -271,10 +271,12 @@ func (oci *oci_t) addGPUDevices() error {
 func (oci *oci_t) addGPUDevice(gpu amdgpu.AMDGPU) error {
 	dev := specs.LinuxDevice{
 		Path:     gpu.Path,
+		Type:     gpu.DevType,
 		Major:    gpu.Major,
 		Minor:    gpu.Minor,
 		FileMode: &gpu.FileMode,
 		GID:      &gpu.Gid,
+		UID:      &gpu.Uid,
 	}
 
 	if oci.spec.Linux == nil {
