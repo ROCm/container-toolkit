@@ -20,8 +20,8 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/ROCm/container-runtime/internal/logger"
-	"github.com/ROCm/container-runtime/internal/oci"
+	"github.com/ROCm/container-toolkit/internal/logger"
+	"github.com/ROCm/container-toolkit/internal/oci"
 )
 
 // Constants
@@ -54,7 +54,7 @@ func New(args []string) (Interface, error) {
 
 	rt.oci, err = oci.New(rt.args[1:])
 	if err != nil {
-		logger.Log.Printf("Failed to create OCI handler, err = %v", err)
+		logger.Log.Printf("Failed to create OCI handler, Error: %v", err)
 		return nil, err
 	}
 
@@ -64,37 +64,44 @@ func New(args []string) (Interface, error) {
 // Run starts the runtime
 func (rt *runtm) Run() error {
 	var err error
+
 	if rt.oci.IsCreate() {
-		logger.Log.Printf("Handling container create")
 		/*
 			// Add runtime OCI hook
 			err = rt.oci.UpdateSpec(oci.AddHook)
 			if err != nil {
-				logger.Log.Printf("Failed to add runtime OCI hook, err = %v", err)
+				logger.Log.Printf("Failed to add runtime OCI hook, Error: %v", err)
 				return err
 			}
 		*/
 
 		// Add GPUs
-		err = rt.oci.UpdateSpec(oci.AddLinuxDevice)
+		err = rt.oci.UpdateSpec(oci.AddGPUDevices)
 		if err != nil {
-			logger.Log.Printf("Failed to add Linux device into OCI spec, err = %v", err)
+			logger.Log.Printf("Failed to add Linux device into OCI spec, Error: %v", err)
 			return err
 		}
 
 		// Print updated OCI spec
 		err = rt.oci.PrintSpec()
 		if err != nil {
-			logger.Log.Printf("Failed to print rutime OCI spec, err = %v", err)
+			logger.Log.Printf("Failed to print rutime OCI spec, Error: %v", err)
+			return err
+		}
+
+		// Write updated OCI spec
+		err = rt.oci.WriteSpec()
+		if err != nil {
+			logger.Log.Printf("Failed to write updated rutime OCI spec, Error: %v", err)
 			return err
 		}
 	}
 
 	// Call runc with updated oci spec
-	logger.Log.Printf("Running runc with args: %v", rt.args)
+	logger.Log.Printf("Running runc with args: %v, environ: %v", rt.args, os.Environ())
 	err = syscall.Exec(RUNC, rt.args, os.Environ())
 	if err != nil {
-		logger.Log.Printf("Failed to call ruc, err = %v", err)
+		logger.Log.Printf("Failed to call runc, Error: %v", err)
 		return err
 	}
 

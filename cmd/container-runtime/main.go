@@ -19,13 +19,14 @@ package main
 import (
 	"os"
 
-	"github.com/ROCm/container-runtime/internal/logger"
-	"github.com/ROCm/container-runtime/internal/runtime"
+	"github.com/ROCm/container-toolkit/internal/logger"
+	"github.com/ROCm/container-toolkit/internal/runtime"
 )
 
 func main() {
 	logger.Init(false)
 	logger.Log.Printf("Creating ROCm container runtime with args %v", os.Args)
+
 	rt, err := runtime.New(os.Args)
 	if err != nil {
 		logger.Log.Printf("Failed to create container runtime, err = %v", err)

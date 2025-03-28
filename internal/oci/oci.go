@@ -20,9 +20,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 
-	"github.com/ROCm/container-runtime/internal/logger"
+	"github.com/ROCm/container-toolkit/internal/amdgpu"
+	"github.com/ROCm/container-toolkit/internal/logger"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -51,16 +54,26 @@ type Interface interface {
 type oci_t struct {
 	// args are the arguments to runtime
 	args []string
+
+	// amdDevices lists the AMD devices, requested via the "AMD_VISIBLE_DEVICES
+	// ENV variable. The devices are specified by their indices and stored in
+	// the ascending order.
+	amdDevices []int
+
 	// isCreate specifies if the container is getting created now
 	isCreate bool
-	// origSpecPath is where the input OCI spec is on the disk
-	origSpecPath string
-	// updatedSpecPath is where the updated OCI spec is put on the disk
-	updatedSpecPath string
-	// spec is the structure into which the input spec file is read into
-	spec *specs.Spec
+
 	// hookPath is the where the OCI hook executable is on the disk
 	hookPath string
+
+	// origSpecPath is where the input OCI spec is on the disk
+	origSpecPath string
+
+	// updatedSpecPath is where the updated OCI spec is put on the disk
+	updatedSpecPath string
+
+	// spec is the structure into which the input spec file is read into
+	spec *specs.Spec
 }
 
 // SpecUpdateOp specifies type of update operation on the OCI spec
@@ -69,7 +82,7 @@ type SpecUpdateOp int
 // Enumeration of the update operations on the OCI spec
 const (
 	AddHook SpecUpdateOp = iota
-	AddLinuxDevice
+	AddGPUDevices
 )
 
 // parseArgs parses the arguments passed to runtime
@@ -89,10 +102,47 @@ func (oci *oci_t) parseArgs() {
 				oci.origSpecPath = parts[1]
 			} else {
 				oci.origSpecPath = args[i+1]
-				i = i + 1
+				i++
 			}
 		} else if args[i] == "create" {
 			oci.isCreate = true
+		}
+	}
+
+	// By default, updateSpecPath is the same as origSpecPath
+	oci.updatedSpecPath = oci.origSpecPath
+}
+
+// getAMDEnv reads the value of "AMD_VISIBLE_DEVICES" environment variable
+// in the spec.
+func (oci *oci_t) getAMDEnv() {
+	getDevs := func(devs string) []int {
+		dl := []int{}
+
+		if devs == "all" || devs == "All" || devs == "ALL" {
+			dl = append(dl, -1)
+			return dl
+		}
+
+		for _, c := range strings.Split(devs, ",") {
+			i, err := strconv.Atoi(c)
+			if err == nil && i >= 0 {
+				dl = append(dl, i)
+			}
+		}
+
+		sort.Ints(dl)
+
+		return dl
+	}
+
+	if oci.spec != nil && oci.spec.Process != nil {
+		envs := oci.spec.Process.Env
+		for _, env := range envs {
+			pts := strings.SplitN(env, "=", 2)
+			if len(pts) == 2 && pts[0] == "AMD_VISIBLE_DEVICES" {
+				oci.amdDevices = getDevs(pts[1])
+			}
 		}
 	}
 }
@@ -104,11 +154,11 @@ func (oci *oci_t) getSpec() error {
 		return nil
 	}
 
-	f := oci.origSpecPath
+	f := oci.origSpecPath + "/config.json"
 
 	file, err := os.Open(f)
 	if err != nil {
-		logger.Log.Printf("Error opening file:%s", err)
+		logger.Log.Printf("Error opening file, Error: %v", err)
 		return err
 	}
 
@@ -117,7 +167,7 @@ func (oci *oci_t) getSpec() error {
 	var spec specs.Spec
 	decoder := json.NewDecoder(file)
 	if err := decoder.Decode(&spec); err != nil {
-		logger.Log.Printf("Failed to decode JSON: %s\n", err)
+		logger.Log.Printf("Failed to decode JSON, Error: %v", err)
 		return err
 	}
 
@@ -142,19 +192,91 @@ func (oci *oci_t) addHook() error {
 	return nil
 }
 
-// addLinuxDevice adds Linux device to the OCI spec.
-func (oci *oci_t) addLinuxDevice() error {
-	fm := 444
-	ofm := os.FileMode(fm)
+// isAddAllGPUs returns true if all GPUs must be added to OCI spec
+func (oci *oci_t) isAddAllGPUs() bool {
+	if len(oci.amdDevices) == 1 && oci.amdDevices[0] == -1 {
+		return true
+	}
 
-	var gid uint32 = 0
+	return false
+}
 
+// isAddNoGPUs returns true if no GPUs need to be added to OCI spec
+func (oci *oci_t) isAddNoGPUs() bool {
+	if len(oci.amdDevices) == 0 {
+		return true
+	}
+
+	return false
+}
+
+// addGPUDevices adds requested GPUs to the OCI spec
+func (oci *oci_t) addGPUDevices() error {
+	addGpus := func(gpus []string) error {
+		for _, gpu := range gpus {
+			amdGPU, err := amdgpu.GetAMDGPU(gpu)
+			if err != nil {
+				return err
+			}
+
+			err = oci.addGPUDevice(amdGPU)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	if oci.isAddNoGPUs() {
+		logger.Log.Printf("No GPUs to be added to OCI spec")
+		return nil
+	}
+
+	devs, err := amdgpu.GetAMDGPUs()
+	if err != nil {
+		return err
+	}
+
+	j, cnt := 0, 0
+	for i, gpus := range devs {
+		if oci.isAddAllGPUs() {
+			addGpus(gpus)
+			cnt++
+		} else if oci.amdDevices[j] < len(gpus) && j == i {
+			addGpus(gpus)
+			cnt++
+			j++
+
+			if j == len(oci.amdDevices) {
+				break
+			}
+		} else if oci.amdDevices[j] >= len(gpus) {
+			break
+		}
+	}
+
+	if cnt > 0 {
+		kfd, err := amdgpu.GetAMDGPU("/dev/kfd")
+		if err != nil {
+			return err
+		}
+		oci.addGPUDevice(kfd)
+	}
+
+	return nil
+}
+
+// addGPUDevice adds the requested GPU device to the OCI spec
+func (oci *oci_t) addGPUDevice(gpu amdgpu.AMDGPU) error {
 	dev := specs.LinuxDevice{
-		Path:     "/dev/dri/renderD128",
-		Major:    0,
-		Minor:    0,
-		FileMode: &ofm,
-		GID:      &gid,
+		Path:     gpu.Path,
+		Type:     gpu.DevType,
+		Major:    gpu.Major,
+		Minor:    gpu.Minor,
+		FileMode: &gpu.FileMode,
+		GID:      &gpu.Gid,
+		UID:      &gpu.Uid,
 	}
 
 	if oci.spec.Linux == nil {
@@ -163,13 +285,12 @@ func (oci *oci_t) addLinuxDevice() error {
 
 	oci.spec.Linux.Devices = append(oci.spec.Linux.Devices, dev)
 
-	var major, minor int64 = 0, 0
 	rdev := specs.LinuxDeviceCgroup{
-		Allow:  true,
-		Type:   "c",
-		Major:  &major,
-		Minor:  &minor,
-		Access: "rwm",
+		Allow:  gpu.Allow,
+		Type:   gpu.DevType,
+		Major:  &gpu.Major,
+		Minor:  &gpu.Minor,
+		Access: gpu.Access,
 	}
 
 	if oci.spec.Linux.Resources == nil {
@@ -177,8 +298,7 @@ func (oci *oci_t) addLinuxDevice() error {
 	}
 
 	oci.spec.Linux.Resources.Devices = append(oci.spec.Linux.Resources.Devices, rdev)
-
-	logger.Log.Printf("Added Linux device %v to OCI spec", "render")
+	logger.Log.Printf("Added GPU device %v to OCI spec", gpu.Path)
 
 	return nil
 }
@@ -196,6 +316,8 @@ func New(argv []string) (Interface, error) {
 		return nil, err
 	}
 
+	oci.getAMDEnv()
+
 	return oci, nil
 }
 
@@ -206,11 +328,11 @@ func (oci *oci_t) IsCreate() bool {
 
 // WriteSpec writes the updated spec back to disk
 func (oci *oci_t) WriteSpec() error {
-	f := oci.updatedSpecPath
+	f := oci.updatedSpecPath + "/config.json"
 
 	file, err := os.Create(f)
 	if err != nil {
-		logger.Log.Printf("Error creating file:%s\n", err)
+		logger.Log.Printf("Error creating file, Error: %v", err)
 		return err
 	}
 
@@ -222,7 +344,7 @@ func (oci *oci_t) WriteSpec() error {
 		return err
 	}
 
-	logger.Log.Printf("Wrote the spec to %v", f)
+	logger.Log.Printf("Wrote spec to %v", f)
 	return nil
 }
 
@@ -231,8 +353,8 @@ func (oci *oci_t) UpdateSpec(op SpecUpdateOp) error {
 	switch op {
 	case AddHook:
 		return oci.addHook()
-	case AddLinuxDevice:
-		return oci.addLinuxDevice()
+	case AddGPUDevices:
+		return oci.addGPUDevices()
 	}
 
 	return nil
@@ -242,7 +364,7 @@ func (oci *oci_t) UpdateSpec(op SpecUpdateOp) error {
 func (oci *oci_t) PrintSpec() error {
 	prettyJSON, err := json.MarshalIndent(oci.spec, "", "  ")
 	if err != nil {
-		logger.Log.Printf("Failed to marshal JSON: %s", err)
+		logger.Log.Printf("Failed to marshal JSON, Error: %v", err)
 		return err
 	}
 
