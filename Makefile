@@ -86,12 +86,13 @@ pkg-clean:
 	rm -rf ${TOP_DIR}/bin/*.deb
 
 pkg: pkg-clean
-	${MAKE} container-toolkit
+	${MAKE} container-toolkit container-toolkit-ctk
 	@echo "Building debian for $(BUILD_VER_ENV)"
 
 	# copy and strip files
 	mkdir -p ${PKG_PATH}
 	cp -vf $(CURDIR)/bin/amd-container-runtime ${PKG_PATH}/
+	cp -vf $(CURDIR)/bin/amd-ctk ${PKG_PATH}/
 	cd ${TOP_DIR}
 	sed -i "s/BUILD_VER_ENV/$(BUILD_VER_ENV)/g" $(DEBIAN_CONTROL)
 	dpkg-deb -Zxz --build build/debian ${TOP_DIR}/bin
