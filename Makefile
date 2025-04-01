@@ -79,7 +79,7 @@ docker-compile:
 
 .PHONY: all
 all:
-	${MAKE} gen checks container-toolkit
+	${MAKE} gen checks container-toolkit container-toolkit-ctk
 
 .PHONY: pkg pkg-clean
 pkg-clean:
@@ -150,3 +150,7 @@ endef
 container-toolkit:
 	@echo "building amd container toolkit"
 	CGO_ENABLED=0 go build  -C cmd/container-runtime -ldflags "-X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE} -X main.Publish=${DISABLE_DEBUG}" -o $(CURDIR)/bin/amd-container-runtime
+
+container-toolkit-ctk:
+	@echo "building amd container toolkit ctk"
+	CGO_ENABLED=0 go build  -C cmd/amd-ctk -ldflags "-X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE} -X main.Publish=${DISABLE_DEBUG}" -o $(CURDIR)/bin/amd-ctk
