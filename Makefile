@@ -79,19 +79,20 @@ docker-compile:
 
 .PHONY: all
 all:
-	${MAKE} gen checks container-toolkit
+	${MAKE} gen checks container-toolkit container-toolkit-ctk
 
 .PHONY: pkg pkg-clean
 pkg-clean:
 	rm -rf ${TOP_DIR}/bin/*.deb
 
 pkg: pkg-clean
-	${MAKE} container-toolkit
+	${MAKE} container-toolkit container-toolkit-ctk
 	@echo "Building debian for $(BUILD_VER_ENV)"
 
 	# copy and strip files
 	mkdir -p ${PKG_PATH}
 	cp -vf $(CURDIR)/bin/amd-container-runtime ${PKG_PATH}/
+	cp -vf $(CURDIR)/bin/amd-ctk ${PKG_PATH}/
 	cd ${TOP_DIR}
 	sed -i "s/BUILD_VER_ENV/$(BUILD_VER_ENV)/g" $(DEBIAN_CONTROL)
 	dpkg-deb -Zxz --build build/debian ${TOP_DIR}/bin
@@ -150,3 +151,7 @@ endef
 container-toolkit:
 	@echo "building amd container toolkit"
 	CGO_ENABLED=0 go build  -C cmd/container-runtime -ldflags "-X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE} -X main.Publish=${DISABLE_DEBUG}" -o $(CURDIR)/bin/amd-container-runtime
+
+container-toolkit-ctk:
+	@echo "building amd container toolkit ctk"
+	CGO_ENABLED=0 go build  -C cmd/amd-ctk -ldflags "-X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE} -X main.Publish=${DISABLE_DEBUG}" -o $(CURDIR)/bin/amd-ctk
