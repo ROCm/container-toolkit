@@ -79,6 +79,11 @@ func (d *dockerConfig) ConfigRuntime(name string, path string, isDefault bool) e
 	}
 	currentCfg["runtimes"] = runtimes
 
+	// Enable CDI by default
+	currentCfg["features"] = map[string]interface{}{
+		"cdi": true,
+	}
+
 	if isDefault {
 		currentCfg["default-runtime"] = name
 	}
