@@ -10,7 +10,7 @@ Offers tools that streamline the use of AMD GPUs with containers.
 
 ### Specify the required GPUs. There are 3 ways to do this.
 
-#### Using AMD_VISIBLE_DEVICES environment variable.
+#### AMD_VISIBLE_DEVICES Environment Variable.
 
 To use all available GPUs,
 
@@ -24,7 +24,7 @@ To use a subset of available GPUs,
 > docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0,1,2 rocm/rocm-terminal rocm-smi
 ```
 
-#### Using CDI style
+#### CDI Style
 
 To use all available GPUs,
 
@@ -38,7 +38,7 @@ To use a subset of available GPUs,
 > docker run --rm --runtime=amd --device amd.com/gpu=0 --device amd.com/gpu=1 rocm/rocm-terminal rocm-smi
 ```
 
-#### Using explicit paths for each required GPU
+#### Explicit Paths
 
 ```text
 > docker run --device /dev/kfd --device /dev/dri/renderD128 --device /dev/dri/renderD129 rocm/rocm-terminal rocm-smi
