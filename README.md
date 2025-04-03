@@ -44,7 +44,7 @@ To use a subset of available GPUs,
 > docker run --device /dev/kfd --device /dev/dri/renderD128 --device /dev/dri/renderD129 rocm/rocm-terminal rocm-smi
 ```
 
-### Check the list of all available GPUs.
+### List available GPUs.
 
 ```text
 > amd-ctk gpu list
