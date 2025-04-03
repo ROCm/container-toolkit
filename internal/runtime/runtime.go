@@ -20,6 +20,7 @@ import (
 	"os"
 	"syscall"
 
+	"github.com/ROCm/container-toolkit/internal/cdi"
 	"github.com/ROCm/container-toolkit/internal/logger"
 	"github.com/ROCm/container-toolkit/internal/oci"
 )
@@ -42,6 +43,8 @@ type runtm struct {
 	args []string
 	// oci is the handle for oci operations
 	oci oci.Interface
+	// cdi is the handle for cdi operations
+	cdi cdi.Interface
 }
 
 // New creates a runtime instance
@@ -58,12 +61,39 @@ func New(args []string) (Interface, error) {
 		return nil, err
 	}
 
+	rt.cdi, err = cdi.New()
+	if err != nil {
+		logger.Log.Printf("Failed to create CDI handler, Error: %v", err)
+		return nil, err
+	}
+
 	return rt, nil
 }
 
 // Run starts the runtime
 func (rt *runtm) Run() error {
 	var err error
+
+	// Generate CDI spec
+	err = rt.cdi.GenerateSpec()
+	if err != nil {
+		logger.Log.Printf("Failed to generate CDI spec, Error: %v", err)
+		return err
+	}
+
+	// Print updated CDI spec
+	err = rt.cdi.PrintSpec()
+	if err != nil {
+		logger.Log.Printf("Failed to print runtime CDI spec, Error: %v", err)
+		return err
+	}
+
+	// Write updated OCI spec
+	err = rt.cdi.WriteSpec()
+	if err != nil {
+		logger.Log.Printf("Failed to write generated runtime CDI spec, Error: %v", err)
+		return err
+	}
 
 	if rt.oci.IsCreate() {
 		/*
@@ -85,14 +115,14 @@ func (rt *runtm) Run() error {
 		// Print updated OCI spec
 		err = rt.oci.PrintSpec()
 		if err != nil {
-			logger.Log.Printf("Failed to print rutime OCI spec, Error: %v", err)
+			logger.Log.Printf("Failed to print runtime OCI spec, Error: %v", err)
 			return err
 		}
 
 		// Write updated OCI spec
 		err = rt.oci.WriteSpec()
 		if err != nil {
-			logger.Log.Printf("Failed to write updated rutime OCI spec, Error: %v", err)
+			logger.Log.Printf("Failed to write updated runtime OCI spec, Error: %v", err)
 			return err
 		}
 	}
