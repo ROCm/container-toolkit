@@ -14,37 +14,23 @@
 # limitations under the License.
 **/
 
-package main
+package cdi
 
 import (
-	"fmt"
-	"os"
-
-	"github.com/ROCm/container-toolkit/cmd/amd-ctk/cdi"
-	"github.com/ROCm/container-toolkit/cmd/amd-ctk/runtime"
-	"github.com/ROCm/container-toolkit/internal/logger"
+	"github.com/ROCm/container-toolkit/cmd/amd-ctk/cdi/list"
 	"github.com/urfave/cli/v2"
 )
 
-func main() {
-	logger.Init(false)
-
-	// Create the top-level CLI tree
-	amdCtkCli := &cli.App{
-		Name:                 "AMD Container Toolkit CLI",
-		EnableBashCompletion: true,
-		Usage:                "Tool to configure AMD Container Toolkit",
+func AddNewCommand() *cli.Command {
+	// Add the cdi command
+	cdiCmd := cli.Command{
+		Name:  "gpu",
+		Usage: "Container Device interface related commands",
 	}
 
-	// Add subcommands
-	amdCtkCli.Commands = []*cli.Command{
-		runtime.AddNewCommand(),
-		cdi.AddNewCommand(),
+	cdiCmd.Subcommands = []*cli.Command{
+		list.AddNewCommand(),
 	}
 
-	err := amdCtkCli.Run(os.Args)
-	if err != nil {
-		fmt.Printf("%v\n", err)
-		os.Exit(1)
-	}
+	return &cdiCmd
 }
