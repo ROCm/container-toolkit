@@ -152,8 +152,10 @@ func (cdi *cdi_t) PrintSpec() error {
 func New() (Interface, error) {
 	if _, err := os.Stat(CDI_SPEC_PATH); os.IsNotExist(err) {
 		err := os.Mkdir(CDI_SPEC_PATH, os.ModeDir)
-		logger.Log.Printf("Failed to create %v, Err: %v", CDI_SPEC_PATH, err)
-		return nil, err
+		if err != nil {
+			logger.Log.Printf("Failed to create %v, Err: %v", CDI_SPEC_PATH, err)
+			return nil, err
+		}
 	}
 
 	spec := specs.Spec{
