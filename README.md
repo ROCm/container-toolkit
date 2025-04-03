@@ -1,4 +1,4 @@
-# container-toolkit
+# Container Toolkit
 Offers tools that streamline the use of AMD GPUs with containers.
 
 ## Docker Usage
