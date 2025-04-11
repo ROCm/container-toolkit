@@ -14,35 +14,35 @@ Offers tools that streamline the use of AMD GPUs with containers.
 
           - To use all available GPUs,
 
-```text
-> docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/rocm-terminal rocm-smi
-```
+          ```text
+          > docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/rocm-terminal rocm-smi
+          ```
 
           - To use a subset of available GPUs,
 
-```text
-> docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0,1,2 rocm/rocm-terminal rocm-smi
-```
+          ```text
+          > docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0,1,2 rocm/rocm-terminal rocm-smi
+          ```
 
      2. Using CDI style
 
           - To use all available GPUs,
 
-```text
-> docker run --rm --runtime=amd --device amd.com/gpu=all rocm/rocm-terminal rocm-smi
-```
+          ```text
+          > docker run --rm --runtime=amd --device amd.com/gpu=all rocm/rocm-terminal rocm-smi
+          ```
 
           - To use a subset of available GPUs,
 
-```text
-> docker run --rm --runtime=amd --device amd.com/gpu=0 --device amd.com/gpu=1 rocm/rocm-terminal rocm-smi
-```
+          ```text
+          > docker run --rm --runtime=amd --device amd.com/gpu=0 --device amd.com/gpu=1 rocm/rocm-terminal rocm-smi
+          ```
 
      3. Using explicit paths
 
-```text
-> docker run --device /dev/kfd --device /dev/dri/renderD128 --device /dev/dri/renderD129 rocm/rocm-terminal rocm-smi
-```
+     ```text
+     > docker run --device /dev/kfd --device /dev/dri/renderD128 --device /dev/dri/renderD129 rocm/rocm-terminal rocm-smi
+     ```
 
 3. List available GPUs.
 
