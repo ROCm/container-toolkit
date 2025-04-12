@@ -8,15 +8,20 @@ DOCKER_REGISTRY ?= docker.io/rocm
 DOCKER_BUILDER_TAG ?= v1.0
 BUILD_BASE_IMAGE ?= ubuntu:22.04
 BUILD_CONTAINER ?= $(DOCKER_REGISTRY)/container-toolkit-build:$(DOCKER_BUILDER_TAG)
+RPM_BUILD_CONTAINER ?= $(DOCKER_REGISTRY)/container-toolkit-rpm-build:$(DOCKER_BUILDER_TAG)
+BIN_DIRECTORY_SUFFIX ?= deb
+
 
 # export environment variables used across project
 export DOCKER_REGISTRY
 export BUILD_CONTAINER
+export RPM_BUILD_CONTAINER
 export BUILD_BASE_IMAGE
 
 CUR_USER:=$(shell whoami)
 CUR_TIME:=$(shell date +%Y-%m-%d_%H.%M.%S)
 CONTAINER_NAME:=${CUR_USER}_container_toolkit-bld
+RPM_CONTAINER_NAME:=${CUR_USER}_container_toolkit-rpm-bld
 CONTAINER_WORKDIR := /usr/src/github.com/ROCm/container-toolkit
 
 TOP_DIR := $(PWD)
@@ -52,17 +57,17 @@ PKG_PATH := ${TOP_DIR}/build/debian/DEBIAN/usr/local/bin
 #
 ##@ QuickStart
 .PHONY: default
-default: build-dev-container ## Quick start to build everything from docker shell container
+default: build-dev-container-deb ## Quick start to build everything from docker shell container
 
 # create development build container only if there is changes done on
-# tools/base-image/Dockerfile
-.PHONY: build-dev-container
-build-dev-container:
-	${MAKE} -C tools/base-image all INSECURE_REGISTRY=$(INSECURE_REGISTRY)
-	$(MAKE) docker-compile
+# tools/deb/base-image/Dockerfile
+.PHONY: build-dev-container-deb
+build-dev-container-deb:
+	${MAKE} -C tools/deb/base-image all INSECURE_REGISTRY=$(INSECURE_REGISTRY)
+	$(MAKE) docker-compile-deb
 
-.PHONY: docker-compile
-docker-compile:
+.PHONY: docker-compile-deb
+docker-compile-deb:
 	docker run --rm -it --privileged \
 		--name ${CONTAINER_NAME} \
 		-e "USER_NAME=$(shell whoami)" \
@@ -77,22 +82,45 @@ docker-compile:
 		$(BUILD_CONTAINER) \
 		bash -c "cd $(CONTAINER_WORKDIR) && source ~/.bashrc && git config --global --add safe.directory $(CONTAINER_WORKDIR) && make all"
 
+# create rpmbuild development build container only if there is changes done on
+# tools/rpmbuild/base-image/Dockerfile
+.PHONY: build-dev-container-rpm
+build-dev-container-rpm:
+	${MAKE} -C tools/rpmbuild/base-image all INSECURE_REGISTRY=$(INSECURE_REGISTRY)
+	$(MAKE) docker-compile-rpm
+
+.PHONY: docker-compile-rpm
+docker-compile-rpm:
+	docker run --rm -it --privileged \
+		--name ${RPM_CONTAINER_NAME} \
+		-e "USER_NAME=$(shell whoami)" \
+		-e "USER_UID=$(shell id -u)" \
+		-e "USER_GID=$(shell id -g)" \
+		-e "GIT_COMMIT=${GIT_COMMIT}" \
+		-e "GIT_VERSION=${GIT_VERSION}" \
+		-e "BUILD_DATE=${BUILD_DATE}" \
+		-v $(CURDIR):$(CONTAINER_WORKDIR) \
+		-v $(HOME)/.ssh:/home/$(shell whoami)/.ssh \
+		-w $(CONTAINER_WORKDIR) \
+		$(RPM_BUILD_CONTAINER) \
+		bash -c "cd $(CONTAINER_WORKDIR) && source ~/.bashrc && git config --global --add safe.directory $(CONTAINER_WORKDIR) && make BIN_DIRECTORY_SUFFIX=rpmbuild all "
+
 .PHONY: all
 all:
 	${MAKE} gen checks container-toolkit container-toolkit-ctk
 
-.PHONY: pkg pkg-clean
-pkg-clean:
-	rm -rf ${TOP_DIR}/bin/*.deb
+.PHONY: pkg-deb pkg-deb-clean
+pkg-deb-clean:
+	rm -rf ${TOP_DIR}/deb/bin/*.deb
 
-pkg: pkg-clean
+pkg-deb: pkg-deb-clean
 	${MAKE} container-toolkit container-toolkit-ctk
 	@echo "Building debian for $(BUILD_VER_ENV)"
 
 	# copy and strip files
 	mkdir -p ${PKG_PATH}
-	cp -vf $(CURDIR)/bin/amd-container-runtime ${PKG_PATH}/
-	cp -vf $(CURDIR)/bin/amd-ctk ${PKG_PATH}/
+	cp -vf $(CURDIR)/bin/deb/amd-container-runtime ${PKG_PATH}/
+	cp -vf $(CURDIR)/bin/deb/amd-ctk ${PKG_PATH}/
 	cd ${TOP_DIR}
 	sed -i "s/BUILD_VER_ENV/$(BUILD_VER_ENV)/g" $(DEBIAN_CONTROL)
 	dpkg-deb -Zxz --build build/debian ${TOP_DIR}/bin
@@ -102,6 +130,32 @@ pkg: pkg-clean
 
 	# rename for internal build
 	mv -vf ${TOP_DIR}/bin/amd-container-toolkit*~${UBUNTU_VERSION_NUMBER}_amd64.deb ${TOP_DIR}/bin/amd-container-toolkit_${UBUNTU_VERSION_NUMBER}_amd64.deb
+
+.PHONY: rpm-pkg-build
+rpm-pkg-build: all
+	rpmbuild -bb $(CURDIR)/build/rpmbuild.spec
+	cp $(HOME)/rpmbuild/RPMS/x86_64/*.rpm $(CURDIR)/bin/
+
+.PHONY: pkg-rpm pkg-rpm-clean
+pkg-rpm-clean:
+	rm -rf ${CURDIR}/bin/*.rpm
+
+pkg-rpm: pkg-rpm-clean
+	docker run --rm -it --privileged \
+		--name ${RPM_CONTAINER_NAME} \
+		-e "USER_NAME=$(shell whoami)" \
+		-e "USER_UID=$(shell id -u)" \
+		-e "USER_GID=$(shell id -g)" \
+		-e "GIT_COMMIT=${GIT_COMMIT}" \
+		-e "GIT_VERSION=${GIT_VERSION}" \
+		-e "BUILD_DATE=${BUILD_DATE}" \
+		-v $(CURDIR):$(CONTAINER_WORKDIR) \
+		-v $(HOME)/.ssh:/home/$(shell whoami)/.ssh \
+		-w $(CONTAINER_WORKDIR) \
+		$(RPM_BUILD_CONTAINER) \
+		bash -c "cd $(CONTAINER_WORKDIR) && source ~/.bashrc && git config --global --add safe.directory $(CONTAINER_WORKDIR) && make BIN_DIRECTORY_SUFFIX=rpmbuild rpm-pkg-build"
+
+
 
 .PHONY: gen
 gen: gopkglist
@@ -150,8 +204,8 @@ endef
 
 container-toolkit:
 	@echo "building amd container toolkit"
-	CGO_ENABLED=0 go build  -C cmd/container-runtime -ldflags "-X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE} -X main.Publish=${DISABLE_DEBUG}" -o $(CURDIR)/bin/amd-container-runtime
+	CGO_ENABLED=0 go build  -C cmd/container-runtime -ldflags "-X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE} -X main.Publish=${DISABLE_DEBUG}" -o $(CURDIR)/bin/$(BIN_DIRECTORY_SUFFIX)/amd-container-runtime
 
 container-toolkit-ctk:
 	@echo "building amd container toolkit ctk"
-	CGO_ENABLED=0 go build  -C cmd/amd-ctk -ldflags "-X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE} -X main.Publish=${DISABLE_DEBUG}" -o $(CURDIR)/bin/amd-ctk
+	CGO_ENABLED=0 go build  -C cmd/amd-ctk -ldflags "-X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -X main.BuildDate=${BUILD_DATE} -X main.Publish=${DISABLE_DEBUG}" -o $(CURDIR)/bin/$(BIN_DIRECTORY_SUFFIX)/amd-ctk
