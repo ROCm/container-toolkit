@@ -45,7 +45,7 @@ DEBIAN_VERSION := "1.2.0"
 
 DEBIAN_CONTROL = ${TOP_DIR}/build/debian/DEBIAN/control
 BUILD_VER_ENV = ${DEBIAN_VERSION}~$(UBUNTU_VERSION_NUMBER)
-PKG_PATH := ${TOP_DIR}/build/debian/DEBIAN/usr/local/bin
+PKG_PATH := ${TOP_DIR}/build/debian/usr/local/bin
 
 ##################
 # Makefile targets

@@ -1,6 +1,21 @@
 # Container Toolkit
 Offers tools that streamline the use of AMD GPUs with containers.
 
+## Building From Source
+To build debian package, use the following command.
+
+```text
+make pkg-deb
+```
+
+To build rpm package, use the following command.
+
+```text
+make pkg-rpm
+```
+
+The packages will be generated in the **bin** folder.
+
 ## Docker Usage
 1. Configure Docker to use AMD container runtime.
 
