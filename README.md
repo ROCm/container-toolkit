@@ -76,3 +76,15 @@ Avoid specifying "--runtime=amd" option with the "docker run" command by setting
 ```text
 > amd-ctk runtime configure --runtime=docker --set-as-default
 ```
+
+5. Remove AMD container runtime as default runtime.
+
+```text
+> amd-ctk runtime configure --runtime=docker --unset-as-default
+```
+
+6. Remove AMD container runtime configuration in Docker. (undo the earlier configuration)
+
+``` text
+> amd-ctk runtime configure --runtime=docker --remove
+```

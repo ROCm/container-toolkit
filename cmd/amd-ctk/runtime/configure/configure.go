@@ -36,6 +36,8 @@ type configOptions struct {
 	runtime        string
 	configFilepath string
 	setAsDefault   bool
+	unSetAsDefault bool
+	remove         bool
 }
 
 func AddNewCommand() *cli.Command {
@@ -44,7 +46,7 @@ func AddNewCommand() *cli.Command {
 	// Add the configure subcommand
 	configureCmd := cli.Command{
 		Name:  "configure",
-		Usage: "Configure a ruuntime to the container engine",
+		Usage: "Configure a runtime to the container engine",
 		Before: func(c *cli.Context) error {
 			return validateConfigOptions(c, &cfgOptions)
 		},
@@ -60,6 +62,11 @@ func AddNewCommand() *cli.Command {
 			Value:       defaultRuntime,
 			Destination: &cfgOptions.runtime,
 		},
+		&cli.BoolFlag{
+			Name:        "remove",
+			Usage:       "remove from target runtimes",
+			Destination: &cfgOptions.remove,
+		},
 		&cli.StringFlag{
 			Name:        "config-path",
 			Usage:       "path to the configuration file for the target engine",
@@ -72,6 +79,12 @@ func AddNewCommand() *cli.Command {
 			Usage:       "set AMD runtime as the default",
 			Destination: &cfgOptions.setAsDefault,
 		},
+		&cli.BoolFlag{
+			Name:        "unset-amd-as-default",
+			Aliases:     []string{"unset-as-default"},
+			Usage:       "remove AMD runtime as the default",
+			Destination: &cfgOptions.unSetAsDefault,
+		},
 	}
 	return &configureCmd
 }
@@ -79,7 +92,15 @@ func AddNewCommand() *cli.Command {
 func validateConfigOptions(c *cli.Context, cfgOptions *configOptions) error {
 
 	if cfgOptions.runtime != "docker" {
-		return fmt.Errorf("Unsupported runtime engine: %v", cfgOptions.runtime)
+		return fmt.Errorf("unsupported runtime engine: %v", cfgOptions.runtime)
+	}
+	if cfgOptions.setAsDefault && cfgOptions.unSetAsDefault {
+		return fmt.Errorf("both set and unset as default cannot be used at the same time")
+	}
+	if cfgOptions.remove {
+		if cfgOptions.setAsDefault || cfgOptions.unSetAsDefault {
+			return fmt.Errorf("remove flag cannot be used along with any other flags")
+		}
 	}
 	return nil
 }
@@ -101,10 +122,22 @@ func performAction(c *cli.Context, cfgOptions *configOptions) error {
 		return fmt.Errorf("failed to init config for runtime engine: %v | err: %v", cfgOptions.runtime, err)
 	}
 
-	err = runtimeEngine.ConfigRuntime(defaultAmdRuntimeName, defaultAmdRuntimeExecutable, cfgOptions.setAsDefault)
+	if cfgOptions.unSetAsDefault {
+		err = runtimeEngine.UnsetDefaultRuntime()
 
-	if err != nil {
-		return fmt.Errorf("failed to update configuration: %v", err)
+		if err != nil {
+			return fmt.Errorf("failed to unset as default runtime %v", err)
+		}
+	} else {
+		if cfgOptions.remove {
+			err = runtimeEngine.RemoveRuntime(defaultAmdRuntimeName)
+		} else {
+			err = runtimeEngine.ConfigRuntime(defaultAmdRuntimeName, defaultAmdRuntimeExecutable, cfgOptions.setAsDefault)
+		}
+
+		if err != nil {
+			return fmt.Errorf("failed to update configuration: %v", err)
+		}
 	}
 
 	// Save the config
