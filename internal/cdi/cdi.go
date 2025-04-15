@@ -27,30 +27,57 @@ import (
 	"tags.cncf.io/container-device-interface/specs-go"
 )
 
+// Constants
 const (
+	// Default path for CDI spec
 	CDI_SPEC_PATH = "/var/run/cdi"
-	CDI_SPEC      = "amd.json"
+
+	// CDI spec file name
+	CDI_SPEC = "amd.json"
 )
 
+// GetGPUs is the type for functions that return the lists of all the GPU devices on the system
+type GetGPUs func() ([][]string, error)
+
+// GetGPU is the type for functions that return the device information for the given GPU
+type GetGPU func(string) (amdgpu.AMDGPU, error)
+
+// Interface for CDI package
 type Interface interface {
+	// GenerateSpec generates the CDI spec for all GPUs available on the host system
 	GenerateSpec() error
+
+	// WriteSpec writes the generated spec to disk
 	WriteSpec() error
+
+	// PrintSpec prints the generated CDI spec on the console
 	PrintSpec() error
 }
 
+// cdi_t implements the CDI interface
 type cdi_t struct {
+	// spec contains the generated CDI spec
 	spec specs.Spec
+
+	// specPath is the directory where CDI spec is written to
+	specPath string
+
+	// getGPUs is the function that returns the list of GPUs in the system
+	getGPUs GetGPUs
+
+	// getGPU is the function that returns the device info of the given GPU
+	getGPU GetGPU
 }
 
 func (cdi *cdi_t) GenerateSpec() error {
-	gpus, err := amdgpu.GetAMDGPUs()
+	gpus, err := cdi.getGPUs()
 	if err != nil {
 		logger.Log.Printf("Failed to get GPUs, Err: %v", err)
 		return err
 	}
 
 	getCDIDevNode := func(gpu string) (specs.DeviceNode, error) {
-		d, err := amdgpu.GetAMDGPU(gpu)
+		d, err := cdi.getGPU(gpu)
 		if err != nil {
 			logger.Log.Printf("Failed to get details of %v GPU, Err: %v", gpu, err)
 			return specs.DeviceNode{}, err
@@ -116,7 +143,7 @@ func (cdi *cdi_t) GenerateSpec() error {
 }
 
 func (cdi *cdi_t) WriteSpec() error {
-	f := CDI_SPEC_PATH + "/" + CDI_SPEC
+	f := cdi.specPath + "/" + CDI_SPEC
 
 	file, err := os.Create(f)
 	if err != nil {
@@ -163,7 +190,12 @@ func New() (Interface, error) {
 		Kind:    "amd.com/gpu",
 		Devices: []specs.Device{},
 	}
-	cdi := &cdi_t{spec: spec}
+	cdi := &cdi_t{
+		spec:     spec,
+		specPath: CDI_SPEC_PATH,
+		getGPUs:  amdgpu.GetAMDGPUs,
+		getGPU:   amdgpu.GetAMDGPU,
+	}
 
 	return cdi, nil
 }

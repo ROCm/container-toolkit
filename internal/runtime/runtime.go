@@ -88,7 +88,7 @@ func (rt *runtm) Run() error {
 		return err
 	}
 
-	// Write updated OCI spec
+	// Write updated CDI spec
 	err = rt.cdi.WriteSpec()
 	if err != nil {
 		logger.Log.Printf("Failed to write generated runtime CDI spec, Error: %v", err)
@@ -96,15 +96,6 @@ func (rt *runtm) Run() error {
 	}
 
 	if rt.oci.IsCreate() {
-		/*
-			// Add runtime OCI hook
-			err = rt.oci.UpdateSpec(oci.AddHook)
-			if err != nil {
-				logger.Log.Printf("Failed to add runtime OCI hook, Error: %v", err)
-				return err
-			}
-		*/
-
 		// Add GPUs
 		err = rt.oci.UpdateSpec(oci.AddGPUDevices)
 		if err != nil {

@@ -29,7 +29,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
-// constants
+// Constants
 const (
 	// Default path for AMD Container Runtime OCI hook
 	DEFAULT_HOOK_PATH = "/usr/bin/amd-container-runtime-hook"
@@ -49,6 +49,12 @@ type Interface interface {
 	// PrintSpec prints the current spec on the console
 	PrintSpec() error
 }
+
+// GetGPUs is the type for functions that return the lists of all the GPU devices on the system
+type GetGPUs func() ([][]string, error)
+
+// GetGPU is the type for functions that return the device information for the given GPU
+type GetGPU func(string) (amdgpu.AMDGPU, error)
 
 // oci_t implements the OCI interface
 type oci_t struct {
@@ -74,6 +80,12 @@ type oci_t struct {
 
 	// spec is the structure into which the input spec file is read into
 	spec *specs.Spec
+
+	// getGPUs is the function that returns the list of GPUs in the system
+	getGPUs GetGPUs
+
+	// getGPU is the function that returns the device info of the given GPU
+	getGPU GetGPU
 }
 
 // SpecUpdateOp specifies type of update operation on the OCI spec
@@ -178,6 +190,11 @@ func (oci *oci_t) getSpec() error {
 
 // addHook adds the AMD runtime OCI hook into the spec
 func (oci *oci_t) addHook() error {
+	if oci.spec == nil {
+		logger.Log.Printf("Failed to get spec")
+		return fmt.Errorf("Failed to get spec")
+	}
+
 	if oci.spec.Hooks == nil {
 		oci.spec.Hooks = &specs.Hooks{}
 	}
@@ -214,7 +231,7 @@ func (oci *oci_t) isAddNoGPUs() bool {
 func (oci *oci_t) addGPUDevices() error {
 	addGpus := func(gpus []string) error {
 		for _, gpu := range gpus {
-			amdGPU, err := amdgpu.GetAMDGPU(gpu)
+			amdGPU, err := oci.getGPU(gpu)
 			if err != nil {
 				return err
 			}
@@ -233,7 +250,7 @@ func (oci *oci_t) addGPUDevices() error {
 		return nil
 	}
 
-	devs, err := amdgpu.GetAMDGPUs()
+	devs, err := oci.getGPUs()
 	if err != nil {
 		return err
 	}
@@ -257,7 +274,7 @@ func (oci *oci_t) addGPUDevices() error {
 	}
 
 	if cnt > 0 {
-		kfd, err := amdgpu.GetAMDGPU("/dev/kfd")
+		kfd, err := oci.getGPU("/dev/kfd")
 		if err != nil {
 			return err
 		}
@@ -277,6 +294,11 @@ func (oci *oci_t) addGPUDevice(gpu amdgpu.AMDGPU) error {
 		FileMode: &gpu.FileMode,
 		GID:      &gpu.Gid,
 		UID:      &gpu.Uid,
+	}
+
+	if oci.spec == nil {
+		logger.Log.Printf("Failed to get spec")
+		return fmt.Errorf("Failed to get spec")
 	}
 
 	if oci.spec.Linux == nil {
@@ -308,6 +330,8 @@ func New(argv []string) (Interface, error) {
 	oci := &oci_t{
 		args:     argv,
 		hookPath: DEFAULT_HOOK_PATH,
+		getGPUs:  amdgpu.GetAMDGPUs,
+		getGPU:   amdgpu.GetAMDGPU,
 	}
 
 	oci.parseArgs()

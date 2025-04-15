@@ -1,50 +1,65 @@
 # Container Toolkit
 Offers tools that streamline the use of AMD GPUs with containers.
 
+## Building From Source
+To build debian package, use the following command.
+
+```text
+make pkg-deb
+```
+
+To build rpm package, use the following command.
+
+```text
+make pkg-rpm
+```
+
+The packages will be generated in the **bin** folder.
+
 ## Docker Usage
-### Configure Docker to use AMD container runtime.
+1. Configure Docker to use AMD container runtime.
 
 ``` text
 > amd-ctk runtime configure --runtime=docker
 ```
 
-### Specify the required GPUs. There are 3 ways to do this.
+2. Specify the required GPUs. There are 3 ways to do this.
 
-#### AMD_VISIBLE_DEVICES Environment Variable.
+     1. Using AMD_VISIBLE_DEVICES environment variable
 
-To use all available GPUs,
+          - To use all available GPUs,
 
-```text
-> docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/rocm-terminal rocm-smi
-```
+          ```text
+          > docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/rocm-terminal rocm-smi
+          ```
 
-To use a subset of available GPUs,
+          - To use a subset of available GPUs,
 
-```text
-> docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0,1,2 rocm/rocm-terminal rocm-smi
-```
+          ```text
+          > docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0,1,2 rocm/rocm-terminal rocm-smi
+          ```
 
-#### CDI Style
+     2. Using CDI style
 
-To use all available GPUs,
+          - To use all available GPUs,
 
-```text
-> docker run --rm --runtime=amd --device amd.com/gpu=all rocm/rocm-terminal rocm-smi
-```
+          ```text
+          > docker run --rm --runtime=amd --device amd.com/gpu=all rocm/rocm-terminal rocm-smi
+          ```
 
-To use a subset of available GPUs,
+          - To use a subset of available GPUs,
 
-```text
-> docker run --rm --runtime=amd --device amd.com/gpu=0 --device amd.com/gpu=1 rocm/rocm-terminal rocm-smi
-```
+          ```text
+          > docker run --rm --runtime=amd --device amd.com/gpu=0 --device amd.com/gpu=1 rocm/rocm-terminal rocm-smi
+          ```
 
-#### Explicit Paths
+     3. Using explicit paths
 
-```text
-> docker run --device /dev/kfd --device /dev/dri/renderD128 --device /dev/dri/renderD129 rocm/rocm-terminal rocm-smi
-```
+     ```text
+     > docker run --device /dev/kfd --device /dev/dri/renderD128 --device /dev/dri/renderD129 rocm/rocm-terminal rocm-smi
+     ```
 
-### List available GPUs.
+3. List available GPUs.
 
 ```text
 > amd-ctk gpu list
@@ -55,7 +70,7 @@ amd.com/gpu=0
   /dev/dri/renderD128
 ```
 
-### Make AMD container runtime default runtime.
+4. Make AMD container runtime default runtime.
 Avoid specifying "--runtime=amd" option with the "docker run" command by setting the AMD container runtime as the default for Docker.
 
 ```text
