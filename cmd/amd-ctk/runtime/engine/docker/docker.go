@@ -23,6 +23,12 @@ import (
 	"os"
 )
 
+const (
+	runtimesKey       = "runtimes"
+	defaultRuntimeKey = "default-runtime"
+	featuresKey       = "features"
+)
+
 type dockerConfig map[string]interface{}
 
 func New(path string) (*dockerConfig, error) {
@@ -69,23 +75,58 @@ func (d *dockerConfig) ConfigRuntime(name string, path string, isDefault bool) e
 
 	//check any existing "runtimes"
 	runtimes := map[string]interface{}{}
-	if _, exists := currentCfg["runtimes"]; exists {
-		runtimes = currentCfg["runtimes"].(map[string]interface{})
+	if _, exists := currentCfg[runtimesKey]; exists {
+		runtimes = currentCfg[runtimesKey].(map[string]interface{})
 	}
 
 	runtimes[name] = map[string]interface{}{
 		"path": path,
 		"args": []string{},
 	}
-	currentCfg["runtimes"] = runtimes
+	currentCfg[runtimesKey] = runtimes
 
 	// Enable CDI by default
-	currentCfg["features"] = map[string]interface{}{
+	currentCfg[featuresKey] = map[string]interface{}{
 		"cdi": true,
 	}
 
 	if isDefault {
-		currentCfg["default-runtime"] = name
+		currentCfg[defaultRuntimeKey] = name
+	}
+
+	*d = currentCfg
+	return nil
+}
+
+func (d *dockerConfig) UnsetDefaultRuntime() error {
+	if d == nil {
+		return fmt.Errorf("configuration is empty")
+	}
+
+	currentCfg := *d
+
+	delete(currentCfg, defaultRuntimeKey)
+
+	fmt.Println("Removed amd as the default runtime")
+	return nil
+}
+
+func (d *dockerConfig) RemoveRuntime(name string) error {
+	if d == nil {
+		return fmt.Errorf("configuration is empty")
+	}
+
+	currentCfg := *d
+
+	//check any existing "runtimes"
+	if _, exists := currentCfg[runtimesKey]; exists {
+		runtimes := currentCfg[runtimesKey].(map[string]interface{})
+		delete(runtimes, name)
+		delete(currentCfg, featuresKey)
+		delete(currentCfg, defaultRuntimeKey)
+		if len(runtimes) == 0 {
+			delete(currentCfg, runtimesKey)
+		}
 	}
 
 	*d = currentCfg
