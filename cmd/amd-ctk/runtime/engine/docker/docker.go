@@ -123,7 +123,13 @@ func (d *dockerConfig) RemoveRuntime(name string) error {
 		runtimes := currentCfg[runtimesKey].(map[string]interface{})
 		delete(runtimes, name)
 		delete(currentCfg, featuresKey)
-		delete(currentCfg, defaultRuntimeKey)
+		_, defExists := currentCfg[defaultRuntimeKey]
+		if defExists {
+			defCfg := currentCfg[defaultRuntimeKey].(string)
+			if defCfg == name {
+				delete(currentCfg, defaultRuntimeKey)
+			}
+		}
 		if len(runtimes) == 0 {
 			delete(currentCfg, runtimesKey)
 		}

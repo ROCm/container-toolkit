@@ -114,7 +114,22 @@ pkg-deb-clean:
 	rm -rf ${TOP_DIR}/deb/bin/*.deb
 
 pkg-deb: pkg-deb-clean
-	${MAKE} container-toolkit container-toolkit-ctk
+	docker run --rm -it --privileged \
+		--name ${CONTAINER_NAME} \
+		-e "USER_NAME=$(shell whoami)" \
+		-e "USER_UID=$(shell id -u)" \
+		-e "USER_GID=$(shell id -g)" \
+		-e "GIT_COMMIT=${GIT_COMMIT}" \
+		-e "GIT_VERSION=${GIT_VERSION}" \
+		-e "BUILD_DATE=${BUILD_DATE}" \
+		-v $(CURDIR):$(CONTAINER_WORKDIR) \
+		-v $(HOME)/.ssh:/home/$(shell whoami)/.ssh \
+		-w $(CONTAINER_WORKDIR) \
+		$(BUILD_CONTAINER) \
+		bash -c "cd $(CONTAINER_WORKDIR) && source ~/.bashrc && git config --global --add safe.directory $(CONTAINER_WORKDIR) && make deb-pkg-build"
+
+.PHONY: deb-pkg-build
+deb-pkg-build: all
 	@echo "Building debian for $(BUILD_VER_ENV)"
 
 	# copy and strip files
@@ -175,6 +190,10 @@ fmt: ## Run go fmt against code.
 .PHONY: vet
 vet: ## Run go vet against code.
 	go vet ./...
+
+.PHONY: test
+test: ## Run go test against code.
+	AMD_CTK_PATH=$(CURDIR)/bin/$(BIN_DIRECTORY_SUFFIX)/amd-ctk go test -v ./...
 
 GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
 .PHONY: golangci-lint

@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -19,11 +18,11 @@ const (
 	setUnsetDefErrMsg  = "both set and unset as default cannot be used at the same time"
 )
 
-var cliPath = flag.String("cliPath", "", "path to amd-ctk executable")
+var cliPath = os.Getenv("AMD_CTK_PATH")
 
 // Helper function to run the CLI command and return the output/error
 func runCLI(args ...string) (string, string, error) {
-	cmd := exec.Command(*cliPath, args...)
+	cmd := exec.Command(cliPath, args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -32,11 +31,11 @@ func runCLI(args ...string) (string, string, error) {
 }
 
 func setup(t *testing.T) {
-	if *cliPath == "" {
-		t.Fatalf("cliPath is not set, usage: go test -v -args cliPath=<pathto amd-ctk executable")
+	if cliPath == "" {
+		t.Fatalf("cliPath is not set, usage: export AMD_CTK_PATH=<path to amd-ctk executable>; go test -v")
 	}
 
-	if _, err := os.Stat(*cliPath); os.IsNotExist(err) {
+	if _, err := os.Stat(cliPath); os.IsNotExist(err) {
 		t.Fatalf("amd-ctk is not built, please run 'make container-toolkit-ctk'")
 	}
 }
@@ -109,7 +108,7 @@ func cleanUp() {
 }
 
 func TestConfigureRunTimeAddRemove(t *testing.T) {
-	fmt.Printf("amd-ctk path: %v\n", *cliPath)
+	fmt.Printf("amd-ctk path: %v\n", cliPath)
 	setup(t)
 	cfgPathArg := "--config-path=" + configFile
 	// add amd to runtimes
@@ -133,7 +132,7 @@ func TestConfigureRunTimeAddRemove(t *testing.T) {
 }
 
 func TestConfigureRunTimeDefault(t *testing.T) {
-	fmt.Printf("amd-ctk path: %v\n", *cliPath)
+	fmt.Printf("amd-ctk path: %v\n", cliPath)
 	setup(t)
 	cfgPathArg := "--config-path=" + configFile
 	// add amd to runtimes as default
@@ -176,7 +175,7 @@ func TestConfigureRunTimeDefault(t *testing.T) {
 }
 
 func TestConfigureRuntimeMultiFlags(t *testing.T) {
-	fmt.Printf("amd-ctk path: %v\n", *cliPath)
+	fmt.Printf("amd-ctk path: %v\n", cliPath)
 	setup(t)
 	cfgPathArg := "--config-path=" + configFile
 	// add amd to runtimes as default along with remove flag
