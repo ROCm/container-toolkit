@@ -99,7 +99,7 @@ func validateConfigOptions(c *cli.Context, cfgOptions *configOptions) error {
 	}
 	if cfgOptions.remove {
 		if cfgOptions.setAsDefault || cfgOptions.unSetAsDefault {
-			return fmt.Errorf("remove flag cannot be used along with any other flags")
+			return fmt.Errorf("remove flag cannot be used along with set-as-default flag")
 		}
 	}
 	return nil
