@@ -37,6 +37,9 @@ const (
 
 // Interface for OCI package
 type Interface interface {
+	// HasHelpOption returns true if the passed arguments include the help option
+	HasHelpOption() bool
+
 	// IsCreate returns true if the container is getting created now
 	IsCreate() bool
 
@@ -65,6 +68,9 @@ type oci_t struct {
 	// ENV variable. The devices are specified by their indices and stored in
 	// the ascending order.
 	amdDevices []int
+
+	// hasHelpOption specifies if the arguments passed include the help option
+	hasHelpOption bool
 
 	// isCreate specifies if the container is getting created now
 	isCreate bool
@@ -106,6 +112,13 @@ func (oci *oci_t) parseArgs() {
 		return false
 	}
 
+	isHelpOption := func(arg string) bool {
+		if arg == "-h" || arg == "-help" || arg == "--h" || arg == "--help" {
+			return true
+		}
+		return false
+	}
+
 	args := oci.args
 	for i := 0; i < len(args)-1; i++ {
 		parts := strings.SplitN(args[i], "=", 2)
@@ -116,6 +129,8 @@ func (oci *oci_t) parseArgs() {
 				oci.origSpecPath = args[i+1]
 				i++
 			}
+		} else if isHelpOption(args[i]) {
+			oci.hasHelpOption = true
 		} else if args[i] == "create" {
 			oci.isCreate = true
 		}
@@ -343,6 +358,11 @@ func New(argv []string) (Interface, error) {
 	oci.getAMDEnv()
 
 	return oci, nil
+}
+
+// HasHelpOption returns true if the arguments passed include the help option
+func (oci *oci_t) HasHelpOption() bool {
+	return oci.hasHelpOption
 }
 
 // IsCreate returns true if the container is getting created now

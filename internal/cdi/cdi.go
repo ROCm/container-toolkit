@@ -176,7 +176,7 @@ func (cdi *cdi_t) PrintSpec() error {
 	return nil
 }
 
-func New() (Interface, error) {
+func New(specFile string) (Interface, error) {
 	if _, err := os.Stat(CDI_SPEC_PATH); os.IsNotExist(err) {
 		err := os.Mkdir(CDI_SPEC_PATH, os.ModeDir)
 		if err != nil {
@@ -190,9 +190,14 @@ func New() (Interface, error) {
 		Kind:    "amd.com/gpu",
 		Devices: []specs.Device{},
 	}
+
+	if specFile == "" {
+		specFile = CDI_SPEC_PATH
+	}
+
 	cdi := &cdi_t{
 		spec:     spec,
-		specPath: CDI_SPEC_PATH,
+		specPath: specFile,
 		getGPUs:  amdgpu.GetAMDGPUs,
 		getGPU:   amdgpu.GetAMDGPU,
 	}

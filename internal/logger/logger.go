@@ -56,7 +56,7 @@ func initLogger(console bool) {
 
 		outfile, err := os.OpenFile(filepath.Join(logdir, logfile),
 			os.O_CREATE|os.O_APPEND|os.O_WRONLY,
-			0644)
+			0666)
 		if err != nil {
 			return
 		}

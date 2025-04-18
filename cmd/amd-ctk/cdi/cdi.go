@@ -17,6 +17,7 @@
 package cdi
 
 import (
+	"github.com/ROCm/container-toolkit/cmd/amd-ctk/cdi/generate"
 	"github.com/ROCm/container-toolkit/cmd/amd-ctk/cdi/list"
 	"github.com/urfave/cli/v2"
 )
@@ -24,12 +25,13 @@ import (
 func AddNewCommand() *cli.Command {
 	// Add the cdi command
 	cdiCmd := cli.Command{
-		Name:  "gpu",
+		Name:  "cdi",
 		Usage: "Container Device interface related commands",
 	}
 
 	cdiCmd.Subcommands = []*cli.Command{
 		list.AddNewCommand(),
+		generate.AddNewCommand(),
 	}
 
 	return &cdiCmd
