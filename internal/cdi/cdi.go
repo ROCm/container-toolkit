@@ -29,7 +29,7 @@ import (
 
 // Constants
 const (
-	// Default path for CDI spec
+	// Default path and name for CDI spec
 	CDI_SPEC_PATH = "/var/run/cdi"
 
 	// CDI spec file name
@@ -176,11 +176,15 @@ func (cdi *cdi_t) PrintSpec() error {
 	return nil
 }
 
-func New(specFile string) (Interface, error) {
-	if _, err := os.Stat(CDI_SPEC_PATH); os.IsNotExist(err) {
-		err := os.Mkdir(CDI_SPEC_PATH, os.ModeDir)
+func New(sp string) (Interface, error) {
+	if sp == "" {
+		sp = CDI_SPEC_PATH
+	}
+
+	if _, err := os.Stat(sp); os.IsNotExist(err) {
+		err := os.Mkdir(sp, os.ModeDir)
 		if err != nil {
-			logger.Log.Printf("Failed to create %v, Err: %v", CDI_SPEC_PATH, err)
+			logger.Log.Printf("Failed to create %v, Err: %v", sp, err)
 			return nil, err
 		}
 	}
@@ -191,13 +195,9 @@ func New(specFile string) (Interface, error) {
 		Devices: []specs.Device{},
 	}
 
-	if specFile == "" {
-		specFile = CDI_SPEC_PATH
-	}
-
 	cdi := &cdi_t{
 		spec:     spec,
-		specPath: specFile,
+		specPath: sp,
 		getGPUs:  amdgpu.GetAMDGPUs,
 		getGPU:   amdgpu.GetAMDGPU,
 	}

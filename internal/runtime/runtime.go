@@ -82,13 +82,6 @@ func (rt *runtm) Run() error {
 		return err
 	}
 
-	// Print updated CDI spec
-	err = rt.cdi.PrintSpec()
-	if err != nil {
-		logger.Log.Printf("Failed to print runtime CDI spec, Error: %v", err)
-		return err
-	}
-
 	// Write updated CDI spec
 	err = rt.cdi.WriteSpec()
 	if err != nil {
