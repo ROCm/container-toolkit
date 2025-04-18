@@ -58,9 +58,9 @@ The packages will be generated in the ```bin``` folder.
           ```text
           > docker run --rm --device amd.com/gpu=0 --device amd.com/gpu=1 rocm/rocm-terminal rocm-smi
           ```
-          - Note that once the CDI spec, ```/etc/cdi/amd.json``` is available, you don't need ```runtime=amd``` in the docker run command.
+          - Note that once the CDI spec, ```/etc/cdi/amd.json``` is available, ```runtime=amd``` is not required in the docker run command.
 
-     3. Using explicit paths. Note that you don't need ```runtime=amd``` here.
+     3. Using explicit paths. Note that ```runtime=amd``` is not required here.
 
      ```text
      > docker run --device /dev/kfd --device /dev/dri/renderD128 --device /dev/dri/renderD129 rocm/rocm-terminal rocm-smi
@@ -90,7 +90,7 @@ Avoid specifying ```--runtime=amd``` option with the ```docker run``` command by
 > amd-ctk runtime configure --runtime=docker --unset-as-default
 ```
 
-6. Remove AMD container runtime configuration in Docker. (undo the earlier configuration)
+6. Remove AMD container runtime configuration in Docker (undo the earlier configuration).
 
 ``` text
 > amd-ctk runtime configure --runtime=docker --remove
