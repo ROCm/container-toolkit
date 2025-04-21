@@ -17,6 +17,7 @@
 package runtime
 
 import (
+	"fmt"
 	"os"
 	"syscall"
 
@@ -61,7 +62,7 @@ func New(args []string) (Interface, error) {
 		return nil, err
 	}
 
-	rt.cdi, err = cdi.New()
+	rt.cdi, err = cdi.New("")
 	if err != nil {
 		logger.Log.Printf("Failed to create CDI handler, Error: %v", err)
 		return nil, err
@@ -81,18 +82,15 @@ func (rt *runtm) Run() error {
 		return err
 	}
 
-	// Print updated CDI spec
-	err = rt.cdi.PrintSpec()
-	if err != nil {
-		logger.Log.Printf("Failed to print runtime CDI spec, Error: %v", err)
-		return err
-	}
-
 	// Write updated CDI spec
 	err = rt.cdi.WriteSpec()
 	if err != nil {
 		logger.Log.Printf("Failed to write generated runtime CDI spec, Error: %v", err)
 		return err
+	}
+
+	if rt.oci.HasHelpOption() {
+		fmt.Printf("\nAMD Container Runtime is a wrapper over runc. Below is the help for runc.\n\n")
 	}
 
 	if rt.oci.IsCreate() {

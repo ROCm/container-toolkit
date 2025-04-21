@@ -88,6 +88,7 @@ func TestParseArgs(t *testing.T) {
 	oci.parseArgs()
 	Assert(t, len(oci.args) > 0, fmt.Sprintf("empty args, %v", oci.args))
 	Assert(t, oci.IsCreate(), "isCreate is False")
+	Assert(t, !oci.HasHelpOption(), "hasHelpOption is True")
 	Assert(t, oci.origSpecPath != "", "empty origSpecPath")
 	Assert(t, oci.updatedSpecPath == oci.origSpecPath, fmt.Sprintf("updateSpecPath %v is different from origSpecPath %v", oci.updatedSpecPath, oci.origSpecPath))
 
