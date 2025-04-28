@@ -20,5 +20,5 @@ type Interface interface {
 	ConfigRuntime(string, string, bool) error
 	UnsetDefaultRuntime() error
 	Update(string) (int, error)
-	RemoveRuntime(string) error
+	RemoveRuntime(string) (error, bool)
 }

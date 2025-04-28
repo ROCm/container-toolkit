@@ -109,6 +109,7 @@ func performAction(c *cli.Context, cfgOptions *configOptions) error {
 	var (
 		err           error
 		runtimeEngine engine.Interface
+		doNotUpdate   bool
 	)
 
 	switch cfgOptions.runtime {
@@ -130,7 +131,7 @@ func performAction(c *cli.Context, cfgOptions *configOptions) error {
 		}
 	} else {
 		if cfgOptions.remove {
-			err = runtimeEngine.RemoveRuntime(defaultAmdRuntimeName)
+			err, doNotUpdate = runtimeEngine.RemoveRuntime(defaultAmdRuntimeName)
 		} else {
 			err = runtimeEngine.ConfigRuntime(defaultAmdRuntimeName, defaultAmdRuntimeExecutable, cfgOptions.setAsDefault)
 		}
@@ -141,14 +142,16 @@ func performAction(c *cli.Context, cfgOptions *configOptions) error {
 	}
 
 	// Save the config
-	num, err := runtimeEngine.Update(cfgOptions.configFilepath)
-	if err != nil {
-		return fmt.Errorf("failed to save the config: %v", err)
-	}
+	if !doNotUpdate {
+		num, err := runtimeEngine.Update(cfgOptions.configFilepath)
+		if err != nil {
+			return fmt.Errorf("failed to save the config: %v", err)
+		}
 
-	if num != 0 {
-		fmt.Printf("Updated the config file: %v\n", cfgOptions.configFilepath)
+		if num != 0 {
+			fmt.Printf("Updated the config file: %v\n", cfgOptions.configFilepath)
+		}
+		fmt.Printf("Please restart %v daemon\n", cfgOptions.runtime)
 	}
-	fmt.Printf("Please restart %v daemon\n", cfgOptions.runtime)
 	return nil
 }

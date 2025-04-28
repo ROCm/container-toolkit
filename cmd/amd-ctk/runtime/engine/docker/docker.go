@@ -111,11 +111,15 @@ func (d *dockerConfig) UnsetDefaultRuntime() error {
 	return nil
 }
 
-func (d *dockerConfig) RemoveRuntime(name string) error {
+// RemoveRuntime removes the amd runtime configuration and returns
+// an error and a do not update flag in case daemon.json doesn't need
+// to be updated
+func (d *dockerConfig) RemoveRuntime(name string) (error, bool) {
 	if d == nil {
-		return fmt.Errorf("configuration is empty")
+		return fmt.Errorf("configuration is empty"), true
 	}
 
+	updated := false
 	currentCfg := *d
 
 	//check any existing "runtimes"
@@ -133,10 +137,14 @@ func (d *dockerConfig) RemoveRuntime(name string) error {
 		if len(runtimes) == 0 {
 			delete(currentCfg, runtimesKey)
 		}
+		updated = true
 	}
 
-	*d = currentCfg
-	return nil
+	if updated {
+		*d = currentCfg
+		return nil, false
+	}
+	return nil, true
 }
 
 func (d dockerConfig) Update(path string) (int, error) {
