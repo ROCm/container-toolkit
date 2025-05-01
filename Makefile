@@ -22,7 +22,7 @@ CUR_USER:=$(shell whoami)
 CUR_TIME:=$(shell date +%Y-%m-%d_%H.%M.%S)
 CONTAINER_NAME:=${CUR_USER}_container_toolkit-bld
 RPM_CONTAINER_NAME:=${CUR_USER}_container_toolkit-rpm-bld
-CONTAINER_WORKDIR := /usr/src/github.com/ROCm/container-toolkit
+CONTAINER_WORKDIR ?= /usr/src/github.com/ROCm/container-toolkit
 
 TOP_DIR := $(PWD)
 GOINSECURE='github.com, google.golang.org, golang.org'
@@ -148,7 +148,7 @@ deb-pkg-build: all
 
 .PHONY: rpm-pkg-build
 rpm-pkg-build: all
-	rpmbuild -bb $(CURDIR)/build/rpmbuild.spec
+	CONTAINER_WORKDIR=$(CONTAINER_WORKDIR) rpmbuild -bb $(CURDIR)/build/rpmbuild.spec
 	cp $(HOME)/rpmbuild/RPMS/x86_64/*.rpm $(CURDIR)/bin/
 
 .PHONY: pkg-rpm pkg-rpm-clean
