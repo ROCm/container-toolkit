@@ -101,12 +101,14 @@ func (rt *runtm) Run() error {
 			return err
 		}
 
-		// Print updated OCI spec
-		err = rt.oci.PrintSpec()
-		if err != nil {
-			logger.Log.Printf("Failed to print runtime OCI spec, Error: %v", err)
-			return err
-		}
+		/*
+			// Print updated OCI spec
+			err = rt.oci.PrintSpec()
+			if err != nil {
+				logger.Log.Printf("Failed to print runtime OCI spec, Error: %v", err)
+				return err
+			}
+		*/
 
 		// Write updated OCI spec
 		err = rt.oci.WriteSpec()
