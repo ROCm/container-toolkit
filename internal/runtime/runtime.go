@@ -76,20 +76,6 @@ func New(args []string) (Interface, error) {
 func (rt *runtm) Run() error {
 	var err error
 
-	// Generate CDI spec
-	err = rt.cdi.GenerateSpec()
-	if err != nil {
-		logger.Log.Printf("Failed to generate CDI spec, Error: %v", err)
-		return err
-	}
-
-	// Write updated CDI spec
-	err = rt.cdi.WriteSpec()
-	if err != nil {
-		logger.Log.Printf("Failed to write generated runtime CDI spec, Error: %v", err)
-		return err
-	}
-
 	if rt.oci.HasHelpOption() {
 		fmt.Printf("\nAMD Container Runtime is a wrapper over runc. Below is the help for runc.\n\n")
 	}

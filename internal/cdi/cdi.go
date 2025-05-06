@@ -182,7 +182,7 @@ func New(sp string) (Interface, error) {
 	}
 
 	if _, err := os.Stat(sp); os.IsNotExist(err) {
-		err := os.Mkdir(sp, os.ModeDir)
+		err := os.Mkdir(sp, 0755)
 		if err != nil {
 			logger.Log.Printf("Failed to create %v, Err: %v", sp, err)
 			return nil, err

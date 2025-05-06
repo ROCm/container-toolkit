@@ -91,6 +91,10 @@ func AddNewCommand() *cli.Command {
 
 func validateConfigOptions(c *cli.Context, cfgOptions *configOptions) error {
 
+	curUser, err := user.Current()
+	if err != nil || curUser.Uid != "0" {
+		return fmt.Errorf("Permission denied: Not running as root")
+	}
 	if cfgOptions.runtime != "docker" {
 		return fmt.Errorf("unsupported runtime engine: %v", cfgOptions.runtime)
 	}
