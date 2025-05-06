@@ -1,18 +1,18 @@
 Quick Start Guide
 =================
 
-This section provides a step-by-step guide to install the AMD Container Toolkit and configure your system for Docker-based GPU container workloads.
+This section provides a step-by-step guide to install the AMD Container Toolkit and configure your system for Docker-based GPU container workloads. The steps below are tailored for ease of use, production-readiness, and ensuring compatibility across AMD Instinct GPU-enabled systems.
 
 Step 1: Install System Prerequisites
 ------------------------------------
-- Update your system and install necessary packages:
+- Update your system and install necessary packages to ensure kernel compatibility:
 
 .. code-block:: bash
 
    sudo apt update
    sudo apt install "linux-headers-$(uname -r)" "linux-modules-extra-$(uname -r)"
 
-- Add your user to necessary groups:
+- Add your user to the required groups for GPU device access:
 
 .. code-block:: bash
 
@@ -87,14 +87,26 @@ Step 4: Install Toolkit and Docker
    #Install Docker (if not already installed)
    sudo apt install docker.io
 
+.. important::
+
+   Please note — the **Docker version must be 25 or above**. The Container Device Interface (CDI) format, used by modern container runtimes to abstract and expose GPUs, is not supported in older Docker versions. Without Docker 25+, CDI functionality such as dynamic device enumeration and CDI-style run commands will not work as intended.
+
+   You can verify your Docker version using:
+
+   .. code-block:: bash
+
+      docker --version
+
+If you are on an earlier Docker version, please upgrade to at least Docker 25 before proceeding with toolkit configuration and GPU-based workloads.
+
 Step 5: Configure Docker Runtime for AMD GPUs
 ---------------------------------------------
 
-- Configure AMD runtime for Docker:
+- Register the AMD container runtime and restart the Docker daemon:
 
 .. code-block:: bash
 
    sudo amd-ctk configure runtime
    sudo systemctl restart docker
 
-Your system is now ready to run AMD GPU-enabled containers!
+This configuration ensures that Docker is aware of the AMD container runtime and is able to support GPU-accelerated workloads using AMD Instinct devices.
