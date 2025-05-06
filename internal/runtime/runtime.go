@@ -120,14 +120,14 @@ func (rt *runtm) Run() error {
 	}
 
 	// Call runc with updated oci spec
-	_, err = exec.LookPath(RUNC)
+	runc, err := exec.LookPath(RUNC)
 	if err != nil {
 		logger.Log.Printf("Unable to find runc in PATH, Error: %v", err)
 		return err
 	}
 
 	logger.Log.Printf("Running runc with args: %v, environ: %v", rt.args, os.Environ())
-	err = syscall.Exec(RUNC, rt.args, os.Environ())
+	err = syscall.Exec(runc, rt.args, os.Environ())
 	if err != nil {
 		logger.Log.Printf("Failed to call runc, Error: %v", err)
 		return err
