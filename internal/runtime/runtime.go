@@ -19,6 +19,7 @@ package runtime
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"syscall"
 
 	"github.com/ROCm/container-toolkit/internal/cdi"
@@ -29,7 +30,7 @@ import (
 // Constants
 const (
 	// runc executable
-	RUNC = "/usr/bin/runc"
+	RUNC = "runc"
 )
 
 // Interface for runtime package
@@ -119,6 +120,12 @@ func (rt *runtm) Run() error {
 	}
 
 	// Call runc with updated oci spec
+	_, err = exec.LookPath(RUNC)
+	if err != nil {
+		logger.Log.Printf("Unable to find runc in PATH, Error: %v", err)
+		return err
+	}
+
 	logger.Log.Printf("Running runc with args: %v, environ: %v", rt.args, os.Environ())
 	err = syscall.Exec(RUNC, rt.args, os.Environ())
 	if err != nil {

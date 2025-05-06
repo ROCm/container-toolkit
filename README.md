@@ -105,7 +105,7 @@ For the most up-to-date information on installing dkms drivers please see the [R
     > sudo apt install amd-container-toolkit
     ```
 
-2. Install docker.
+2. Install docker version 25 or above.
 
 ## Debian Package Install
 
