@@ -24,9 +24,9 @@ RUN curl -k -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyri
 
 RUN echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable' > /etc/apt/sources.list.d/docker.list
 
-RUN apt-get update && apt-get install -y \
-  docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \
-  git && apt-get clean && rm -rf /var/lib/apt/lists/*
+#RUN apt-get update && apt-get install -y \
+#  docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \
+#  git && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Download go1.23
 RUN wget https://go.dev/dl/go1.23.4.linux-amd64.tar.gz && \

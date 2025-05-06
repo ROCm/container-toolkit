@@ -106,7 +106,7 @@ func TestGetAMDEnv(t *testing.T) {
 	Assert(t, err == nil, fmt.Sprintf("failed to get OCI spec, Err: %v", err))
 
 	oci.getAMDEnv()
-	expectedDevs := []int{0, 1, 2}
+	expectedDevs := []int{0, 1}
 	Assert(t, slices.Equal(oci.amdDevices, expectedDevs), fmt.Sprintf("expected amdDevices %v, got %v", expectedDevs, oci.amdDevices))
 	Assert(t, !oci.isAddAllGPUs(), "isAddAllGPUs() returned True")
 	Assert(t, !oci.isAddNoGPUs(), "isAddNoGPUs() returned True")

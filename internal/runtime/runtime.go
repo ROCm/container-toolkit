@@ -19,6 +19,7 @@ package runtime
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"syscall"
 
 	"github.com/ROCm/container-toolkit/internal/cdi"
@@ -29,7 +30,7 @@ import (
 // Constants
 const (
 	// runc executable
-	RUNC = "/usr/bin/runc"
+	RUNC = "runc"
 )
 
 // Interface for runtime package
@@ -101,12 +102,14 @@ func (rt *runtm) Run() error {
 			return err
 		}
 
-		// Print updated OCI spec
-		err = rt.oci.PrintSpec()
-		if err != nil {
-			logger.Log.Printf("Failed to print runtime OCI spec, Error: %v", err)
-			return err
-		}
+		/*
+			// Print updated OCI spec
+			err = rt.oci.PrintSpec()
+			if err != nil {
+				logger.Log.Printf("Failed to print runtime OCI spec, Error: %v", err)
+				return err
+			}
+		*/
 
 		// Write updated OCI spec
 		err = rt.oci.WriteSpec()
@@ -117,8 +120,14 @@ func (rt *runtm) Run() error {
 	}
 
 	// Call runc with updated oci spec
+	runc, err := exec.LookPath(RUNC)
+	if err != nil {
+		logger.Log.Printf("Unable to find runc in PATH, Error: %v", err)
+		return err
+	}
+
 	logger.Log.Printf("Running runc with args: %v, environ: %v", rt.args, os.Environ())
-	err = syscall.Exec(RUNC, rt.args, os.Environ())
+	err = syscall.Exec(runc, rt.args, os.Environ())
 	if err != nil {
 		logger.Log.Printf("Failed to call runc, Error: %v", err)
 		return err

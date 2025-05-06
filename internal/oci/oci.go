@@ -163,12 +163,42 @@ func (oci *oci_t) getAMDEnv() {
 		return dl
 	}
 
+	validateGPUs := func(gpus []int) []int {
+		devs, err := oci.getGPUs()
+		if err != nil {
+			return []int{}
+		}
+
+		if len(devs) == 0 {
+			fmt.Printf("No GPUs available\n")
+			return []int{}
+		}
+
+		if len(gpus) == 1 && gpus[0] == -1 {
+			// all GPUs
+			return gpus
+		}
+
+		for i, gpu := range gpus {
+			if gpu >= len(devs) {
+				fmt.Printf("Ignoring %v GPUs as they are not available\n", gpus[i:])
+				return gpus[:i]
+			}
+		}
+
+		return gpus
+	}
+
 	if oci.spec != nil && oci.spec.Process != nil {
 		envs := oci.spec.Process.Env
+		gpus := []int{}
 		for _, env := range envs {
 			pts := strings.SplitN(env, "=", 2)
 			if len(pts) == 2 && pts[0] == "AMD_VISIBLE_DEVICES" {
-				oci.amdDevices = getDevs(pts[1])
+				gpus = getDevs(pts[1])
+				if len(gpus) > 0 {
+					oci.amdDevices = validateGPUs(gpus)
+				}
 			}
 		}
 	}
@@ -270,21 +300,16 @@ func (oci *oci_t) addGPUDevices() error {
 		return err
 	}
 
-	j, cnt := 0, 0
-	for i, gpus := range devs {
-		if oci.isAddAllGPUs() {
+	cnt := 0
+	if oci.isAddAllGPUs() {
+		for _, gpus := range devs {
 			addGpus(gpus)
 			cnt++
-		} else if oci.amdDevices[j] < len(gpus) && j == i {
-			addGpus(gpus)
+		}
+	} else {
+		for _, idx := range oci.amdDevices {
+			addGpus(devs[idx])
 			cnt++
-			j++
-
-			if j == len(oci.amdDevices) {
-				break
-			}
-		} else if oci.amdDevices[j] >= len(gpus) {
-			break
 		}
 	}
 
