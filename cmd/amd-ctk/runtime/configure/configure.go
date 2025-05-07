@@ -18,6 +18,7 @@ package configure
 
 import (
 	"fmt"
+	"os/user"
 
 	"github.com/ROCm/container-toolkit/cmd/amd-ctk/runtime/engine"
 	"github.com/ROCm/container-toolkit/cmd/amd-ctk/runtime/engine/docker"
