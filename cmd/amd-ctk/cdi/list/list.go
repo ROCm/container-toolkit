@@ -18,6 +18,7 @@ package list
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/ROCm/container-toolkit/internal/amdgpu"
 	"github.com/urfave/cli/v2"
@@ -53,8 +54,9 @@ func performAction(c *cli.Context) error {
 		}
 		fmt.Printf("amd.com/gpu=%v\n", cnt)
 		for _, dd := range dev {
-			fmt.Printf("  %s\n", dd)
-
+			if !strings.HasPrefix(dd, "/dev/dri/card") {
+				fmt.Printf("  %s\n", dd)
+			}
 		}
 	}
 	return nil
