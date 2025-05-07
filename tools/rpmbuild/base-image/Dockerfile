@@ -3,15 +3,8 @@ ARG VERSION=latest
 
 FROM ${FROM}:${VERSION}
 
-RUN yum install -y gcc gcc-c++ \
-    libtool libtool-ltdl \
-    make cmake \
-    git \
-    pkgconfig \
-    sudo \
-    automake autoconf \
-    wget \
-    yum-utils rpm-build && \
+RUN yum update -y && \
+    yum install -y make git rpm-build wget && \
     yum clean all
 
 # Remove old version of go

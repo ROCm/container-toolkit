@@ -10,23 +10,8 @@ ENV LC_ALL=en_US.UTF-8
 # Remove old version of go
 RUN rm -rf /usr/local/go
 
-RUN apt-get update && apt-get install -y wget protobuf-compiler \
-    curl locales ca-certificates build-essential git vim \
-    net-tools sudo cmake build-essential && \
-    install -m 0755 -d /etc/apt/keyrings && \
+RUN apt-get update && apt-get install -y wget git make && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
-
-RUN localedef -i en_US -f UTF-8 en_US.UTF-8
-
-# Download docker
-RUN curl -k -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc && \
-    chmod a+r /etc/apt/keyrings/docker.asc
-
-RUN echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable' > /etc/apt/sources.list.d/docker.list
-
-#RUN apt-get update && apt-get install -y \
-#  docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \
-#  git && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Download go1.23
 RUN wget https://go.dev/dl/go1.23.4.linux-amd64.tar.gz && \
