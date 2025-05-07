@@ -18,6 +18,7 @@ package configure
 
 import (
 	"fmt"
+	"os/user"
 
 	"github.com/ROCm/container-toolkit/cmd/amd-ctk/runtime/engine"
 	"github.com/ROCm/container-toolkit/cmd/amd-ctk/runtime/engine/docker"
@@ -91,6 +92,10 @@ func AddNewCommand() *cli.Command {
 
 func validateConfigOptions(c *cli.Context, cfgOptions *configOptions) error {
 
+	curUser, err := user.Current()
+	if err != nil || curUser.Uid != "0" {
+		return fmt.Errorf("Permission denied: Not running as root")
+	}
 	if cfgOptions.runtime != "docker" {
 		return fmt.Errorf("unsupported runtime engine: %v", cfgOptions.runtime)
 	}
