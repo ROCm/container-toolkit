@@ -5,12 +5,11 @@ This section provides a step-by-step guide to install the AMD Container Toolkit 
 
 Step 1: Install System Prerequisites
 ------------------------------------
-- Update your system and install necessary packages to ensure kernel compatibility:
+- Update your system:
 
 .. code-block:: bash
 
    sudo apt update
-   sudo apt install "linux-headers-$(uname -r)" "linux-modules-extra-$(uname -r)"
 
 - Add your user to the required groups for GPU device access:
 

@@ -21,7 +21,7 @@ Run ROCm-enabled TensorFlow:
 
 .. code-block:: bash
 
-   docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0 tensorflow/tensorflow:rocm-latest
+   sudo docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0 tensorflow/tensorflow:rocm-latest
 
 2. PyTorch
 -----------
@@ -30,7 +30,7 @@ Use ROCm-enabled PyTorch containers:
 
 .. code-block:: bash
 
-   docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/pytorch:latest
+   sudo docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/pytorch:latest
 
 3.Triton Inference Server
 -------------------------

@@ -85,14 +85,14 @@ To use AMD GPUs with Docker:
 
   .. code-block:: bash
 
-     docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/rocm-terminal rocm-smi
+     sudo docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/rocm-terminal rocm-smi
 
 - CDI style:
 
   .. code-block:: bash
 
      amd-ctk cdi generate --output=/etc/cdi/amd.json
-     docker run --rm --device amd.com/gpu=all rocm/rocm-terminal rocm-smi
+     sudo docker run --rm --device amd.com/gpu=all rocm/rocm-terminal rocm-smi
 
 Device Discovery
 ----------------
