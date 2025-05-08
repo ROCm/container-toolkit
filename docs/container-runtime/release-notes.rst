@@ -9,7 +9,7 @@ The AMD Container Toolkit provides seamless GPU acceleration for containerized a
 Versioning Information
 ----------------------
 
-Current Version: **1.2.0**
+Current Version: **1.0.0**
 
 - ROCm Compatibility: **6.3.x**
 - Docker Compatibility: **25.0+**
@@ -64,7 +64,7 @@ Compatibility Matrix
   * - AMD Container Toolkit
     - ROCm Version
     - Docker Version
-  * - 1.2.0
+  * - 1.0.0
     - 6.3.x
     - 25.0+
 
