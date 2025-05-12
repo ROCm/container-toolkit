@@ -24,9 +24,10 @@ import (
 )
 
 const (
-	runtimesKey       = "runtimes"
-	defaultRuntimeKey = "default-runtime"
-	featuresKey       = "features"
+	runtimesKey        = "runtimes"
+	defaultRuntimeKey  = "default-runtime"
+	featuresKey        = "features"
+	defaultCDISpecPath = "/etc/cdi"
 )
 
 type dockerConfig map[string]interface{}
@@ -138,6 +139,8 @@ func (d *dockerConfig) RemoveRuntime(name string) (error, bool) {
 			delete(currentCfg, runtimesKey)
 		}
 		updated = true
+
+		_ = os.RemoveAll(defaultCDISpecPath)
 	}
 
 	if updated {

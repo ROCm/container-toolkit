@@ -26,11 +26,10 @@ import (
 )
 
 const (
-	defaultRuntime                  = "docker"
-	defaultAmdRuntimeName           = "amd"
-	defaultAmdRuntimeExecutable     = "amd-container-runtime"
-	defaultAmdRuntimeExecutablePath = "/usr/bin/amd-container-runtime"
-	defaultDockerConfigFilePath     = "/etc/docker/daemon.json"
+	defaultRuntime              = "docker"
+	defaultAmdRuntimeName       = "amd"
+	defaultAmdRuntimeExecutable = "amd-container-runtime"
+	defaultDockerConfigFilePath = "/etc/docker/daemon.json"
 )
 
 type configOptions struct {
