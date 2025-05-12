@@ -116,6 +116,8 @@ func (d *dockerConfig) UnsetDefaultRuntime() error {
 // an error and a do not update flag in case daemon.json doesn't need
 // to be updated
 func (d *dockerConfig) RemoveRuntime(name string) (error, bool) {
+	_ = os.RemoveAll(defaultCDISpecPath)
+
 	if d == nil {
 		return fmt.Errorf("configuration is empty"), true
 	}
@@ -139,8 +141,6 @@ func (d *dockerConfig) RemoveRuntime(name string) (error, bool) {
 			delete(currentCfg, runtimesKey)
 		}
 		updated = true
-
-		_ = os.RemoveAll(defaultCDISpecPath)
 	}
 
 	if updated {
