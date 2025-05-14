@@ -46,7 +46,7 @@ ifeq (${UBUNTU_VERSION}, noble)
 UBUNTU_VERSION_NUMBER = 24.04
 endif
 
-DEBIAN_VERSION := "1.2.0"
+DEBIAN_VERSION := "1.0.0"
 
 DEBIAN_CONTROL = ${TOP_DIR}/build/debian/DEBIAN/control
 BUILD_VER_ENV = ${DEBIAN_VERSION}~$(UBUNTU_VERSION_NUMBER)
@@ -126,7 +126,7 @@ pkg-deb: pkg-deb-clean
 		-v $(HOME)/.ssh:/home/$(shell whoami)/.ssh \
 		-w $(CONTAINER_WORKDIR) \
 		$(BUILD_CONTAINER) \
-		bash -c "cd $(CONTAINER_WORKDIR) && source ~/.bashrc && git config --global --add safe.directory $(CONTAINER_WORKDIR) && make deb-pkg-build"
+		bash -c "cd $(CONTAINER_WORKDIR) && source ~/.bashrc && git config --global --add safe.directory $(CONTAINER_WORKDIR) && make deb-pkg-build UBUNTU_VERSION=$(UBUNTU_VERSION)"
 
 .PHONY: deb-pkg-build
 deb-pkg-build: all
