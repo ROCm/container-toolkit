@@ -4,4 +4,4 @@ Section: utils
 Maintainer: AMD Inc.
 Architecture: amd64
 Description: AMD Container Toolkit for Ubuntu
-Version: 1.2.0~22.04
+Version: 1.0.0~22.04
