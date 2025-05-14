@@ -16,13 +16,11 @@ Install the Container toolkit.
 
 # Configuring Docker
 
-1. Configure the AMD container runtime for Docker as follows.
+1. Configure the AMD container runtime for Docker as follows. The following command modifies the docker configuration file, /etc/docker/daemon.json, so that Docker can use the AMD container runtime.
 
      ```text
      > sudo amd-ctk configure runtime
      ```
-
-The above command modifies the docker configuration file, /etc/docker/daemon.json, so that Docker can use the AMD container runtime.
 
 2. Restart the Docker daemon.
 
@@ -90,9 +88,7 @@ amd.com/gpu=0
   /dev/dri/renderD128
 ```
 
-4. Make AMD container runtime default runtime.
-
-Avoid specifying ```--runtime=amd``` option with the ```docker run``` command by setting the AMD container runtime as the default for Docker.
+4. Make AMD container runtime default runtime. Avoid specifying ```--runtime=amd``` option with the ```docker run``` command by setting the AMD container runtime as the default for Docker.
 
 ```text
 > amd-ctk runtime configure --runtime=docker --set-as-default
