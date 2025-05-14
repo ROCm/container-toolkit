@@ -50,6 +50,6 @@ fi
 # Update Docker config file
 if [ "$update" == true ]; then
     echo "$out" > "$DOCKER_CONFIG"
-    echo "Updated the docker config file
+    echo "Updated the docker config file"
     echo "Please restart docker daemon"
 fi

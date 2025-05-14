@@ -10,9 +10,9 @@ ROCm Container Toolkit offers tools to streamline the use of AMD GPUs with conta
 # Quick Start
 Install the Container toolkit.
 
-    ```text
-    > sudo apt install amd-container-toolkit
-    ```
+```text
+> sudo apt install amd-container-toolkit
+```
 
 # Configuring Docker
 
