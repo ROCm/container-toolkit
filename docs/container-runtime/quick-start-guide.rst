@@ -3,6 +3,17 @@ Quick Start Guide
 
 This section provides a step-by-step guide to install the AMD Container Toolkit and configure your system for Docker-based GPU container workloads. The steps below are tailored for ease of use, production-readiness, and ensuring compatibility across AMD Instinct GPU-enabled systems.
 
+Prerequisites
+-------------
+
+Before installing the AMD Container Toolkit, ensure the following dependencies are installed:
+
+1. **jq** - Required during uninstallation to parse configuration settings cleanly.
+
+   .. code-block:: bash
+
+      sudo apt-get install jq
+
 Step 1: Install System Prerequisites
 ------------------------------------
 - Update your system:
@@ -109,3 +120,35 @@ Step 5: Configure Docker Runtime for AMD GPUs
    sudo systemctl restart docker
 
 This configuration ensures that Docker is aware of the AMD container runtime and is able to support GPU-accelerated workloads using AMD Instinct devices.
+
+Uninstallation Guide
+--------------------
+
+To remove the `amd-container-toolkit`, you must have `jq` installed. The uninstallation script relies on it to parse configuration files.
+
+.. code-block:: bash
+
+   sudo apt-get install jq
+
+Then proceed with the removal:
+
+.. code-block:: bash
+
+   sudo apt-get remove --purge amd-container-toolkit
+
+If you encounter issues, inspect the logs:
+
+.. code-block:: bash
+
+   sudo journalctl -u apt
+
+   sudo tail -f /var/log/amd-container-runtime.log
+
+
+If you continue to face errors, you may need to force the removal:
+
+.. code-block:: bash
+
+   sudo dpkg --remove --force-all amd-container-toolkit
+
+   sudo apt-get autoremove
