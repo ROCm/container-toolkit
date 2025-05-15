@@ -1,5 +1,5 @@
 # Overview
-ROCm Container Toolkit offers tools to streamline the use of AMD GPUs with containers. The toolkit includes the following packages.
+AMD Container Toolkit offers tools to streamline the use of AMD GPUs with containers. The toolkit includes the following packages.
 - ```amd-container-runtime``` - The AMD Container Runtime
 -  ```amd-ctk``` - The AMD Container Toolkit CLI
 
