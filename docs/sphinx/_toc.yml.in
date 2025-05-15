@@ -3,7 +3,7 @@ subtrees:
   - caption: Tools
     entries:
     - file: container-runtime/index.rst
-      title: Container Runtime
+      title: AMD Container Toolkit
       subtrees:
       - entries:
         - file: container-runtime/overview.rst
