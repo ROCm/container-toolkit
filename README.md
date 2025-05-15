@@ -10,9 +10,23 @@ AMD Container Toolkit offers tools to streamline the use of AMD GPUs with contai
 # Quick Start
 Install the Container toolkit.
 
-```text
-> sudo apt install amd-container-toolkit
-```
+## Installing from the official repository
+To install the AMD Container Toolkit from the official repository, follow these steps:
+
+1. Add the GPG key for the repository:
+   ```bash
+   wget https://repo.radeon.com/rocm/rocm.gpg.key -O - | gpg --dearmor | tee /etc/apt/keyrings/rocm.gpg > /dev/null
+   ```
+
+2. Add the repository to your system. Replace `noble` with `jammy` if you are using Ubuntu 22.04:
+   ```bash
+   echo "deb [signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/amd-container-toolkit/apt/ noble main" > /etc/apt/sources.list.d/rocm.list
+   ```
+
+3. Update the package list and install the toolkit:
+   ```bash
+   apt update && apt install amd-container-toolkit
+   ```
 
 # Configuring Docker
 
@@ -120,8 +134,10 @@ amd.com/gpu=0
 ```
 
 # Release notes
-1. Partitioned GPUs are not supported.
-
+| Release  | Known Issues                                                                 |
+|----------|------------------------------------------------------------------------------|
+| v1.0.0   |  1. Partitioned GPUs are not supported.<br>  2. RPM builds are experimental. |
+ 
 ## Building from Source
 To build debian package, use the following command.
 
@@ -135,10 +151,14 @@ To build rpm package, use the following command.
 make pkg-rpm
 ```
 
+> [!WARNING]
+> The RPM package is still experimental in nature and may not be fully stable.
+
 The packages will be generated in the ```bin``` folder.
 
 # Documentation
-For detailed documentation including installation guides and configuration options, see the documentation.
+For detailed documentation including installation guides and configuration options, see the [documentation](https://instinct.docs.amd.com/projects/container-toolkit/en/latest).
 
 # License
 This project is licensed under the Apache 2.0 License - see the [LICENSE](https://github.com/ROCm/container-toolkit/blob/main/LICENSE) file for details.
+
