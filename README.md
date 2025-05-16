@@ -13,17 +13,22 @@ Install the Container toolkit.
 ## Installing from the official repository
 To install the AMD Container Toolkit from the official repository, follow these steps:
 
-1. Add the GPG key for the repository:
+1. Ensure pre-requisites are installed
+   ```bash
+   apt update && apt install -y wget gnupg2
+   ```
+
+2. Add the GPG key for the repository:
    ```bash
    wget https://repo.radeon.com/rocm/rocm.gpg.key -O - | gpg --dearmor | tee /etc/apt/keyrings/rocm.gpg > /dev/null
    ```
 
-2. Add the repository to your system. Replace `noble` with `jammy` if you are using Ubuntu 22.04:
+3. Add the repository to your system. Replace `noble` with `jammy` if you are using Ubuntu 22.04:
    ```bash
-   echo "deb [signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/amd-container-toolkit/apt/ noble main" > /etc/apt/sources.list.d/rocm.list
+   echo "deb [signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/amd-container-toolkit/apt/ noble main" > /etc/apt/sources.list.d/amd-container-toolkit.list
    ```
 
-3. Update the package list and install the toolkit:
+4. Update the package list and install the toolkit:
    ```bash
    apt update && apt install amd-container-toolkit
    ```
