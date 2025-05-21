@@ -10,4 +10,5 @@ Welcome to the official documentation for the AMD Container Toolkit!
 - :doc:`troubleshooting`
 - :doc:`migration-guide`
 - :doc:`developer-guide`
+- :doc:`docker-compose`
 - :doc:`release-notes`
