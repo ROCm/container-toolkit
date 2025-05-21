@@ -8,7 +8,7 @@ Prerequisites
 
 Before installing the AMD Container Toolkit, ensure the following dependencies are installed.
 
-**Docker** - The toolkit is designed to work with Docker, so ensure you have Docker installed on your system. the **Docker version must be 25 or above**. The Container Device Interface (CDI) format, used by modern container runtimes to abstract and expose GPUs, is not supported in older Docker versions. Without Docker 25+, CDI functionality such as dynamic device enumeration and CDI-style run commands will not work as intended.
+**Docker** - The toolkit is designed to work with Docker, so ensure you have Docker installed on your system. The **Docker version must be 25 or above**. The Container Device Interface (CDI) format, used by modern container runtimes to abstract and expose GPUs, is not supported in older Docker versions. Without Docker 25+, CDI functionality such as dynamic device enumeration and CDI-style run commands will not work as intended.
 
 .. code-block:: bash
 
@@ -45,8 +45,8 @@ Step 1: Update System and Group Settings
 Step 2: Install the AMDGPU Driver
 ---------------------------------
 
-- Refer to the latest ROCm documentation for driver installation here, [ROCm Install Quick Start](https://rocm.docs.amd.com/projects/install-on-linux/en/latest/install/quick-start.html).
-- Download the AMDGPU driver installer package from the [Radeon Repository](https://repo.radeon.com/amdgpu-install).
+- Refer to the latest ROCm documentation for driver installation here, `ROCm Install Quick Start <https://rocm.docs.amd.com/projects/install-on-linux/en/latest/install/quick-start.html>`_.
+- Download the AMDGPU driver installer package from the `Radeon Repository <https://repo.radeon.com/amdgpu-install>`_.
 - Install the downloaded package.
 - Load the driver.
 
@@ -69,7 +69,7 @@ Step 3: Configure Repositories
    sudo apt update
    sudo apt install vim wget gpg
 
-- Create keyrings directory
+- Create keyrings directory:
 
 .. code-block:: bash
 
@@ -128,11 +128,13 @@ To run Docker containers with access to AMD GPUs, you need to specify the AMD ru
 Run a container with access to all available AMD GPUs:
 
 .. code-block:: bash
-   docker run --runtime=amd -e AMD_VISIBLE_DEVICES=all --runtime=amd rocm/rocm-terminal amd-smi monitor
+
+   docker run --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/rocm-terminal amd-smi monitor
 
 Output should look like this, validating that all GPUs are visible:
 
-.. code-block:: bash   
+.. code-block:: bash
+
    GPU  POWER   GPU_T   MEM_T   GFX_CLK   GFX%   MEM%   ENC%   DEC%      VRAM_USAGE
      0  137 W   41 °C   36 °C   142 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
      1  139 W   39 °C   33 °C   135 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
@@ -143,14 +145,16 @@ Output should look like this, validating that all GPUs are visible:
      6  139 W   43 °C   36 °C   151 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
      7  137 W   41 °C   34 °C   141 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
 
-Tun a container with access to a specific AMD GPU (i.e., the first GPU):
+Run a container with access to a specific AMD GPU (i.e., the first GPU):
 
 .. code-block:: bash
-   docker run --runtime=amd -e AMD_VISIBLE_DEVICES=0 --runtime=amd rocm/rocm-terminal amd-smi monitor
+
+   docker run --runtime=amd -e AMD_VISIBLE_DEVICES=0 rocm/rocm-terminal amd-smi monitor
 
 Output should look like this, validating that only the first GPU is visible:
 
-.. code-block:: bash   
+.. code-block:: bash
+
    GPU  POWER   GPU_T   MEM_T   GFX_CLK   GFX%   MEM%   ENC%   DEC%      VRAM_USAGE
      0  140 W   42 °C   36 °C   146 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
 
