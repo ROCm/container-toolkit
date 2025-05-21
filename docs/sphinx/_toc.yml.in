@@ -20,5 +20,7 @@ subtrees:
           title: Migration Guide
         - file: container-runtime/developer-guide.rst
           title: Developer Guide
+        - file: container-runtime/docker-compose.rst
+          title: Docker Compose Usage          
         - file: container-runtime/release-notes.rst
           title: Release Notes
