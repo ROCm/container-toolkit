@@ -10,23 +10,23 @@ Before installing the AMD Container Toolkit, ensure the following dependencies a
 
 **Docker** - The toolkit is designed to work with Docker, so ensure you have Docker installed on your system. the **Docker version must be 25 or above**. The Container Device Interface (CDI) format, used by modern container runtimes to abstract and expose GPUs, is not supported in older Docker versions. Without Docker 25+, CDI functionality such as dynamic device enumeration and CDI-style run commands will not work as intended.
 
-   .. code-block:: bash
+.. code-block:: bash
 
-      sudo apt-get install docker.io
+   sudo apt-get install docker.io
 
 You can verify your Docker version using:
 
-   .. code-block:: bash
+.. code-block:: bash
 
-      docker --version
+   docker --version
 
 If you are on an earlier Docker version, please upgrade to at least Docker 25 before proceeding with toolkit configuration and GPU-based workloads.      
 
 **jq** - Required during uninstallation to parse configuration settings cleanly.
 
-   .. code-block:: bash
+.. code-block:: bash
 
-      sudo apt-get install jq
+   sudo apt-get install jq
 
 Step 1: Update System and Group Settings
 ----------------------------------------
@@ -126,23 +126,25 @@ Step 6: Verify Container Runtime Installation
 To run Docker containers with access to AMD GPUs, you need to specify the AMD runtime and visible GPUs. Here are some examples you can use to verify the installation:
 
 **Run a container with access to all available AMD GPUs:**
-  .. code-block:: bash
-     docker run --runtime=amd -e AMD_VISIBLE_DEVICES=all --runtime=amd rocm/rocm-terminal amd-smi monitor
-      GPU  POWER   GPU_T   MEM_T   GFX_CLK   GFX%   MEM%   ENC%   DEC%      VRAM_USAGE
-        0  137 W   41 °C   36 °C   142 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
-        1  139 W   39 °C   33 °C   135 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
-        2  138 W   42 °C   34 °C   145 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
-        3  141 W   39 °C   33 °C   139 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
-        4  140 W   42 °C   36 °C   146 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
-        5  137 W   38 °C   33 °C   133 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
-        6  139 W   43 °C   36 °C   151 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
-        7  137 W   41 °C   34 °C   141 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
+
+.. code-block:: bash
+   docker run --runtime=amd -e AMD_VISIBLE_DEVICES=all --runtime=amd rocm/rocm-terminal amd-smi monitor
+   GPU  POWER   GPU_T   MEM_T   GFX_CLK   GFX%   MEM%   ENC%   DEC%      VRAM_USAGE
+      0  137 W   41 °C   36 °C   142 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
+      1  139 W   39 °C   33 °C   135 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
+      2  138 W   42 °C   34 °C   145 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
+      3  141 W   39 °C   33 °C   139 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
+      4  140 W   42 °C   36 °C   146 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
+      5  137 W   38 °C   33 °C   133 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
+      6  139 W   43 °C   36 °C   151 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
+      7  137 W   41 °C   34 °C   141 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
 
 **To run a container with access to a specific AMD GPU (i.e., the first GPU):**
-  .. code-block:: bash
-     docker run --runtime=amd -e AMD_VISIBLE_DEVICES=0 --runtime=amd rocm/rocm-terminal amd-smi monitor
-     GPU  POWER   GPU_T   MEM_T   GFX_CLK   GFX%   MEM%   ENC%   DEC%      VRAM_USAGE
-       0  140 W   42 °C   36 °C   146 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
+
+.. code-block:: bash
+   docker run --runtime=amd -e AMD_VISIBLE_DEVICES=0 --runtime=amd rocm/rocm-terminal amd-smi monitor
+   GPU  POWER   GPU_T   MEM_T   GFX_CLK   GFX%   MEM%   ENC%   DEC%      VRAM_USAGE
+      0  140 W   42 °C   36 °C   146 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
 
 Uninstallation Guide
 --------------------
