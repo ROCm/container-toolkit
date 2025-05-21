@@ -38,7 +38,7 @@ To install the AMD Container Toolkit from the official repository, follow these 
 1. Configure the AMD container runtime for Docker as follows. The following command modifies the docker configuration file, /etc/docker/daemon.json, so that Docker can use the AMD container runtime.
 
      ```text
-     > sudo amd-ctk configure runtime
+     > sudo amd-ctk runtime configure
      ```
 
 2. Restart the Docker daemon.

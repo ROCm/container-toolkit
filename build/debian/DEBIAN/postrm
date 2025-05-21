@@ -1,0 +1,26 @@
+#!/bin/sh
+
+set -e
+
+AMD_CONTAINER_RUNTIME=/usr/local/bin/amd-container-runtime
+AMD_CONTAINER_TOOLKIT=/usr/local/bin/amd-ctk
+
+case "$1" in
+    purge)
+        [ -e "${AMD_CONTAINER_TOOLKIT}" ] && rm "${AMD_CONTAINER_TOOLKIT}"
+        [ -e "${AMD_CONTAINER_RUNTIME}" ] && rm "${AMD_CONTAINER_RUNTIME}"
+    ;;
+
+    upgrade|failed-upgrade|remove|abort-install|abort-upgrade|disappear)
+    ;;
+
+    *)
+        echo "postrm called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0
+
