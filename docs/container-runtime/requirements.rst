@@ -10,16 +10,16 @@ Operating Systems
 
 Compatibility Matrix
 --------------------
-
 - Each AMD Container Toolkit release is tightly coupled with a specific ROCm and AMDGPU driver version. Please refer to the compatibility matrix before proceeding.
+
 .. list-table:: Compatibility Matrix
     :header-rows: 1
-    :widths: 30 20 25
+    :widths: 30 20
 
     * - Container Toolkit Debian Version
       - Docker Version
     * - amd-container-toolkit-1.0.0
-      - 25
+      - 25+
 
 Note
 ----
