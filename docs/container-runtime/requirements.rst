@@ -10,7 +10,7 @@ Operating Systems
 
 Compatibility Matrix
 --------------------
-- Each AMD Container Toolkit release is tightly coupled with a specific ROCm and AMDGPU driver version. Please refer to the compatibility matrix before proceeding.
+- Please refer to the compatibility matrix before proceeding.
 
 .. list-table:: Compatibility Matrix
     :header-rows: 1
