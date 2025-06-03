@@ -11,7 +11,6 @@ Versioning Information
 
 Current Version: **1.0.0**
 
-- ROCm Compatibility: **6.3.x**
 - Docker Compatibility: **25.0+**
 - Supported Distributions: Ubuntu 22.04, Ubuntu 24.04
 
@@ -62,10 +61,8 @@ Compatibility Matrix
   :header-rows: 1
 
   * - AMD Container Toolkit
-    - ROCm Version
     - Docker Version
   * - 1.0.0
-    - 6.3.x
     - 25.0+
 
 Next Steps

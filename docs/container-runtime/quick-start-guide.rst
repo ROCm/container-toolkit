@@ -115,7 +115,7 @@ Step 5: Configure Docker Runtime for AMD GPUs
 
 .. code-block:: bash
 
-   sudo amd-ctk configure runtime
+   sudo amd-ctk runtime configure
    sudo systemctl restart docker
 
 This configuration ensures that Docker is aware of the AMD container runtime and is able to support GPU-accelerated workloads using AMD Instinct devices.

@@ -1,26 +1,22 @@
 root: index.md
 subtrees:
-  - caption: Tools
+  - caption: AMD Container Toolkit
     entries:
-    - file: container-runtime/index.rst
-      title: AMD Container Toolkit
-      subtrees:
-      - entries:
-        - file: container-runtime/overview.rst
-          title: Overview
-        - file: container-runtime/requirements.rst
-          title: Requirements
-        - file: container-runtime/quick-start-guide.rst
-          title: Quick Start Guide
-        - file: container-runtime/framework-integration.rst
-          title: Framework Integration
-        - file: container-runtime/troubleshooting
-          title: Troubleshooting
-        - file: container-runtime/migration-guide.rst
-          title: Migration Guide
-        - file: container-runtime/developer-guide.rst
-          title: Developer Guide
-        - file: container-runtime/docker-compose.rst
-          title: Docker Compose Usage          
-        - file: container-runtime/release-notes.rst
-          title: Release Notes
+      - file: container-runtime/overview.rst
+        title: Overview
+      - file: container-runtime/requirements.rst
+        title: Requirements
+      - file: container-runtime/quick-start-guide.rst
+        title: Quick Start Guide
+      - file: container-runtime/framework-integration.rst
+        title: Framework Integration
+      - file: container-runtime/troubleshooting.rst
+        title: Troubleshooting
+      - file: container-runtime/migration-guide.rst
+        title: Migration Guide
+      - file: container-runtime/developer-guide.rst
+        title: Developer Guide
+      - file: container-runtime/docker-compose.rst
+        title: Docker Compose Usage
+      - file: container-runtime/release-notes.rst
+        title: Release Notes
