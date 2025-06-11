@@ -49,6 +49,7 @@ endif
 DEBIAN_VERSION := "1.0.0"
 
 DEBIAN_CONTROL = ${TOP_DIR}/build/debian/DEBIAN/control
+DEBIAN_PRERM = ${TOP_DIR}/build/debian/DEBIAN/prerm
 BUILD_VER_ENV = ${DEBIAN_VERSION}~$(UBUNTU_VERSION_NUMBER)
 PKG_PATH := ${TOP_DIR}/build/debian/usr/local/bin
 
@@ -136,12 +137,16 @@ deb-pkg-build: all
 	mkdir -p ${PKG_PATH}
 	cp -vf $(CURDIR)/bin/deb/amd-container-runtime ${PKG_PATH}/
 	cp -vf $(CURDIR)/bin/deb/amd-ctk ${PKG_PATH}/
+	cp -vf $(CURDIR)/build/cleanup.sh $(DEBIAN_PRERM)
+	chmod 0755 $(DEBIAN_PRERM)
+
 	cd ${TOP_DIR}
 	sed -i "s/BUILD_VER_ENV/$(BUILD_VER_ENV)/g" $(DEBIAN_CONTROL)
 	dpkg-deb -Zxz --build build/debian ${TOP_DIR}/bin
 
 	# revert the dynamic version set file
 	git checkout $(DEBIAN_CONTROL)
+	rm -rf $(DEBIAN_PRERM)
 
 	# rename for internal build
 	mv -vf ${TOP_DIR}/bin/amd-container-toolkit*~${UBUNTU_VERSION_NUMBER}_amd64.deb ${TOP_DIR}/bin/amd-container-toolkit_${UBUNTU_VERSION_NUMBER}_amd64.deb
