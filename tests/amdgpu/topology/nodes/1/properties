@@ -1,0 +1,10 @@
+drm_render_minor 129
+unique_id 1
+gfx_target_version 90402
+cpu_cores_count 20
+simd_count 0
+mem_banks_count 1
+caches_count 0
+io_links_count 1
+cpu_core_id_base 0
+simd_id_base 0
