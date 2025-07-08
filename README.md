@@ -4,14 +4,14 @@ AMD Container Toolkit offers tools to streamline the use of AMD GPUs with contai
 -  ```amd-ctk``` - The AMD Container Toolkit CLI
 
 # Requirements
-- Ubuntu 22.02 or 24.04
+- Ubuntu 22.02 or 24.04, or RHEL/CentOS 9
 - Docker version 25 or later
 
 # Quick Start
 Install the Container toolkit.
 
-## Installing from the official repository
-To install the AMD Container Toolkit from the official repository, follow these steps:
+### Installing on Ubuntu
+To install the AMD Container Toolkit on Ubuntu systems, follow these steps:
 
 1. Ensure pre-requisites are installed
    ```bash
@@ -31,6 +31,28 @@ To install the AMD Container Toolkit from the official repository, follow these 
 4. Update the package list and install the toolkit:
    ```bash
    apt update && apt install amd-container-toolkit
+   ```
+
+### Installing on RHEL/CentOS 9
+To install the AMD Container Toolkit on RHEL/CentOS 9 systems, follow these steps:
+
+1. Add the repository configuration:
+   ```bash
+   tee --append /etc/yum.repos.d/rocm.repo <<EOF
+   [amd-container-toolkit]
+   name=amd-container-toolkit
+   baseurl=https://repo.radeon.com/amd-container-toolkit/el9/main/
+   enabled=1
+   priority=50
+   gpgcheck=1
+   gpgkey=https://repo.radeon.com/rocm/rocm.gpg.key
+   EOF
+   ```
+
+2. Clean the package cache and install the toolkit:
+   ```bash
+   dnf clean all
+   dnf install -y amd-container-toolkit
    ```
 
 # Configuring Docker
@@ -151,9 +173,10 @@ amd.com/gpu=0
 ```
 
 # Release notes
-| Release  | Known Issues                                                                 |
-|----------|------------------------------------------------------------------------------|
-| v1.0.0   |  1. Partitioned GPUs are not supported.<br>  2. RPM builds are experimental. |
+| Release  | Features                                                                     | Known Issues                                                                 |
+|----------|------------------------------------------------------------------------------|------------------------------------------------------------------------------|
+| v1.1.0   | 1. GPU partitioning support<br>2. Full RPM package support<br>3. Support for range operator in the input string to AMD_VISIBLE_DEVICES ENV variable. | None                                                                         |
+| v1.0.0   | Initial release                                                             | 1. Partitioned GPUs are not supported.<br>2. RPM builds are experimental.   |
  
 ## Building from Source
 To build debian package, use the following command.
@@ -170,9 +193,6 @@ make
 make pkg-rpm
 ```
 
-> [!WARNING]
-> The RPM package is still experimental in nature and may not be fully stable.
-
 The packages will be generated in the ```bin``` folder.
 
 # Documentation
@@ -180,4 +200,5 @@ For detailed documentation including installation guides and configuration optio
 
 # License
 This project is licensed under the Apache 2.0 License - see the [LICENSE](https://github.com/ROCm/container-toolkit/blob/main/LICENSE) file for details.
+
 

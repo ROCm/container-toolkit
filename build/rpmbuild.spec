@@ -1,5 +1,5 @@
 Name: amd-container-toolkit
-Version: 1.0
+Version: 1.1
 Release: 1%{?dist}
 Summary: Package containing AMD container tookkit binaries
 
