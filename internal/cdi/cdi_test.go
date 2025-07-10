@@ -65,6 +65,9 @@ func TestInterface(t *testing.T) {
 	err = cdi.WriteSpec()
 	Assert(t, err == nil, fmt.Sprintf("WriteSpec() returned error %v", err))
 
+	err = cdi.ValidateSpec()
+	Assert(t, err == nil, fmt.Sprintf("ValidateSpec() returned error %v", err))
+
 	cdi.PrintSpec()
 }
 
