@@ -69,12 +69,24 @@ To install the AMD Container Toolkit from the official repository, follow these 
           > docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0,1,2 rocm/rocm-terminal rocm-smi
           ```
 
+          - To use many contiguously numbered GPUs,
+
+          ```text
+          > docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0-3,5,8 rocm/rocm-terminal rocm-smi
+          ```
+
      2. Using [CDI](https://github.com/cncf-tags/container-device-interface) style
 
           - First, generate the CDI spec.
 
           ```text
           > amd-ctk cdi generate --output=/etc/cdi/amd.json
+          ```
+
+          - Validate the generated CDI spec.
+
+          ```text
+          > amd-ctk cdi validate --path=/etc/cdi/amd.json
           ```
 
           - To use all available GPUs,
@@ -147,12 +159,14 @@ amd.com/gpu=0
 To build debian package, use the following command.
 
 ```text
+make
 make pkg-deb
 ```
 
 To build rpm package, use the following command.
 
 ```text
+make
 make pkg-rpm
 ```
 

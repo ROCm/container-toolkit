@@ -26,6 +26,25 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+var (
+	Version   = "dev"
+	BuildDate = "unknown"
+	GitCommit = "none"
+)
+
+func showVersion() *cli.Command {
+	showVersionCmd := cli.Command{
+		Name:  "version",
+		Usage: "Show the version",
+		Action: func(c *cli.Context) error {
+			fmt.Printf("Version: %s\nBuild Date: %s\nGitCommit: %s\n", Version, BuildDate, GitCommit)
+			return nil
+		},
+	}
+
+	return &showVersionCmd
+}
+
 func main() {
 	logger.Init(false)
 
@@ -38,6 +57,7 @@ func main() {
 
 	// Add subcommands
 	amdCtkCli.Commands = []*cli.Command{
+		showVersion(),
 		runtime.AddNewCommand(),
 		cdi.AddNewCommand(),
 	}

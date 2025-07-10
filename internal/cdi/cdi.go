@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
 	"strconv"
 
 	"github.com/ROCm/container-toolkit/internal/amdgpu"
@@ -52,6 +53,9 @@ type Interface interface {
 
 	// PrintSpec prints the generated CDI spec on the console
 	PrintSpec() error
+
+	// ValidateSpec validated the existing CDI spec on the disk
+	ValidateSpec() error
 }
 
 // cdi_t implements the CDI interface
@@ -67,6 +71,22 @@ type cdi_t struct {
 
 	// getGPU is the function that returns the device info of the given GPU
 	getGPU GetGPU
+}
+
+func readSpecFromFile(f string) (*specs.Spec, error) {
+	file, err := os.Open(f)
+	if err != nil {
+		return &specs.Spec{}, err
+	}
+	defer file.Close()
+
+	var spec specs.Spec
+	err = json.NewDecoder(file).Decode(&spec)
+	if err != nil {
+		return &specs.Spec{}, err
+	}
+
+	return &spec, nil
 }
 
 func (cdi *cdi_t) GenerateSpec() error {
@@ -143,7 +163,7 @@ func (cdi *cdi_t) GenerateSpec() error {
 }
 
 func (cdi *cdi_t) WriteSpec() error {
-	f := cdi.specPath + "/" + CDI_SPEC
+	f := cdi.specPath + CDI_SPEC
 
 	file, err := os.Create(f)
 	if err != nil {
@@ -172,6 +192,34 @@ func (cdi *cdi_t) PrintSpec() error {
 
 	fmt.Printf(string(prettyJSON))
 	fmt.Printf("\n")
+
+	return nil
+}
+
+func (cdi *cdi_t) ValidateSpec() error {
+	f := cdi.specPath + CDI_SPEC
+
+	fmt.Printf("Validating CDI spec: %v\n", f)
+
+	savedCDISpec, err := readSpecFromFile(f)
+	if err != nil {
+		fmt.Printf("Failed to parse %v, Err: %v\n", f, err)
+		return err
+	}
+
+	err = cdi.GenerateSpec()
+	if err != nil {
+		fmt.Printf("Failed to generate current CDI spec, Err: %v", err)
+		return err
+	}
+
+	equal := reflect.DeepEqual(*savedCDISpec, cdi.spec)
+	if equal != true {
+		logger.Log.Printf("CDI spec: %v is invalid. Please regenerate CDI spec", f)
+		fmt.Printf("CDI spec is invalid\nPlease regenerate CDI spec\n")
+		return nil
+	}
+	fmt.Printf("CDI spec is valid\n")
 
 	return nil
 }

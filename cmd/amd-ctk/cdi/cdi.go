@@ -19,6 +19,7 @@ package cdi
 import (
 	"github.com/ROCm/container-toolkit/cmd/amd-ctk/cdi/generate"
 	"github.com/ROCm/container-toolkit/cmd/amd-ctk/cdi/list"
+	"github.com/ROCm/container-toolkit/cmd/amd-ctk/cdi/validate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -32,6 +33,7 @@ func AddNewCommand() *cli.Command {
 	cdiCmd.Subcommands = []*cli.Command{
 		list.AddNewCommand(),
 		generate.AddNewCommand(),
+		validate.AddNewCommand(),
 	}
 
 	return &cdiCmd
