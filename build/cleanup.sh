@@ -14,7 +14,7 @@ if [[ ! -f "$DOCKER_CONFIG" ]]; then
     exit 0
 fi
 
-# Exit if "jq is not available
+# Exit if jq is not available
 if ! type "jq" > /dev/null; then
     echo "jq is not available. Docker config file cannot be cleaned up."
     exit 0
@@ -52,4 +52,4 @@ if [ "$update" == true ]; then
     echo "$out" > "$DOCKER_CONFIG"
     echo "Updated the docker config file"
     echo "Please restart docker daemon"
-fi
+fi 
