@@ -151,11 +151,39 @@ func (oci *oci_t) getAMDEnv() {
 			return dl
 		}
 
+		invalidDevsRange := []string{}
+		invalidDevs := []string{}
 		for _, c := range strings.Split(devs, ",") {
-			i, err := strconv.Atoi(c)
-			if err == nil && i >= 0 {
-				dl = append(dl, i)
+			if strings.Contains(c, "-") {
+				devsRange := strings.SplitN(c, "-", 2)
+				start, err0 := strconv.Atoi(devsRange[0])
+				end, err1 := strconv.Atoi(devsRange[1])
+				if err0 != nil || err1 != nil || start < 0 ||
+					end < 0 || start > end {
+					invalidDevsRange = append(invalidDevsRange, c)
+				} else {
+					for i := start; i <= end; i++ {
+						dl = append(dl, i)
+					}
+				}
+			} else {
+				i, err := strconv.Atoi(c)
+				if err == nil {
+					if i >= 0 {
+						dl = append(dl, i)
+					} else {
+						invalidDevs = append(invalidDevs, c)
+					}
+				}
 			}
+		}
+
+		if len(invalidDevsRange) > 0 {
+			fmt.Printf("Ignoring %v GPUs Ranges as they are invalid\n", invalidDevsRange)
+		}
+
+		if len(invalidDevs) > 0 {
+			fmt.Printf("Ignoring %v GPUs as they are not available\n", invalidDevs)
 		}
 
 		sort.Ints(dl)
