@@ -180,6 +180,7 @@ func (cdi *cdi_t) WriteSpec() error {
 	}
 
 	logger.Log.Printf("Wrote spec to %v", f)
+	fmt.Printf("Generated CDI spec: %v\n", f)
 	return nil
 }
 
