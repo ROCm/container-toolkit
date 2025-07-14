@@ -38,7 +38,7 @@ To install the AMD Container Toolkit on RHEL/CentOS 9 systems, follow these step
 
 1. Add the repository configuration:
    ```bash
-   tee --append /etc/yum.repos.d/rocm.repo <<EOF
+   tee --append /etc/yum.repos.d/amd-container-toolkit.repo <<EOF
    [amd-container-toolkit]
    name=amd-container-toolkit
    baseurl=https://repo.radeon.com/amd-container-toolkit/el9/main/
@@ -189,7 +189,7 @@ make pkg-deb
 To build rpm package, use the following command.
 
 ```text
-make
+make build-dev-container-rpm
 make pkg-rpm
 ```
 
