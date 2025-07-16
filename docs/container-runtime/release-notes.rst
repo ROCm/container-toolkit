@@ -67,8 +67,8 @@ New Features
 Improvements
 ------------
 
-- **Range Operator for Device Selection:**  
-  The `AMD_VISIBLE_DEVICES` environment variable now supports range expressions, making it easier to select multiple GPUs or partitions in a concise manner.
+- **Range of GPU Device Selection:**  
+  The `AMD_VISIBLE_DEVICES` environment variable allows users to specify range of GPUs, making it easier to select multiple GPUs or partitions in a concise manner.
 - **Documentation Updates:**  
   All documentation related to GPU partitioning, RHEL/CentOS installation, and Docker ``--gpus`` flag usage has been updated to reflect these new capabilities.
 
@@ -88,8 +88,8 @@ Upgrade Notes
 Next Steps
 ----------
 
-1. Review the updated installation and partitioning guides in the documentation.
-2. For GPU partitioning, use the new range operator and remember to regenerate CDI specs after changes.
+1. Review the updated requirements and quick start guide in the documentation.
+2. For GPU partitioning, users can provide range of GPUs and remember to regenerate CDI specs after changes.
 3. For RHEL/CentOS 9, follow the new RPM-based installation workflow.
 4. To use the ``--gpus`` flag, ensure you are running Docker 28.3.0 or newer.
 5. Deploy your first container using:
