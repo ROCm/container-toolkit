@@ -275,7 +275,7 @@ To regenerate the CDI spec after a partitioning change, run:
 
    amd-ctk cdi generate --output=/etc/cdi/amd.json
 
-To validate that the generated CDI spec accurately reflects the available GPUs and partitions, use:
+To validate that the existing CDI spec accurately reflects the available GPUs and partitions, use:
 
 .. code-block:: bash
 
