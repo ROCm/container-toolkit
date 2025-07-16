@@ -11,16 +11,12 @@ Supported Operating Systems
 
 .. note::
    - RHEL and CentOS 9 support is new in v1.1.0 and requires the RPM-based installation flow.
-   - Follow the installation instructions in the documentation for these platforms.
+   - Follow the installation instructions in the Quick Start Guide document for these platforms.
 
 Docker Compatibility
 --------------------
 - Docker 25.0+ is required for all features.
 - Docker 28.3.0+ is required to use the standardized ``--gpus`` flag for AMD GPU selection.
-
-.. note::
-   - Docker version **28.3.0** or later is recommended to take advantage of the `--gpus` flag integration for AMD GPUs.
-   - Ensure ROCm version **6.4.1** or higher is used in container images to support GPU partitioning capabilities.
 
 ROCm and Driver Compatibility
 -----------------------------
@@ -50,7 +46,7 @@ The following packages and configurations are required on the host system:
 GPU Partitioning Requirements
 -----------------------------
 - To use GPU partitioning, ensure your ROCm version is 6.4.1 or newer.
-- After any partitioning change, you must regenerate the CDI spec to reflect the new GPU topology:
+- After any partitioning change, you must regenerate the CDI spec to reflect the new GPU topology.
 - The `amd-smi` tool can be used to inspect partition status and details from within containers.
 
 Important Notes
