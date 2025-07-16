@@ -8,7 +8,15 @@ Prerequisites
 
 Before installing the AMD Container Toolkit, ensure the following dependencies are installed.
 
-**Docker** - The toolkit is designed to work with Docker, so ensure you have Docker installed on your system. The **Docker version must be 25 or above**. The Container Device Interface (CDI) format, used by modern container runtimes to abstract and expose GPUs, is not supported in older Docker versions. Without Docker 25+, CDI functionality such as dynamic device enumeration and CDI-style run commands will not work as intended.
+- **Docker:**  
+   - The toolkit is designed to work with Docker, so ensure you have Docker installed on your system.
+   - Docker version 25.0 or newer is required for all features.
+
+.. note::
+      - The Container Device Interface (CDI) format, used by modern container runtimes to abstract and expose GPUs, is not supported in older Docker versions.
+      - Without Docker 25+, CDI functionality such as dynamic device enumeration and CDI-style run commands will not work as intended. 
+  
+   - Docker version 28.3.0 or newer is required to use the standardized ``--gpus`` flag for AMD GPU selection.
 
 .. code-block:: bash
 
@@ -20,7 +28,11 @@ You can verify your Docker version using:
 
    docker --version
 
-If you are on an earlier Docker version, please upgrade to at least Docker 25 before proceeding with toolkit configuration and GPU-based workloads.      
+If you are on an earlier Docker version, please upgrade to at least Docker 25 before proceeding with toolkit configuration and GPU-based workloads.
+
+- **ROCm:**
+
+  - ROCm 6.4.1 or newer is required to view and verify partitioned GPUs inside containers.
 
 **jq** - Required during uninstallation to parse configuration settings cleanly.
 
@@ -101,12 +113,37 @@ Ubuntu 24.04:
 
    sudo apt update
 
+RHEL/CentOS 9:
+
+.. code-block:: bash
+
+   tee --append /etc/yum.repos.d/amd-container-toolkit.repo <<EOF
+   [amd-container-toolkit]
+   name=amd-container-toolkit
+   baseurl=https://repo.radeon.com/amd-container-toolkit/el9/main/
+   enabled=1
+   priority=50
+   gpgcheck=1
+   gpgkey=https://repo.radeon.com/rocm/rocm.gpg.key
+   EOF
+
 Step 4: Install Toolkit and Docker
 ----------------------------------
+
+Ubuntu:
 
 .. code-block:: bash
 
    sudo apt install amd-container-toolkit
+
+RHEL/CentOS 9:
+
+- Clean the package cache and install the toolkit:
+
+.. code-block:: bash
+
+   dnf clean all
+   dnf install -y amd-container-toolkit
 
 Step 5: Configure Docker Runtime for AMD GPUs
 ---------------------------------------------
@@ -157,6 +194,129 @@ Output should look like this, validating that only the first GPU is visible:
 
    GPU  POWER   GPU_T   MEM_T   GFX_CLK   GFX%   MEM%   ENC%   DEC%      VRAM_USAGE
      0  140 W   42 °C   36 °C   146 MHz    0 %    0 %    N/A    0 %    0.3/192.0 GB
+
+
+
+Using ``--gpus`` Flag with Docker 28.x+
+---------------------------------------
+
+Starting from Docker **28.3.0**, containerized GPU workloads can leverage the standardized ``--gpus`` flag for specifying AMD GPU usage. The AMD Container Toolkit integrates seamlessly with this interface, enabling users to declare GPU requirements directly in `docker run` commands.
+
+**Examples**
+
+1. **Use all available GPUs**
+
+   ::
+
+       sudo docker run --rm --runtime=amd --gpus all rocm/rocm-terminal rocm-smi
+
+   or equivalently:
+
+   ::
+
+       sudo docker run --rm --runtime=amd --gpus device=all rocm/rocm-terminal rocm-smi
+
+2. **Use any 2 GPUs**
+
+   ::
+
+       sudo docker run --rm --runtime=amd --gpus 2 rocm/rocm-terminal rocm-smi
+
+   .. note::
+      Specifying multiple values in a comma-separated list like ``--gpus 1,2,3`` will result in **only the last number** being recognized. For instance, that same input would end up requesting **3 GPUs**.
+
+3. **Select a specific set of GPUs**
+
+   ::
+
+       sudo docker run --rm --runtime=amd --gpus "device=1,2,3" rocm/rocm-terminal rocm-smi
+
+   .. note::
+      * GPU indices start from **0**.
+      * The ``device=`` specifier is **mandatory** when enumerating specific GPUs.
+
+4. **Select one specific GPU**
+
+   ::
+
+       sudo docker run --rm --runtime=amd --gpus device=2 rocm/rocm-terminal rocm-smi
+
+   .. note::
+      * Again, the **``device=``** prefix is required.
+
+**Summary**
+
+- Use ``--gpus <count>`` to request a specific number of GPUs (e.g., ``--gpus 2``)
+- Use ``--gpus device=<i,j,...>`` to request exact GPU indices (e.g., ``device=1,2,3``)
+
+GPU Partitioning: Enabling Fine-Grained Resource Allocation
+-----------------------------------------------------------
+
+GPU partitioning empowers users to divide a single physical GPU into multiple logical units, each of which can be independently accessed and managed within containerized workloads. This capability is essential for fine-grained control over GPU resources, enabling scenarios such as workload isolation, resource sharing, and maximizing GPU utilization within containerized environments.
+
+Starting with version **1.1.0**, the AMD Container Toolkit introduces full support for **GPU partitioning**
+
+.. note::
+   Partitioned GPUs behave identically to physical GPUs within containers. Applications and monitoring tools like `rocm-smi` or `amd-smi` will detect and report them as separate devices.
+
+Partitioning Schemes and Access
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+With the AMD Container Toolkit, you can apply various partitioning schemes to your GPUs. Once partitioned, each logical GPU appears to the container runtime as a distinct device, indistinguishable from a standard, unpartitioned GPU. This allows you to allocate specific GPU partitions to different containers, optimizing performance and isolation. This functionality is particularly useful in multi-tenant or resource-constrained environments where full GPU allocation is not necessary.
+
+Regenerating and Validating CDI Specifications
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Whenever you modify the GPU partitioning on your system, it is must to regenerate the Container Device Interface (CDI) specification. This ensures that the container runtime is aware of the current GPU topology and can accurately expose the correct devices to your containers.
+
+To regenerate the CDI spec after a partitioning change, run:
+
+.. code-block:: bash
+
+   amd-ctk cdi generate --output=/etc/cdi/amd.json
+
+To validate that the existing CDI spec accurately reflects the available GPUs and partitions, use:
+
+.. code-block:: bash
+
+   amd-ctk cdi validate --path=/etc/cdi/amd.json
+
+Inspecting GPU Partition Status
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You can use the `amd-smi` tool inside your container to inspect the status of each GPU, determine whether it is partitioned or unpartitioned, and view details about the partitioning scheme in use.
+
+.. code-block:: bash
+
+   docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/rocm-terminal amd-smi
+
+Selecting GPUs and Partitions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Partitioning can result in a large number of logical GPUs on your system. To simplify device selection, the AMD Container Toolkit supports specifying a range or set of GPUs using the `AMD_VISIBLE_DEVICES` environment variable. For example:
+
+.. code-block:: bash
+
+   docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0-3,8,17-20,52-54 rocm/rocm-terminal amd-smi
+
+This command grants the container access to GPUs 0 through 3, 8, 17 through 20, and 52 through 54. The range specifier is especially useful for efficiently targeting all partitions within specific physical GPUs, as partitions are typically numbered contiguously.
+
+.. image:: ./images/rocm-smi-partitioned.png
+   :alt: Example output of rocm-smi showing partitioned GPUs inside a container
+   :width: 800px
+   :align: center
+
+.. note::
+   To view and verify partitioned GPUs inside containers, ensure you are using ROCm version 6.4.1 or newer.
+
+Best Practices and Documentation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- **Always regenerate the CDI spec** after any GPU partitioning change to ensure containers have access to the correct devices.
+- **Validate the CDI spec** to confirm it matches the current system state before launching new workloads.
+- **Consult the latest documentation** for detailed partitioning workflows and troubleshooting guidance.
+
+By leveraging GPU partitioning, you can achieve fine-grained resource allocation, improved workload isolation, and greater flexibility in deploying GPU-accelerated containers across your infrastructure.
 
 Uninstallation Guide
 --------------------
