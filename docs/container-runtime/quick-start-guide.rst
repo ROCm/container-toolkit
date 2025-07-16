@@ -30,8 +30,8 @@ You can verify your Docker version using:
 
 If you are on an earlier Docker version, please upgrade to at least Docker 25 before proceeding with toolkit configuration and GPU-based workloads.
 
-- **ROCm:**  
-  - ROCm 6.3.x or newer is required for basic functionality.  
+- **ROCm:**
+
   - ROCm 6.4.1 or newer is required to view and verify partitioned GPUs inside containers.
 
 **jq** - Required during uninstallation to parse configuration settings cleanly.
@@ -127,13 +127,6 @@ RHEL/CentOS 9:
    gpgkey=https://repo.radeon.com/rocm/rocm.gpg.key
    EOF
 
-- Clean the package cache and install the toolkit:
-
-.. code-block:: bash
-
-   dnf clean all
-   dnf install -y amd-container-toolkit
-
 Step 4: Install Toolkit and Docker
 ----------------------------------
 
@@ -144,7 +137,13 @@ Ubuntu:
    sudo apt install amd-container-toolkit
 
 RHEL/CentOS 9:
-Already covered in the previous step.
+
+- Clean the package cache and install the toolkit:
+
+.. code-block:: bash
+
+   dnf clean all
+   dnf install -y amd-container-toolkit
 
 Step 5: Configure Docker Runtime for AMD GPUs
 ---------------------------------------------
@@ -291,8 +290,8 @@ You can use the `amd-smi` tool inside your container to inspect the status of ea
 
    docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/rocm-terminal amd-smi
 
-Selecting GPUs and Partitions with Range Syntax
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Selecting GPUs and Partitions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Partitioning can result in a large number of logical GPUs on your system. To simplify device selection, the AMD Container Toolkit supports specifying a range or set of GPUs using the `AMD_VISIBLE_DEVICES` environment variable. For example:
 
