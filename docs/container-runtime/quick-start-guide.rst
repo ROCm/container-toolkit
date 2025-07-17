@@ -113,7 +113,7 @@ Ubuntu 24.04:
 
    sudo apt update
 
-RHEL/CentOS 9:
+RHEL 9.5:
 
 .. code-block:: bash
 
@@ -136,7 +136,7 @@ Ubuntu:
 
    sudo apt install amd-container-toolkit
 
-RHEL/CentOS 9:
+RHEL 9.5:
 
 - Clean the package cache and install the toolkit:
 
@@ -166,7 +166,7 @@ Run a container with access to all available AMD GPUs:
 
 .. code-block:: bash
 
-   docker run --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/rocm-terminal amd-smi monitor
+   docker run --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/dev-ubuntu-24.04 amd-smi monitor
 
 Output should look like this, validating that all GPUs are visible:
 
@@ -186,7 +186,7 @@ Run a container with access to a specific AMD GPU (i.e., the first GPU):
 
 .. code-block:: bash
 
-   docker run --runtime=amd -e AMD_VISIBLE_DEVICES=0 rocm/rocm-terminal amd-smi monitor
+   docker run --runtime=amd -e AMD_VISIBLE_DEVICES=0 rocm/dev-ubuntu-24.04 amd-smi monitor
 
 Output should look like this, validating that only the first GPU is visible:
 
@@ -208,19 +208,19 @@ Starting from Docker **28.3.0**, containerized GPU workloads can leverage the st
 
    ::
 
-       sudo docker run --rm --runtime=amd --gpus all rocm/rocm-terminal rocm-smi
+       sudo docker run --rm --runtime=amd --gpus all rocm/dev-ubuntu-24.04 rocm-smi
 
    or equivalently:
 
    ::
 
-       sudo docker run --rm --runtime=amd --gpus device=all rocm/rocm-terminal rocm-smi
+       sudo docker run --rm --runtime=amd --gpus device=all rocm/dev-ubuntu-24.04 rocm-smi
 
 2. **Use any 2 GPUs**
 
    ::
 
-       sudo docker run --rm --runtime=amd --gpus 2 rocm/rocm-terminal rocm-smi
+       sudo docker run --rm --runtime=amd --gpus 2 rocm/dev-ubuntu-24.04 rocm-smi
 
    .. note::
       Specifying multiple values in a comma-separated list like ``--gpus 1,2,3`` will result in **only the last number** being recognized. For instance, that same input would end up requesting **3 GPUs**.
@@ -229,7 +229,7 @@ Starting from Docker **28.3.0**, containerized GPU workloads can leverage the st
 
    ::
 
-       sudo docker run --rm --runtime=amd --gpus "device=1,2,3" rocm/rocm-terminal rocm-smi
+       sudo docker run --rm --runtime=amd --gpus '"device=1,2,3"' rocm/dev-ubuntu-24.04 rocm-smi
 
    .. note::
       * GPU indices start from **0**.
@@ -239,7 +239,7 @@ Starting from Docker **28.3.0**, containerized GPU workloads can leverage the st
 
    ::
 
-       sudo docker run --rm --runtime=amd --gpus device=2 rocm/rocm-terminal rocm-smi
+       sudo docker run --rm --runtime=amd --gpus device=2 rocm/dev-ubuntu-24.04 rocm-smi
 
    .. note::
       * Again, the **``device=``** prefix is required.
@@ -269,7 +269,9 @@ Regenerating and Validating CDI Specifications
 
 Whenever you modify the GPU partitioning on your system, it is must to regenerate the Container Device Interface (CDI) specification. This ensures that the container runtime is aware of the current GPU topology and can accurately expose the correct devices to your containers.
 
-To regenerate the CDI spec after a partitioning change, run:
+You can regenerate and validate the CDI spec either by specifying an explicit output path or by using the default location.
+
+**To regenerate the CDI spec with an explicit output path after a partitioning change, run:**
 
 .. code-block:: bash
 
@@ -281,6 +283,16 @@ To validate that the existing CDI spec accurately reflects the available GPUs an
 
    amd-ctk cdi validate --path=/etc/cdi/amd.json
 
+**Alternatively, you may omit the path to use the default CDI spec location:**
+
+.. code-block:: bash
+
+   amd-ctk cdi generate
+   amd-ctk cdi validate
+
+.. note::
+   If you do not specify an output or path, the commands will operate on the default CDI spec location as defined by the toolkit. This is suitable for most standard installations.
+
 Inspecting GPU Partition Status
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -288,7 +300,7 @@ You can use the `amd-smi` tool inside your container to inspect the status of ea
 
 .. code-block:: bash
 
-   docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/rocm-terminal amd-smi
+   docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/dev-ubuntu-24.04 amd-smi
 
 Selecting GPUs and Partitions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -297,7 +309,7 @@ Partitioning can result in a large number of logical GPUs on your system. To sim
 
 .. code-block:: bash
 
-   docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0-3,8,17-20,52-54 rocm/rocm-terminal amd-smi
+   docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0-3,8,17-20,52-54 rocm/dev-ubuntu-24.04 amd-smi
 
 This command grants the container access to GPUs 0 through 3, 8, 17 through 20, and 52 through 54. The range specifier is especially useful for efficiently targeting all partitions within specific physical GPUs, as partitions are typically numbered contiguously.
 

@@ -14,7 +14,7 @@ Compatibility Matrix
      - Supported OS
    * - 1.1.0
      - 25.0+ (``--gpus`` flag in 28.3.0+)
-     - Ubuntu 22.04, Ubuntu 24.04, RHEL/CentOS 9
+     - Ubuntu 22.04, Ubuntu 24.04, RHEL 9.5
    * - 1.0.0
      - 25.0+
      - Ubuntu 22.04, Ubuntu 24.04
@@ -30,7 +30,7 @@ Versioning Information
      - Highlights
    * - v1.1.0
      - July 2025
-     - GPU Partitioning Support , Docker --gpus Support, RHEL/CentOS 9 Support
+     - GPU Partitioning Support , Docker --gpus Support, RHEL 9.5 Support
    * - v1.0.0
      - June 2025
      - Initial Release with `amd-ctk`, CDI, Docker Integration, Ubuntu 22.04/24.04 Support
@@ -42,7 +42,7 @@ v1.1.0 (July 2025)
 Overview
 --------
 
-Version 1.1.0 of the AMD Container Toolkit delivers a significant leap in flexibility, usability, and platform reach for GPU-accelerated container workloads. This release introduces three impactful features: **GPU Partitioning**, **support for RHEL/CentOS 9**, and **integration with Docker’s standardized ``--gpus`` flag**. These enhancements empower users to maximize GPU utilization, streamline deployment across diverse environments, and adopt industry-standard container interfaces for specifying GPU resources.
+Version 1.1.0 of the AMD Container Toolkit delivers a significant leap in flexibility, usability, and platform reach for GPU-accelerated container workloads. This release introduces three impactful features: **GPU Partitioning**, **support for RHEL 9.5**, and **integration with Docker’s standardized ``--gpus`` flag**. These enhancements empower users to maximize GPU utilization, streamline deployment across diverse environments, and adopt industry-standard container interfaces for specifying GPU resources.
 
 New Features
 ~~~~~~~~~~~~
@@ -54,9 +54,9 @@ New Features
   - Support for range-based device specification (e.g., `0-3,8,17-20`).
   - Compatibility with container runtimes using updated CDI specs.
 
-- **Full Support for RHEL and CentOS 9**
+- **Full Support for RHEL 9.5**
 
-  - This release introduces native RPM packaging and support for RHEL/CentOS 9 systems.
+  - This release introduces native RPM packaging and support for RHEL 9.5 systems.
 
 - **Support for `--gpus` Flag in Docker 28.x+**
 
@@ -70,7 +70,7 @@ Improvements
 - **Range of GPU Device Selection:**  
   The `AMD_VISIBLE_DEVICES` environment variable allows users to specify range of GPUs, making it easier to select multiple GPUs or partitions in a concise manner.
 - **Documentation Updates:**  
-  All documentation related to GPU partitioning, RHEL/CentOS installation, and Docker ``--gpus`` flag usage has been updated to reflect these new capabilities.
+  All documentation related to GPU partitioning, RHEL installation, and Docker ``--gpus`` flag usage has been updated to reflect these new capabilities.
 
 Known Issues
 ~~~~~~~~~~~~
@@ -82,7 +82,7 @@ Upgrade Notes
 
 - After any GPU partitioning changes, always regenerate and validate the CDI spec to ensure containers have access to the correct devices.
 - For partitioned GPU visibility inside containers, ensure you are using ROCm version 6.4.1 or newer.
-- For RHEL/CentOS 9, follow the new installation instructions in the documentation.
+- For RHEL 9.5, follow the new installation instructions in the documentation.
 - To use the ``--gpus`` flag, upgrade Docker to version 28.3.0 or newer.
 
 Next Steps
@@ -90,7 +90,7 @@ Next Steps
 
 1. Review the updated requirements and quick start guide in the documentation.
 2. For GPU partitioning, users can provide range of GPUs and remember to regenerate CDI specs after changes.
-3. For RHEL/CentOS 9, follow the new RPM-based installation workflow.
+3. For RHEL 9.5, follow the new RPM-based installation workflow.
 4. To use the ``--gpus`` flag, ensure you are running Docker 28.3.0 or newer.
 5. Deploy your first container using:
 

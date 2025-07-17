@@ -7,10 +7,10 @@ Supported Operating Systems
 ---------------------------
 - Ubuntu 22.04 LTS (Jammy Jellyfish)
 - Ubuntu 24.04 LTS (Noble Numbat)
-- RHEL 9 / CentOS Stream 9
+- RHEL 9.5
 
 .. note::
-   - RHEL and CentOS 9 support is new in v1.1.0 and requires the RPM-based installation flow.
+   - RHEL 9.5 support is new in v1.1.0 and requires the RPM-based installation flow.
    - Follow the installation instructions in the Quick Start Guide document for these platforms.
 
 Docker Compatibility
@@ -41,7 +41,7 @@ The following packages and configurations are required on the host system:
 
        sudo usermod -aG render,video $USER
        newgrp render && newgrp video
-- For RHEL/CentOS 9, ensure the AMD Container Toolkit YUM repository is configured as described in the installation guide.
+- For RHEL 9.5, ensure the AMD Container Toolkit YUM repository is configured as described in the installation guide.
 
 GPU Partitioning Requirements
 -----------------------------
