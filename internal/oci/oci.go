@@ -59,6 +59,9 @@ type GetGPUs func() ([][]string, error)
 // GetGPU is the type for functions that return the device information for the given GPU
 type GetGPU func(string) (amdgpu.AMDGPU, error)
 
+// GetUniqueIdToDeviceIndexMap is the type for functions that return UUID to device index mapping
+type GetUniqueIdToDeviceIndexMap func() (map[string][]int, error)
+
 // oci_t implements the OCI interface
 type oci_t struct {
 	// args are the arguments to runtime
@@ -92,6 +95,9 @@ type oci_t struct {
 
 	// getGPU is the function that returns the device info of the given GPU
 	getGPU GetGPU
+
+	// getUniqueIdToDeviceIndexMap is the function that returns UUID to device index mapping
+	getUniqueIdToDeviceIndexMap GetUniqueIdToDeviceIndexMap
 }
 
 // SpecUpdateOp specifies type of update operation on the OCI spec
@@ -140,8 +146,8 @@ func (oci *oci_t) parseArgs() {
 	oci.updatedSpecPath = oci.origSpecPath
 }
 
-// getAMDEnv reads the value of "AMD_VISIBLE_DEVICES" environment variable
-// in the spec.
+// getAMDEnv reads the value of "AMD_VISIBLE_DEVICES" or "DOCKER_RESOURCE_*" environment variables
+// in the spec. Supports both device indices and hex unique IDs.
 func (oci *oci_t) getAMDEnv() {
 	getDevs := func(devs string) []int {
 		dl := []int{}
@@ -151,10 +157,38 @@ func (oci *oci_t) getAMDEnv() {
 			return dl
 		}
 
+		// Get unique ID to device index mapping for hex ID support
+		uniqueIdMap, err := oci.getUniqueIdToDeviceIndexMap()
+		if err != nil {
+			logger.Log.Printf("Failed to get unique ID mapping: %v", err)
+			uniqueIdMap = make(map[string][]int) // Continue with empty map
+		}
+
 		invalidDevsRange := []string{}
 		invalidDevs := []string{}
 		for _, c := range strings.Split(devs, ",") {
-			if strings.Contains(c, "-") {
+			// Check if it's a hex unique ID (starts with 0x or is a long hex string)
+			if strings.HasPrefix(c, "0x") || strings.HasPrefix(c, "0X") ||
+				(len(c) > 8 && isHexString(c)) {
+				// Normalize hex format
+				hexId := strings.ToLower(c)
+				if !strings.HasPrefix(hexId, "0x") {
+					hexId = "0x" + hexId
+				}
+
+				if deviceIndices, exists := uniqueIdMap[hexId]; exists {
+					dl = append(dl, deviceIndices...)
+				} else {
+					// Also try without 0x prefix
+					hexIdNoPrefix := strings.TrimPrefix(hexId, "0x")
+					if deviceIndices, exists := uniqueIdMap[hexIdNoPrefix]; exists {
+						dl = append(dl, deviceIndices...)
+					} else {
+						invalidDevs = append(invalidDevs, c)
+					}
+				}
+			} else if strings.Contains(c, "-") {
+				// Range of device indices
 				devsRange := strings.SplitN(c, "-", 2)
 				start, err0 := strconv.Atoi(devsRange[0])
 				end, err1 := strconv.Atoi(devsRange[1])
@@ -167,6 +201,7 @@ func (oci *oci_t) getAMDEnv() {
 					}
 				}
 			} else {
+				// Device index
 				i, err := strconv.Atoi(c)
 				if err == nil {
 					if i >= 0 {
@@ -174,6 +209,8 @@ func (oci *oci_t) getAMDEnv() {
 					} else {
 						invalidDevs = append(invalidDevs, c)
 					}
+				} else {
+					invalidDevs = append(invalidDevs, c)
 				}
 			}
 		}
@@ -222,7 +259,7 @@ func (oci *oci_t) getAMDEnv() {
 		gpus := []int{}
 		for _, env := range envs {
 			pts := strings.SplitN(env, "=", 2)
-			if len(pts) == 2 && pts[0] == "AMD_VISIBLE_DEVICES" {
+			if len(pts) == 2 && (pts[0] == "AMD_VISIBLE_DEVICES" || strings.HasPrefix(pts[0], "DOCKER_RESOURCE_")) {
 				gpus = getDevs(pts[1])
 				if len(gpus) > 0 {
 					oci.amdDevices = validateGPUs(gpus)
@@ -230,6 +267,19 @@ func (oci *oci_t) getAMDEnv() {
 			}
 		}
 	}
+}
+
+// isHexString checks if a string contains only hexadecimal characters
+func isHexString(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	for _, c := range s {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
 }
 
 // getSpec reads the input OCI spec file into memory
@@ -396,10 +446,11 @@ func (oci *oci_t) addGPUDevice(gpu amdgpu.AMDGPU) error {
 // New creates an OCI instance
 func New(argv []string) (Interface, error) {
 	oci := &oci_t{
-		args:     argv,
-		hookPath: DEFAULT_HOOK_PATH,
-		getGPUs:  amdgpu.GetAMDGPUs,
-		getGPU:   amdgpu.GetAMDGPU,
+		args:                        argv,
+		hookPath:                    DEFAULT_HOOK_PATH,
+		getGPUs:                     amdgpu.GetAMDGPUs,
+		getGPU:                      amdgpu.GetAMDGPU,
+		getUniqueIdToDeviceIndexMap: amdgpu.GetUniqueIdToDeviceIndexMap,
 	}
 
 	oci.parseArgs()

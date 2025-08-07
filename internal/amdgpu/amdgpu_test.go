@@ -527,3 +527,76 @@ func TestGetDevIdsFromTopology(t *testing.T) {
 		})
 	}
 }
+
+func TestGetUniqueIdToDeviceIndexMapWithFS(t *testing.T) {
+	tests := []struct {
+		name           string
+		testCase       string
+		expectedResult map[string][]int
+		expectedError  error
+	}{
+		{
+			name:     "single GPU UUID mapping",
+			testCase: "single_gpu",
+			expectedResult: map[string][]int{
+				"0x1": {0},
+				"1":   {0},
+			},
+			expectedError: nil,
+		},
+		{
+			name:     "GPU with partition UUID mapping",
+			testCase: "gpu_with_partition",
+			expectedResult: map[string][]int{
+				"0x1": {0, 1},
+				"1":   {0, 1},
+			},
+			expectedError: nil,
+		},
+		{
+			name:     "multiple GPUs UUID mapping",
+			testCase: "multiple_gpus",
+			expectedResult: map[string][]int{
+				"0x1": {0},
+				"1":   {0},
+				"0x2": {1},
+				"2":   {1},
+			},
+			expectedError: nil,
+		},
+		{
+			name:     "unordered partitions UUID mapping",
+			testCase: "unordered_partitions",
+			expectedResult: map[string][]int{
+				"0x1": {0, 1},
+				"1":   {0, 1},
+				"0x2": {2},
+				"2":   {2},
+			},
+			expectedError: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockFS := &mockFS{}
+
+			// Setup filesystem mocks
+			fileInfo := setupMockFileInfo()
+			mockFS.On("Stat", "/sys/module/amdgpu/drivers/").Return(fileInfo, nil)
+			loadTestData(t, mockFS, tt.testCase)
+
+			result, err := GetUniqueIdToDeviceIndexMapWithFS(mockFS)
+
+			if tt.expectedError != nil {
+				assert.Error(t, err)
+				assert.Equal(t, tt.expectedError, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedResult, result)
+			}
+
+			mockFS.AssertExpectations(t)
+		})
+	}
+}
