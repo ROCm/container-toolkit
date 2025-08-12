@@ -174,6 +174,138 @@ amd.com/gpu=0
   /dev/dri/renderD128
 ```
 
+# GPU UUID Support
+
+The AMD Container Toolkit supports GPU selection using unique identifiers (UUIDs) in addition to device indices. This enables more precise and reliable GPU targeting, especially in multi-GPU systems and orchestrated environments.
+
+## Getting GPU UUIDs
+
+You can obtain GPU UUIDs using different tools:
+
+### Using ROCm SMI
+```bash
+rocm-smi --showuniqueid
+```
+
+This will display output similar to:
+```
+GPU[0]          : Unique ID: 0xef2c1799a1f3e2ed
+GPU[1]          : Unique ID: 0x1234567890abcdef
+```
+
+### Using AMD-SMI
+You can also use `amd-smi` to get the ASIC_SERIAL, which serves as the GPU UUID:
+
+```bash
+amd-smi static -aB
+```
+
+This will display output similar to:
+```
+GPU: 0
+    ASIC:
+        MARKET_NAME: AMD Instinct MI210
+        VENDOR_ID: 0x1002
+        VENDOR_NAME: Advanced Micro Devices Inc. [AMD/ATI]
+        SUBVENDOR_ID: 0x1002
+        DEVICE_ID: 0x740f
+        SUBSYSTEM_ID: 0x0c34
+        REV_ID: 0x02
+        ASIC_SERIAL: 0xD1CC3F11CFDD5112
+        OAM_ID: N/A
+        NUM_COMPUTE_UNITS: 104
+        TARGET_GRAPHICS_VERSION: gfx90a
+    BOARD:
+        MODEL_NUMBER: 102-D67302-00
+        PRODUCT_SERIAL: 692231000131
+        FRU_ID: 113-HPED67302000B.009
+        PRODUCT_NAME: Instinct MI210
+        MANUFACTURER_NAME: AMD
+```
+
+Use the `ASIC_SERIAL` value (e.g., `0xD1CC3F11CFDD5112`) as the GPU UUID in your container configurations.
+
+## Using UUIDs with Environment Variables
+
+Both `AMD_VISIBLE_DEVICES` and `DOCKER_RESOURCE_*` environment variables support UUID specification:
+
+### Using AMD_VISIBLE_DEVICES
+```bash
+# Use specific GPUs by UUID
+docker run --rm --runtime=amd \
+  -e AMD_VISIBLE_DEVICES=0xef2c1799a1f3e2ed,0x1234567890abcdef \
+  rocm/dev-ubuntu-24.04 rocm-smi
+
+# Mix device indices and UUIDs
+docker run --rm --runtime=amd \
+  -e AMD_VISIBLE_DEVICES=0,0xef2c1799a1f3e2ed \
+  rocm/dev-ubuntu-24.04 rocm-smi
+```
+
+### Using DOCKER_RESOURCE_* Variables
+```bash
+# Docker Swarm generic resource format
+docker run --rm --runtime=amd \
+  -e DOCKER_RESOURCE_GPU=0xef2c1799a1f3e2ed \
+  rocm/dev-ubuntu-24.04 rocm-smi
+```
+
+## Docker Swarm Integration
+
+GPU UUID support significantly improves Docker Swarm deployments by enabling precise GPU allocation across cluster nodes.
+
+### Docker Daemon Configuration for Swarm
+
+Configure each swarm node's Docker daemon with GPU resources in `/etc/docker/daemon.json`:
+
+```json
+{
+  "runtimes": {
+    "amd": {
+      "path": "amd-container-runtime",
+      "runtimeArgs": []
+    }
+  },
+  "node-generic-resources": [
+    "AMD_GPU=0x378041e1ada6015",
+    "AMD_GPU=0xef39dad16afb86ad",
+    "GPU_COMPUTE=0x583de6f2d99dc333"
+  ]
+}
+```
+
+After updating the configuration, restart the Docker daemon:
+```bash
+sudo systemctl restart docker
+```
+
+### Service Definition
+
+Deploy services with specific GPU requirements using docker-compose:
+
+```yaml
+# docker-compose.yml for Swarm deployment
+version: '3.8'
+services:
+  rocm-service:
+    image: rocm/dev-ubuntu-24.04
+    command: rocm-smi
+    runtime: amd
+    deploy:
+      replicas: 1
+      resources:
+        reservations:
+          generic_resources:
+            - discrete_resource_spec:
+                kind: 'AMD_GPU'  # Matches daemon.json key
+                value: 1
+```
+
+Deploy the service:
+```bash
+docker stack deploy -c docker-compose.yml rocm-stack
+```
+
 # Release notes
 | Release  | Features                                                                     | Known Issues                                                                 |
 |----------|------------------------------------------------------------------------------|------------------------------------------------------------------------------|
