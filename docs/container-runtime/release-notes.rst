@@ -152,7 +152,7 @@ Upgrade Notes
 -------------
 
 - Docker must be upgraded to version **25.0 or higher**.
-- Ensure the ROCm driver version matches the compatibility matrix listed in `requirements.rst`.
+- Ensure the amdgpu driver version matches the compatibility matrix listed in `requirements.rst`.
 - If migrating from NVIDIA, follow the steps outlined in `migration-guide.rst`.
 
 Next Steps
