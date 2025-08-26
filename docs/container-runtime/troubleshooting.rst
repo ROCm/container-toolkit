@@ -174,7 +174,7 @@ Next Steps
 
 If the above steps do not resolve your issue:
 
-- Validate your ROCm driver installation with:
+- Validate your amdgpu driver installation with:
 
 .. code-block:: bash
 
