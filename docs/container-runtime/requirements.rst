@@ -53,7 +53,7 @@ Important Notes
 ----------------
 
 - ROCm must be installed on the host system and must match the expected version compatibility with your container images.
-- Using mismatched ROCm driver and runtime versions may result in runtime errors or undefined behavior.
+- Using mismatched amdgpu driver and runtime versions may result in runtime errors or undefined behavior.
 - Ensure CDI specs are kept up to date in environments where GPU topology can change frequently (e.g., partitioned systems or multi-GPU deployments).
 - Always refer to the latest documentation for platform-specific installation and configuration steps.
 
