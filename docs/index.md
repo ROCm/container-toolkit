@@ -17,4 +17,5 @@ This documentation site provides information about the AMD Container Toolkit, wh
 - [Migration Guide](container-runtime/migration-guide.rst)
 - [Developer Guide](container-runtime/developer-guide.rst)
 - [Docker Compose](container-runtime/docker-compose.rst)
+- [Enroot Pyxis Installation](container-runtime/enroot-pyxis-installation.rst)
 - [Release Notes](container-runtime/release-notes.rst)
