@@ -18,5 +18,6 @@ subtrees:
         title: Developer Guide
       - file: container-runtime/docker-compose.rst
         title: Docker Compose Usage
+      - file: container-runtime/enroot-pyxis-installation.md      
       - file: container-runtime/release-notes.rst
         title: Release Notes
