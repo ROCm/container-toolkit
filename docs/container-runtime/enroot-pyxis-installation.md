@@ -1,14 +1,10 @@
 # Enroot and Pyxis 
 
-Enroot and Pyxis are tools created to run containerized AI/HPC workloads on SLURM. These tools can now be used on a SLURM cluster  with AMD GPUs to make them run efficiently and achieve isolation for these  GPUs. Traditional runtimes like Docker/Podman bring additional overhead such as daemons, root privileges and extra storage layers. With Enroot, users can convert Docker images into a simple unpacked filesystem tree and run containers as a regular Linux process. Also, with Enroot and Pyxis, each job is granted exclusive GPU device files which prevents jobs from accidentally accessing the same GPU device.  
-
-Enroot reference: https://github.com/NVIDIA/enroot 
-
-Pyxis reference:  https://github.com/NVIDIA/pyxis 
+[Enroot](https://github.com/NVIDIA/enroot) and [Pyxis](https://github.com/NVIDIA/pyxis) are tools created to run containerized AI/HPC workloads on SLURM. These tools can now be used on a SLURM cluster  with AMD GPUs to make them run efficiently and achieve isolation for these  GPUs. Traditional runtimes like Docker/Podman bring additional overhead such as daemons, root privileges and extra storage layers. With Enroot, users can convert Docker images into a simple unpacked filesystem tree and run containers as a regular Linux process. Also, with Enroot and Pyxis, each job is granted exclusive GPU device files which prevents jobs from accidentally accessing the same GPU device.  
 
 This guide provides the steps to install enroot/pyxis on a SLURM cluster as well as examples to run containerized images isolating specific AMD GPUs on Ubuntu. 
 
-Installation: 
+## Installation
 
 Pre-requisites: 
 Make sure SLURM is already installed  and the cluster is up and running.  
