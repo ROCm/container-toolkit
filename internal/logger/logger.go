@@ -19,6 +19,7 @@ package logger
 import (
 	"log"
 	"os"
+	"os/user"
 	"path/filepath"
 	"sync"
 )
@@ -42,17 +43,32 @@ func SetLogFile(file string) {
 }
 
 // SetLogDir sets the path to the directory of logs
-func SetLogDir(dir string) {
-	logdir = dir
+func SetLogDir() {
+	if os.Getenv("LOGDIR") != "" {
+		logdir = os.Getenv("LOGDIR")
+		return
+	}
+	// Get the current user's information.
+	currentUser, err := user.Current()
+	if err != nil {
+		log.Fatalf("Failed to get current user: %v", err)
+	}
+	// for root user, log dir is /var/log
+	if currentUser.Uid != "0" {
+		//Non-Root user, setting log directory to user's home directory
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			log.Fatalf("Failed to get user home directory: %v", err)
+		}
+		logdir = homeDir
+	}
 }
 
 func initLogger(console bool) {
 	if console {
 		Log = log.New(os.Stdout, logPrefix, log.Lmsgprefix)
 	} else {
-		if os.Getenv("LOGDIR") != "" {
-			logdir = os.Getenv("LOGDIR")
-		}
+		SetLogDir()
 
 		outfile, err := os.OpenFile(filepath.Join(logdir, logfile),
 			os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
