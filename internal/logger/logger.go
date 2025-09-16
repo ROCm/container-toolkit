@@ -44,10 +44,31 @@ func SetLogFile(file string) {
 
 // SetLogDir sets the path to the directory of logs
 func SetLogDir() {
+
+	isWriteable := func(path string) bool {
+		// Create a temporary file in the specified directory.
+		// os.CreateTemp will return an error if the directory is not writable.
+		file, err := os.CreateTemp(path, "tmp-test-")
+		if err != nil {
+			return false
+		}
+		file.Close()           // Close the file
+		os.Remove(file.Name()) // Clean up the temporary file
+
+		return true
+	}
+
 	if os.Getenv("LOGDIR") != "" {
 		logdir = os.Getenv("LOGDIR")
+
+		//check if the user has permission to write to this location
+		if !isWriteable(logdir) {
+			log.Fatalf("User doesn't have write permission for the specified directory: %v", logdir)
+		}
+
 		return
 	}
+
 	// Get the current user's information.
 	currentUser, err := user.Current()
 	if err != nil {
