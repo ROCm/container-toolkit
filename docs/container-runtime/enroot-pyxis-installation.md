@@ -187,3 +187,47 @@ Device  Node  IDs              Temp        Power     Partitions          SCLK   
 
 ================================================== End of ROCm SMI Log =================================================== 
 ```
+## Enroot and Pyxis with GPU partition
+ We can use partitioned GPUs just like any other unpartitioned GPU when we use enroot and pyxis. But for this, slurm first needs to identify partitioned GPUS as the generic resources.
+ Some config changes:
+ 1. Add the below line to /etc/slurm/gres.conf file, so that whenever GPUS are partitioned, the slurm automatically detects the number of gres resources.
+AutoDetect=rsmi
+ Example gres.conf file :
+ ```bash
+AutoDetect=rsmi
+Name=gpu File=/dev/dri/renderD128
+Name=gpu File=/dev/dri/renderD136
+Name=gpu File=/dev/dri/renderD144
+Name=gpu File=/dev/dri/renderD152
+Name=gpu File=/dev/dri/renderD160
+Name=gpu File=/dev/dri/renderD168
+Name=gpu File=/dev/dri/renderD176
+Name=gpu File=/dev/dri/renderD184
+```
+ 2. If gres is specified in the node info in /etc/slurm/slurm.conf file, make sure it specifies the correct number of GPUs for that node
+ Eg :
+ ```bash
+ NodeName=localhost CPUs=160 Boards=1 SocketsPerBoard=2 CoresPerSocket=80 ThreadsPerCore=1 RealMemory=1285717 Gres=gpu:8
+ ```
+ Gres=gpu:8 , can be omitted as well if the partitions keep changing.
+ 3. Restart slurm on both worker node and head node.
+ Head node : 
+ ```bash
+ sudo service slurmctld restart && sudo service slurmd restart
+ ```
+ Worker node : 
+ ```bash
+ sudo service slurmd restart
+ ```
+ Now, pyxis would be able to use all the partitioned GPUS as the resources and allocate them as requested.
+```bash
+root@node2:~# srun --gres=gpu:62 --container-image=./rocm+pytorch+latest.sqsh --pty bash
+root@node2:/var/lib/jenkins# python3
+Python 3.12.10 | packaged by conda-forge | (main, Apr 10 2025, 22:21:13) [GCC 13.3.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import torch 
+>>> torch.cuda.device_count()
+62
+>>> exit()
+```
+
