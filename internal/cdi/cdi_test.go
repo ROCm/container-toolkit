@@ -61,7 +61,7 @@ func TestInterface(t *testing.T) {
 	err := cdi.GenerateSpec()
 	Assert(t, err == nil, fmt.Sprintf("failed to generate cdi spec, Err: %v", err))
 
-	cdi.specPath = "/tmp"
+	cdi.specPath = "/tmp/"
 	err = cdi.WriteSpec()
 	Assert(t, err == nil, fmt.Sprintf("WriteSpec() returned error %v", err))
 
