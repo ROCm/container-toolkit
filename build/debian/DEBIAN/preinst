@@ -1,0 +1,18 @@
+#!/bin/sh
+
+set -e
+
+case "$1" in
+    install|upgrade)
+        echo "Checking for AMD GPU driver..."
+        if [ ! -d "/sys/module/amdgpu/drivers/" ]; then
+            echo "Error: AMD GPU driver (amdgpu) is not installed or loaded."
+            echo "The AMD Container Toolkit requires the amdgpu driver to be installed and loaded."
+            echo "Please install the AMD GPU driver before installing the container toolkit."
+            exit 1
+        fi
+        echo "AMD GPU driver found."
+        ;;
+esac
+
+exit 0
