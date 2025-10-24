@@ -573,6 +573,7 @@ Device  Node  IDs              Temp    Power  Partitions          SCLK    MCLK  
 # Release notes
 | Release  | Features                                                                     | Known Issues                                                                 |
 |----------|------------------------------------------------------------------------------|------------------------------------------------------------------------------|
+| v1.2.0   | 1. GPU Tracker feature support<br>2. Docker Swarm support | None                                                                         |
 | v1.1.0   | 1. GPU partitioning support<br>2. Full RPM package support<br>3. Support for range operator in the input string to AMD_VISIBLE_DEVICES ENV variable. | None                                                                         |
 | v1.0.0   | Initial release                                                             | 1. Partitioned GPUs are not supported.<br>2. RPM builds are experimental.   |
 
