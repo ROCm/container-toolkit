@@ -44,8 +44,9 @@ func AddNewCommand() *cli.Command {
 
 	// Add the configure subcommand
 	configureCmd := cli.Command{
-		Name:  "configure",
-		Usage: "Configure a runtime to the container engine",
+		Name:      "configure",
+		Usage:     "Configure a runtime to the container engine",
+		UsageText: "amd-ctk runtime configure [options]",
 		Before: func(c *cli.Context) error {
 			return validateConfigOptions(c, &cfgOptions)
 		},

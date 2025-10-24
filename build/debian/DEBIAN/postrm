@@ -4,11 +4,15 @@ set -e
 
 AMD_CONTAINER_RUNTIME=/usr/local/bin/amd-container-runtime
 AMD_CONTAINER_TOOLKIT=/usr/local/bin/amd-ctk
+GPU_TRACKER_FILE=/var/log/gpu-tracker.json
+GPU_TRACKER_LOCK_FILE=/var/log/gpu-tracker.lock
 
 case "$1" in
     purge)
         [ -e "${AMD_CONTAINER_TOOLKIT}" ] && rm "${AMD_CONTAINER_TOOLKIT}"
         [ -e "${AMD_CONTAINER_RUNTIME}" ] && rm "${AMD_CONTAINER_RUNTIME}"
+        [ -e "${GPU_TRACKER_FILE}" ] && rm "${GPU_TRACKER_FILE}"
+        [ -e "${GPU_TRACKER_LOCK_FILE}" ] && rm "${GPU_TRACKER_LOCK_FILE}"
     ;;
 
     upgrade|failed-upgrade|remove|abort-install|abort-upgrade|disappear)

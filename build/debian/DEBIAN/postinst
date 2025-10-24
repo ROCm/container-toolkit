@@ -1,0 +1,14 @@
+#!/bin/sh
+
+set -e
+
+AMD_CTK_CMD=/usr/local/bin/amd-ctk
+
+case "$1" in
+    configure)
+        echo "Initializing AMD GPU Tracker..."
+        "${AMD_CTK_CMD}" gpu-tracker init || echo "Failed to initialize GPU Tracker"
+        ;;
+esac
+
+exit 0

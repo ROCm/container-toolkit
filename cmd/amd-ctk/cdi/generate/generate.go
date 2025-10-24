@@ -39,8 +39,9 @@ func AddNewCommand() *cli.Command {
 	// Add the cdi generate command
 	genOptions := generateOptions{}
 	cdiGenerateCmd := cli.Command{
-		Name:  "generate",
-		Usage: "Generate the CDI spec for GPUs",
+		Name:      "generate",
+		Usage:     "Generate the CDI spec for GPUs",
+		UsageText: "amd-ctk cdi generate [options]",
 		Before: func(c *cli.Context) error {
 			return validateGenOptions(c, &genOptions)
 		},

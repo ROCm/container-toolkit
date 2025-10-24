@@ -21,6 +21,7 @@ import (
 	"os"
 
 	"github.com/ROCm/container-toolkit/cmd/amd-ctk/cdi"
+	"github.com/ROCm/container-toolkit/cmd/amd-ctk/gpu-tracker"
 	"github.com/ROCm/container-toolkit/cmd/amd-ctk/runtime"
 	"github.com/ROCm/container-toolkit/internal/logger"
 	"github.com/urfave/cli/v2"
@@ -34,8 +35,9 @@ var (
 
 func showVersion() *cli.Command {
 	showVersionCmd := cli.Command{
-		Name:  "version",
-		Usage: "Show the version",
+		Name:      "version",
+		Usage:     "Show the version",
+		UsageText: "amd-ctk version [options]",
 		Action: func(c *cli.Context) error {
 			fmt.Printf("Version: %s\nBuild Date: %s\nGitCommit: %s\n", Version, BuildDate, GitCommit)
 			return nil
@@ -53,6 +55,7 @@ func main() {
 		Name:                 "AMD Container Toolkit CLI",
 		EnableBashCompletion: true,
 		Usage:                "Tool to configure AMD Container Toolkit",
+		UsageText:            "amd-ctk [command] [options]",
 	}
 
 	// Add subcommands
@@ -60,6 +63,7 @@ func main() {
 		showVersion(),
 		runtime.AddNewCommand(),
 		cdi.AddNewCommand(),
+		gpuTracker.AddNewCommand(),
 	}
 
 	err := amdCtkCli.Run(os.Args)

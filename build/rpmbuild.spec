@@ -23,6 +23,10 @@ if [ ! -d "/sys/module/amdgpu/drivers/" ]; then
 fi
 echo "AMD GPU driver found."
 
+%post
+# Initialize GPU tracker after install
+/usr/bin/amd-ctk gpu-tracker init || echo "Failed to initialize GPU Tracker"
+
 %preun
 /bin/bash /usr/share/amd-container-toolkit/cleanup.sh
 
