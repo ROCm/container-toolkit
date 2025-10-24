@@ -1,5 +1,15 @@
 #!/bin/bash
 
+# Remove GPU Tracker files
+GPU_TRACKER_FILE=/var/log/gpu-tracker.json
+if [ -f "$GPU_TRACKER_FILE" ]; then
+    rm -f "$GPU_TRACKER_FILE"
+fi
+GPU_TRACKER_LOCK_FILE=/var/log/gpu-tracker.lock
+if [ -f "$GPU_TRACKER_LOCK_FILE" ]; then
+    rm -f "$GPU_TRACKER_LOCK_FILE"
+fi
+
 # Remove default CDI directory if present
 CDI_DIR="/etc/cdi"
 if [ -d "$CDI_DIR" ]; then
@@ -52,4 +62,4 @@ if [ "$update" == true ]; then
     echo "$out" > "$DOCKER_CONFIG"
     echo "Updated the docker config file"
     echo "Please restart docker daemon"
-fi 
+fi

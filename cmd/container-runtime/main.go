@@ -19,6 +19,7 @@ package main
 import (
 	"os"
 
+	"github.com/ROCm/container-toolkit/internal/gpu-tracker"
 	"github.com/ROCm/container-toolkit/internal/logger"
 	"github.com/ROCm/container-toolkit/internal/runtime"
 )
@@ -30,6 +31,12 @@ func main() {
 	rt, err := runtime.New(os.Args)
 	if err != nil {
 		logger.Log.Printf("Failed to create container runtime, err = %v", err)
+		gpuTracker, err := gpuTracker.New()
+		if err != nil {
+			logger.Log.Printf("Failed to create GPU tracker, err = %v", err)
+			os.Exit(1)
+		}
+		gpuTracker.ReleaseGPUs(os.Args[len(os.Args)-1])
 		os.Exit(1)
 	}
 
@@ -37,6 +44,12 @@ func main() {
 	err = rt.Run()
 	if err != nil {
 		logger.Log.Printf("Failed to run container runtime, err = %v", err)
+		gpuTracker, err := gpuTracker.New()
+		if err != nil {
+			logger.Log.Printf("Failed to create GPU tracker, err = %v", err)
+			os.Exit(1)
+		}
+		gpuTracker.ReleaseGPUs(os.Args[len(os.Args)-1])
 		os.Exit(1)
 	}
 }

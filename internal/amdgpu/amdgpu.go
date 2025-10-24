@@ -19,6 +19,7 @@ package amdgpu
 import (
 	"bufio"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"os"
 	"os/exec"
@@ -30,6 +31,11 @@ import (
 
 	"github.com/ROCm/container-toolkit/internal/logger"
 )
+
+type DeviceInfo struct {
+	DrmDevices    []string
+	PartitionType string
+}
 
 // FileSystem interface for mocking filesystem operations
 type FileSystem interface {
@@ -82,14 +88,14 @@ type AMDGPU struct {
 // All devices under the same "pci:amdgpu/[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]:*"
 // directory are in a single list.
 // There are as many such lists as the number of gpu directories under "pci:amdgpu/".
-func GetAMDGPUs() ([][]string, error) {
+func GetAMDGPUs() ([]DeviceInfo, error) {
 	return GetAMDGPUsWithFS(defaultFS)
 }
 
 // GetAMDGPUsWithFS is the internal implementation that takes a FileSystem interface.
 // This split allows for better testability by enabling mock filesystem operations
 // in unit tests, while keeping the public API simple with GetAMDGPUs.
-func GetAMDGPUsWithFS(fs FileSystem) ([][]string, error) {
+func GetAMDGPUsWithFS(fs FileSystem) ([]DeviceInfo, error) {
 	if _, err := fs.Stat("/sys/module/amdgpu/drivers/"); err != nil {
 		logger.Log.Printf("amdgpu driver unavailable: %s", err)
 		return nil, err
@@ -98,7 +104,7 @@ func GetAMDGPUsWithFS(fs FileSystem) ([][]string, error) {
 	renderDevIds := GetDevIdsFromTopology(fs)
 
 	// Map to store devices by unique_id to maintain grouping
-	uniqueIdDevices := make(map[string][][]string)
+	uniqueIdDevices := make(map[string][]DeviceInfo)
 	var uniqueIds []string // To maintain order
 
 	// Process PCI devices
@@ -116,6 +122,25 @@ func GetAMDGPUsWithFS(fs FileSystem) ([][]string, error) {
 
 	// Process all devices using the same logic
 	for _, path := range allDevs {
+		computePartitionFile := filepath.Join(path, "current_compute_partition")
+		memoryPartitionFile := filepath.Join(path, "current_memory_partition")
+
+		computePartitionType, memoryPartitionType, combinedPartitionType := "", "", ""
+
+		// Read the compute partition
+		if data, err := ioutil.ReadFile(computePartitionFile); err == nil {
+			computePartitionType = strings.ToLower(strings.TrimSpace(string(data)))
+		}
+		// Read the memory partition
+		if data, err := ioutil.ReadFile(memoryPartitionFile); err == nil {
+			memoryPartitionType = strings.ToLower(strings.TrimSpace(string(data)))
+		}
+
+		combinedPartitionType = computePartitionType + "_" + memoryPartitionType
+		if combinedPartitionType == "_" {
+			combinedPartitionType = ""
+		}
+
 		drms, err := fs.Glob(path + "/drm/*")
 		if err != nil {
 			logger.Log.Printf("Failed to find amdgpu driver drm directories: %s", err)
@@ -139,7 +164,7 @@ func GetAMDGPUsWithFS(fs FileSystem) ([][]string, error) {
 				if _, exists := uniqueIdDevices[devID]; !exists {
 					uniqueIds = append(uniqueIds, devID)
 				}
-				uniqueIdDevices[devID] = append(uniqueIdDevices[devID], drmDevs)
+				uniqueIdDevices[devID] = append(uniqueIdDevices[devID], DeviceInfo{DrmDevices: drmDevs, PartitionType: combinedPartitionType})
 			}
 		}
 	}
@@ -147,7 +172,8 @@ func GetAMDGPUsWithFS(fs FileSystem) ([][]string, error) {
 	// Sort devices within each unique_id group by render minor number
 	for _, devID := range uniqueIds {
 		sort.Slice(uniqueIdDevices[devID], func(i, j int) bool {
-			getRenderID := func(devs []string) int {
+			getRenderID := func(devInfo DeviceInfo) int {
+				devs := devInfo.DrmDevices
 				for _, dev := range devs {
 					baseDev := filepath.Base(dev)
 					if len(baseDev) >= 7 && strings.HasPrefix(baseDev, "renderD") {
@@ -162,7 +188,7 @@ func GetAMDGPUsWithFS(fs FileSystem) ([][]string, error) {
 	}
 
 	// Combine all devices maintaining the unique_id order
-	var devs [][]string
+	var devs []DeviceInfo
 	for _, devID := range uniqueIds {
 		devs = append(devs, uniqueIdDevices[devID]...)
 	}
@@ -316,7 +342,7 @@ func GetUniqueIdToDeviceIndexMapWithFS(fs FileSystem) (map[string][]int, error) 
 	// Process each device group and assign index
 	for deviceIndex, deviceGroup := range devs {
 		// Find the render minor for this device group
-		for _, device := range deviceGroup {
+		for _, device := range deviceGroup.DrmDevices {
 			// Extract render minor from device path like /dev/dri/renderD128
 			if strings.Contains(device, "renderD") {
 				renderMinorStr := strings.TrimPrefix(filepath.Base(device), "renderD")

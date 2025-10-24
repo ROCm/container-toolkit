@@ -14,51 +14,53 @@
 # limitations under the License.
 **/
 
-package list
+package initialize
 
 import (
 	"fmt"
-	"strings"
+	"os/user"
 
-	"github.com/ROCm/container-toolkit/internal/amdgpu"
+	"github.com/ROCm/container-toolkit/internal/gpu-tracker"
 	"github.com/urfave/cli/v2"
 )
 
 func AddNewCommand() *cli.Command {
-	// Add the cdi list command
-	cdiListCmd := cli.Command{
-		Name:      "list",
-		Usage:     "List the available AMD GPU devices",
-		UsageText: "amd-ctk cdi list [options]",
+	// Add the gpu-tracker init command
+	gpuTrackerInitCmd := cli.Command{
+		Name:      "init",
+		Hidden:    true,
+		Usage:     "Initalize the GPU Tracker",
+		UsageText: "amd-ctk gpu-tracker init [options]",
+		Before: func(c *cli.Context) error {
+			return validateGenOptions(c)
+		},
 		Action: func(c *cli.Context) error {
 			return performAction(c)
 		},
 	}
 
-	return &cdiListCmd
+	return &gpuTrackerInitCmd
+}
+
+func validateGenOptions(c *cli.Context) error {
+	curUser, err := user.Current()
+	if err != nil || curUser.Uid != "0" {
+		return fmt.Errorf("Permission denied: Not running as root")
+	}
+
+	return nil
 }
 
 func performAction(c *cli.Context) error {
-	devs, err := amdgpu.GetAMDGPUs()
+	gpuTracker, err := gpuTracker.New()
 	if err != nil {
-		return fmt.Errorf("failed to list AMD devices: %v", err)
+		return fmt.Errorf("Failed to create GPU tracker, Error: %v", err)
 	}
 
-	suffix := "devices"
-	if len(devs) == 1 {
-		suffix = "device"
+	err = gpuTracker.Init()
+	if err != nil {
+		return fmt.Errorf("Failed to Initialize GPU Tracker, Error: %v", err)
 	}
-	fmt.Printf("Found %v AMD GPU %s\n", len(devs), suffix)
-	for cnt, dev := range devs {
-		if cnt == 0 {
-			fmt.Printf("amd.com/gpu=all\n")
-		}
-		fmt.Printf("amd.com/gpu=%v\n", cnt)
-		for _, dd := range dev.DrmDevices {
-			if !strings.HasPrefix(dd, "/dev/dri/card") {
-				fmt.Printf("  %s\n", dd)
-			}
-		}
-	}
+
 	return nil
 }

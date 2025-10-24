@@ -39,8 +39,9 @@ func AddNewCommand() *cli.Command {
 	// Add the cdi validate command
 	valOptions := validateOptions{}
 	cdiValidateCmd := cli.Command{
-		Name:  "validate",
-		Usage: "Validate the CDI spec for GPUs",
+		Name:      "validate",
+		Usage:     "Validate the CDI spec for GPUs",
+		UsageText: "amd-ctk cdi validate [options]",
 		Before: func(c *cli.Context) error {
 			return validateValOptions(c, &valOptions)
 		},
@@ -88,9 +89,12 @@ func performAction(c *cli.Context, valOptions *validateOptions) error {
 	}
 
 	// Validate CDI spec
-	err = cdi.ValidateSpec()
+	result, err := cdi.ValidateSpec()
 	if err != nil {
 		return fmt.Errorf("Failed to validate CDI spec")
+	}
+	if result == true {
+		fmt.Printf("CDI spec is valid\n")
 	}
 
 	return nil

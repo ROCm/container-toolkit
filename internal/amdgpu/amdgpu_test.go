@@ -220,7 +220,7 @@ func TestGetAMDGPUs(t *testing.T) {
 	tests := []struct {
 		name          string
 		testCase      string
-		expectedDevs  [][]string
+		expectedDevs  []DeviceInfo
 		expectedError error
 	}{
 		{
@@ -232,36 +232,84 @@ func TestGetAMDGPUs(t *testing.T) {
 		{
 			name:     "single GPU device",
 			testCase: "single_gpu",
-			expectedDevs: [][]string{
-				{"/dev/dri/card0", "/dev/dri/renderD128"},
+			expectedDevs: []DeviceInfo{
+				DeviceInfo{
+					DrmDevices: []string{
+						"/dev/dri/card0",
+						"/dev/dri/renderD128",
+					},
+					PartitionType: "",
+				},
 			},
 			expectedError: nil,
 		},
 		{
 			name:     "GPU with partition",
 			testCase: "gpu_with_partition",
-			expectedDevs: [][]string{
-				{"/dev/dri/card0", "/dev/dri/renderD128"},
-				{"/dev/dri/card1", "/dev/dri/renderD129"},
+			expectedDevs: []DeviceInfo{
+				DeviceInfo{
+					DrmDevices: []string{
+						"/dev/dri/card0",
+						"/dev/dri/renderD128",
+					},
+					PartitionType: "",
+				},
+				DeviceInfo{
+					DrmDevices: []string{
+						"/dev/dri/card1",
+						"/dev/dri/renderD129",
+					},
+					PartitionType: "",
+				},
 			},
 			expectedError: nil,
 		},
 		{
 			name:     "multiple GPUs",
 			testCase: "multiple_gpus",
-			expectedDevs: [][]string{
-				{"/dev/dri/card0", "/dev/dri/renderD128"},
-				{"/dev/dri/card1", "/dev/dri/renderD130"},
+			expectedDevs: []DeviceInfo{
+				DeviceInfo{
+					DrmDevices: []string{
+						"/dev/dri/card0",
+						"/dev/dri/renderD128",
+					},
+					PartitionType: "",
+				},
+				DeviceInfo{
+					DrmDevices: []string{
+						"/dev/dri/card1",
+						"/dev/dri/renderD130",
+					},
+					PartitionType: "",
+				},
 			},
 			expectedError: nil,
 		},
 		{
 			name:     "unordered partitions",
 			testCase: "unordered_partitions",
-			expectedDevs: [][]string{
-				{"/dev/dri/card0", "/dev/dri/renderD128"},
-				{"/dev/dri/card1", "/dev/dri/renderD129"},
-				{"/dev/dri/card2", "/dev/dri/renderD130"},
+			expectedDevs: []DeviceInfo{
+				DeviceInfo{
+					DrmDevices: []string{
+						"/dev/dri/card0",
+						"/dev/dri/renderD128",
+					},
+					PartitionType: "",
+				},
+				DeviceInfo{
+					DrmDevices: []string{
+						"/dev/dri/card1",
+						"/dev/dri/renderD129",
+					},
+					PartitionType: "",
+				},
+				DeviceInfo{
+					DrmDevices: []string{
+						"/dev/dri/card2",
+						"/dev/dri/renderD130",
+					},
+					PartitionType: "",
+				},
 			},
 			expectedError: nil,
 		},

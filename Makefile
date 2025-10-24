@@ -46,7 +46,7 @@ ifeq (${UBUNTU_VERSION}, noble)
 UBUNTU_VERSION_NUMBER = 24.04
 endif
 
-DEBIAN_VERSION := "1.1.1"
+DEBIAN_VERSION := "1.2.0"
 
 DEBIAN_CONTROL = ${TOP_DIR}/build/debian/DEBIAN/control
 DEBIAN_PRERM = ${TOP_DIR}/build/debian/DEBIAN/prerm

@@ -1,5 +1,5 @@
 Name: amd-container-toolkit
-Version: 1.1.1
+Version: 1.2.0
 Release: 1%{?dist}
 Summary: Package containing AMD container tookkit binaries
 
@@ -22,6 +22,10 @@ if [ ! -d "/sys/module/amdgpu/drivers/" ]; then
     exit 1
 fi
 echo "AMD GPU driver found."
+
+%post
+# Initialize GPU tracker after install
+/usr/bin/amd-ctk gpu-tracker init || echo "Failed to initialize GPU Tracker"
 
 %preun
 /bin/bash /usr/share/amd-container-toolkit/cleanup.sh

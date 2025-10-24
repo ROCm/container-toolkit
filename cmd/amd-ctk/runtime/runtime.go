@@ -24,8 +24,9 @@ import (
 func AddNewCommand() *cli.Command {
 	// Add the runtime command
 	runtimeCmd := cli.Command{
-		Name:  "runtime",
-		Usage: "runtime related commands for AMD Container Toolkit",
+		Name:      "runtime",
+		Usage:     "runtime related commands for AMD Container Toolkit",
+		UsageText: "amd-ctk runtime [command] [options]",
 	}
 
 	runtimeCmd.Subcommands = []*cli.Command{

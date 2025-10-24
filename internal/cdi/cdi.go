@@ -38,7 +38,7 @@ const (
 )
 
 // GetGPUs is the type for functions that return the lists of all the GPU devices on the system
-type GetGPUs func() ([][]string, error)
+type GetGPUs func() ([]amdgpu.DeviceInfo, error)
 
 // GetGPU is the type for functions that return the device information for the given GPU
 type GetGPU func(string) (amdgpu.AMDGPU, error)
@@ -48,6 +48,9 @@ type Interface interface {
 	// GenerateSpec generates the CDI spec for all GPUs available on the host system
 	GenerateSpec() error
 
+	// GetSpec returns the CDI Spec to the caller
+	GetSpec() specs.Spec
+
 	// WriteSpec writes the generated spec to disk
 	WriteSpec() error
 
@@ -55,7 +58,7 @@ type Interface interface {
 	PrintSpec() error
 
 	// ValidateSpec validated the existing CDI spec on the disk
-	ValidateSpec() error
+	ValidateSpec() (bool, error)
 }
 
 // cdi_t implements the CDI interface
@@ -126,7 +129,7 @@ func (cdi *cdi_t) GenerateSpec() error {
 	for i, gpuList := range gpus {
 		devName := strconv.Itoa(i)
 		dnl := []*specs.DeviceNode{}
-		for _, gpu := range gpuList {
+		for _, gpu := range gpuList.DrmDevices {
 			dn, err := getCDIDevNode(gpu)
 			if err != nil {
 				return err
@@ -160,6 +163,10 @@ func (cdi *cdi_t) GenerateSpec() error {
 	cdi.spec.Devices = cdiDevs
 
 	return nil
+}
+
+func (cdi *cdi_t) GetSpec() specs.Spec {
+	return cdi.spec
 }
 
 func (cdi *cdi_t) WriteSpec() error {
@@ -197,7 +204,7 @@ func (cdi *cdi_t) PrintSpec() error {
 	return nil
 }
 
-func (cdi *cdi_t) ValidateSpec() error {
+func (cdi *cdi_t) ValidateSpec() (bool, error) {
 	f := cdi.specPath + CDI_SPEC
 
 	fmt.Printf("Validating CDI spec: %v\n", f)
@@ -205,24 +212,23 @@ func (cdi *cdi_t) ValidateSpec() error {
 	savedCDISpec, err := readSpecFromFile(f)
 	if err != nil {
 		fmt.Printf("Failed to parse %v, Err: %v\n", f, err)
-		return err
+		return false, err
 	}
 
 	err = cdi.GenerateSpec()
 	if err != nil {
 		fmt.Printf("Failed to generate current CDI spec, Err: %v", err)
-		return err
+		return false, err
 	}
 
 	equal := reflect.DeepEqual(*savedCDISpec, cdi.spec)
 	if equal != true {
 		logger.Log.Printf("CDI spec: %v is invalid. Please regenerate CDI spec", f)
 		fmt.Printf("CDI spec is invalid\nPlease regenerate CDI spec\n")
-		return nil
+		return false, nil
 	}
-	fmt.Printf("CDI spec is valid\n")
 
-	return nil
+	return true, nil
 }
 
 func New(sp string) (Interface, error) {

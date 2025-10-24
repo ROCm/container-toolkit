@@ -26,8 +26,9 @@ import (
 func AddNewCommand() *cli.Command {
 	// Add the cdi command
 	cdiCmd := cli.Command{
-		Name:  "cdi",
-		Usage: "Container Device interface related commands",
+		Name:      "cdi",
+		Usage:     "Container Device interface related commands",
+		UsageText: "amd-ctk cdi [command] [options]",
 	}
 
 	cdiCmd.Subcommands = []*cli.Command{

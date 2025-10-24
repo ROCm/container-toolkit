@@ -9,15 +9,21 @@ import (
 	"tags.cncf.io/container-device-interface/specs-go"
 )
 
-func mockGetAMDGPUs() ([][]string, error) {
-	ret := [][]string{
+func mockGetAMDGPUs() ([]amdgpu.DeviceInfo, error) {
+	ret := []amdgpu.DeviceInfo{
 		{
-			"/dev/dri/renderD128",
-			"/dev/dri/card1",
+			DrmDevices: []string{
+				"/dev/dri/renderD128",
+				"/dev/dri/card1",
+			},
+			PartitionType: "",
 		},
 		{
-			"/dev/dri/render129",
-			"/dev/dri/card2",
+			DrmDevices: []string{
+				"/dev/dri/renderD129",
+				"/dev/dri/card2",
+			},
+			PartitionType: "",
 		},
 	}
 
@@ -65,7 +71,7 @@ func TestInterface(t *testing.T) {
 	err = cdi.WriteSpec()
 	Assert(t, err == nil, fmt.Sprintf("WriteSpec() returned error %v", err))
 
-	err = cdi.ValidateSpec()
+	_, err = cdi.ValidateSpec()
 	Assert(t, err == nil, fmt.Sprintf("ValidateSpec() returned error %v", err))
 
 	cdi.PrintSpec()

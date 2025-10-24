@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -27,15 +29,21 @@ const (
 	DELETE_ARGS = "amd-container-runtime --root /var/run/docker/runtime-runc/moby --log /run/containerd/io.containerd.runtime.v2.task/moby/a557d313712ab3255f3bb0eb107173fe41e386a99e6873311107239d43335085/log.json --log-format json delete --force a557d313712ab3255f3bb0eb107173fe41e386a99e6873311107239d43335085], environ: [LANG=C.UTF-8 PATH=/opt/containerd/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin INVOCATION_ID=56c5fa9ca8514fb7a232d094e1d8bed5 JOURNAL_STREAM=8:228353 SYSTEMD_EXEC_PID=3130 LD_LIBRARY_PATH=/opt/containerd/lib: GOMAXPROCS=2 MAX_SHIM_VERSION=2 TTRPC_ADDRESS=/run/containerd/containerd.sock.ttrpc GRPC_ADDRESS=/run/containerd/containerd.sock NAMESPACE=moby"
 )
 
-func mockGetAMDGPUs() ([][]string, error) {
-	ret := [][]string{
+func mockGetAMDGPUs() ([]amdgpu.DeviceInfo, error) {
+	ret := []amdgpu.DeviceInfo{
 		{
-			"/dev/dri/renderD128",
-			"/dev/dri/card1",
+			DrmDevices: []string{
+				"/dev/dri/renderD128",
+				"/dev/dri/card1",
+			},
+			PartitionType: "",
 		},
 		{
-			"/dev/dri/render129",
-			"/dev/dri/card2",
+			DrmDevices: []string{
+				"/dev/dri/renderD129",
+				"/dev/dri/card2",
+			},
+			PartitionType: "",
 		},
 	}
 
@@ -56,6 +64,101 @@ func mockGetAMDGPU(dev string) (amdgpu.AMDGPU, error) {
 	}
 
 	return gpu, nil
+}
+
+func mockReserveGPUs(gpus string, containerId string) ([]int, error) {
+	parseGPUsList := func(gpus string) ([]int, []string, []string, error) {
+		// isHexString checks if a string contains only hexadecimal characters
+		isHexString := func(s string) bool {
+			if len(s) == 0 {
+				return false
+			}
+			for _, c := range s {
+				if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+					return false
+				}
+			}
+			return true
+		}
+
+		validGPUs := []int{}
+		invalidGPUs := []string{}
+		invalidGPUsRange := []string{}
+
+		gpusInfo, err := mockGetAMDGPUs()
+		if err != nil {
+			logger.Log.Printf("Failed to get AMD GPUs info, Error: %v", err)
+			fmt.Printf("Failed to get AMD GPUs info, Error: %v\n", err)
+			return []int{}, []string{}, []string{}, err
+		}
+
+		if gpus == "all" || gpus == "All" || gpus == "ALL" {
+			for i := 0; i < len(gpusInfo); i++ {
+				validGPUs = append(validGPUs, i)
+			}
+			return validGPUs, []string{}, []string{}, nil
+		}
+
+		uuidToGPUIdMap, err := mockGetUniqueIdToDeviceIndexMap()
+		if err != nil {
+			logger.Log.Printf("Failed to get UUID to GPU Id mappings: %v", err)
+			uuidToGPUIdMap = make(map[string][]int) // Continue with empty map
+		}
+
+		for _, c := range strings.Split(gpus, ",") {
+			if strings.HasPrefix(c, "0x") || strings.HasPrefix(c, "0X") ||
+				(len(c) > 8 && isHexString(c)) {
+				uuid := strings.ToLower(c)
+				if !strings.HasPrefix(uuid, "0x") {
+					uuid = "0x" + uuid
+				}
+				if gpuIds, exists := uuidToGPUIdMap[uuid]; exists {
+					validGPUs = append(validGPUs, gpuIds...)
+				} else {
+					uuid = strings.TrimPrefix(uuid, "0x")
+					if gpuIds, exists := uuidToGPUIdMap[uuid]; exists {
+						validGPUs = append(validGPUs, gpuIds...)
+					} else {
+						invalidGPUs = append(invalidGPUs, c)
+					}
+				}
+			} else if strings.Contains(c, "-") {
+				devsRange := strings.SplitN(c, "-", 2)
+				start, err0 := strconv.Atoi(devsRange[0])
+				end, err1 := strconv.Atoi(devsRange[1])
+				if err0 != nil || err1 != nil ||
+					start < 0 || end < 0 || start > end {
+					invalidGPUsRange = append(invalidGPUsRange, c)
+				} else {
+					for i := start; i <= end; i++ {
+						if i < len(gpusInfo) {
+							validGPUs = append(validGPUs, i)
+						} else {
+							invalidGPUs = append(invalidGPUs, strconv.Itoa(i))
+						}
+					}
+				}
+			} else {
+				i, err := strconv.Atoi(c)
+				if err == nil {
+					if i >= 0 && i < len(gpusInfo) {
+						validGPUs = append(validGPUs, i)
+					} else {
+						invalidGPUs = append(invalidGPUs, c)
+					}
+				} else {
+					invalidGPUs = append(invalidGPUs, c)
+				}
+			}
+		}
+
+		sort.Ints(validGPUs)
+
+		return validGPUs, invalidGPUs, invalidGPUsRange, nil
+	}
+
+	validGPUs, _, _, err := parseGPUsList(gpus)
+	return validGPUs, err
 }
 
 func setup(t *testing.T) {
@@ -103,6 +206,7 @@ func TestGetAMDEnv(t *testing.T) {
 		getGPUs:                     mockGetAMDGPUs,
 		getGPU:                      mockGetAMDGPU,
 		getUniqueIdToDeviceIndexMap: mockGetUniqueIdToDeviceIndexMap,
+		reserveGPUs:                 mockReserveGPUs,
 	}
 	err := oci.getSpec()
 	Assert(t, err == nil, fmt.Sprintf("failed to get OCI spec, Err: %v", err))
@@ -110,7 +214,6 @@ func TestGetAMDEnv(t *testing.T) {
 	oci.getAMDEnv()
 	expectedDevs := []int{0, 1}
 	Assert(t, slices.Equal(oci.amdDevices, expectedDevs), fmt.Sprintf("expected amdDevices %v, got %v", expectedDevs, oci.amdDevices))
-	Assert(t, !oci.isAddAllGPUs(), "isAddAllGPUs() returned True")
 	Assert(t, !oci.isAddNoGPUs(), "isAddNoGPUs() returned True")
 
 	err = oci.addGPUDevices()
@@ -176,6 +279,7 @@ func TestNew(t *testing.T) {
 	_, err := New(strings.Split(CREATE_ARGS, " "))
 	Assert(t, err == nil, fmt.Sprintf("New() returned error %v", err))
 }
+
 func TestInterface(t *testing.T) {
 	setup(t)
 
@@ -184,6 +288,7 @@ func TestInterface(t *testing.T) {
 		getGPUs:                     mockGetAMDGPUs,
 		getGPU:                      mockGetAMDGPU,
 		getUniqueIdToDeviceIndexMap: mockGetUniqueIdToDeviceIndexMap,
+		reserveGPUs:                 mockReserveGPUs,
 	}
 	err := oci.getSpec()
 	Assert(t, err == nil, fmt.Sprintf("failed to get OCI spec, Err: %v", err))
@@ -204,62 +309,6 @@ func TestInterface(t *testing.T) {
 func Assert(t *testing.T, b bool, errString string) {
 	if !b {
 		t.Errorf(errString)
-	}
-}
-
-func TestIsHexString(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected bool
-	}{
-		{
-			name:     "valid hex string lowercase",
-			input:    "abc123",
-			expected: true,
-		},
-		{
-			name:     "valid hex string uppercase",
-			input:    "ABC123",
-			expected: true,
-		},
-		{
-			name:     "valid hex string mixed case",
-			input:    "aBc123DeF",
-			expected: true,
-		},
-		{
-			name:     "invalid hex string with g",
-			input:    "abc123g",
-			expected: false,
-		},
-		{
-			name:     "invalid hex string with special chars",
-			input:    "abc123-def",
-			expected: false,
-		},
-		{
-			name:     "empty string",
-			input:    "",
-			expected: false,
-		},
-		{
-			name:     "single valid hex char",
-			input:    "a",
-			expected: true,
-		},
-		{
-			name:     "long valid hex string",
-			input:    "ef2c1799a1f3e2ed",
-			expected: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := isHexString(tt.input)
-			Assert(t, result == tt.expected, fmt.Sprintf("isHexString(%s) = %t, expected %t", tt.input, result, tt.expected))
-		})
 	}
 }
 
@@ -298,6 +347,7 @@ func TestGetAMDEnvWithUUID(t *testing.T) {
 		getGPUs:                     mockGetAMDGPUs,
 		getGPU:                      mockGetAMDGPU,
 		getUniqueIdToDeviceIndexMap: mockGetUniqueIdToDeviceIndexMap,
+		reserveGPUs:                 mockReserveGPUs,
 	}
 	err = oci.getSpec()
 	Assert(t, err == nil, fmt.Sprintf("failed to get OCI spec, Err: %v", err))
@@ -330,6 +380,7 @@ func TestGetAMDEnvWithDockerResource(t *testing.T) {
 		getGPUs:                     mockGetAMDGPUs,
 		getGPU:                      mockGetAMDGPU,
 		getUniqueIdToDeviceIndexMap: mockGetUniqueIdToDeviceIndexMap,
+		reserveGPUs:                 mockReserveGPUs,
 	}
 	err = oci.getSpec()
 	Assert(t, err == nil, fmt.Sprintf("failed to get OCI spec, Err: %v", err))
@@ -362,6 +413,7 @@ func TestGetAMDEnvWithMixedDevices(t *testing.T) {
 		getGPUs:                     mockGetAMDGPUs,
 		getGPU:                      mockGetAMDGPU,
 		getUniqueIdToDeviceIndexMap: mockGetUniqueIdToDeviceIndexMap,
+		reserveGPUs:                 mockReserveGPUs,
 	}
 	err = oci.getSpec()
 	Assert(t, err == nil, fmt.Sprintf("failed to get OCI spec, Err: %v", err))
@@ -394,6 +446,7 @@ func TestGetAMDEnvWithInvalidUUID(t *testing.T) {
 		getGPUs:                     mockGetAMDGPUs,
 		getGPU:                      mockGetAMDGPU,
 		getUniqueIdToDeviceIndexMap: mockGetUniqueIdToDeviceIndexMap,
+		reserveGPUs:                 mockReserveGPUs,
 	}
 	err = oci.getSpec()
 	Assert(t, err == nil, fmt.Sprintf("failed to get OCI spec, Err: %v", err))
@@ -426,6 +479,7 @@ func TestGetAMDEnvWithDuplicateDevices(t *testing.T) {
 		getGPUs:                     mockGetAMDGPUs,
 		getGPU:                      mockGetAMDGPU,
 		getUniqueIdToDeviceIndexMap: mockGetUniqueIdToDeviceIndexMap,
+		reserveGPUs:                 mockReserveGPUs,
 	}
 	err = oci.getSpec()
 	Assert(t, err == nil, fmt.Sprintf("failed to get OCI spec, Err: %v", err))

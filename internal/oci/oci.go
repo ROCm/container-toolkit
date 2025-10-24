@@ -20,11 +20,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/ROCm/container-toolkit/internal/amdgpu"
+	"github.com/ROCm/container-toolkit/internal/gpu-tracker"
 	"github.com/ROCm/container-toolkit/internal/logger"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -54,7 +53,7 @@ type Interface interface {
 }
 
 // GetGPUs is the type for functions that return the lists of all the GPU devices on the system
-type GetGPUs func() ([][]string, error)
+type GetGPUs func() ([]amdgpu.DeviceInfo, error)
 
 // GetGPU is the type for functions that return the device information for the given GPU
 type GetGPU func(string) (amdgpu.AMDGPU, error)
@@ -62,10 +61,16 @@ type GetGPU func(string) (amdgpu.AMDGPU, error)
 // GetUniqueIdToDeviceIndexMap is the type for functions that return UUID to device index mapping
 type GetUniqueIdToDeviceIndexMap func() (map[string][]int, error)
 
+// ReserveGPUs is the type for functions that return a list of reserved GPUs
+type ReserveGPUs func(string, string) ([]int, error)
+
 // oci_t implements the OCI interface
 type oci_t struct {
 	// args are the arguments to runtime
 	args []string
+
+	// container id
+	containerId string
 
 	// amdDevices lists the AMD devices, requested via the "AMD_VISIBLE_DEVICES
 	// ENV variable. The devices are specified by their indices and stored in
@@ -98,6 +103,9 @@ type oci_t struct {
 
 	// getUniqueIdToDeviceIndexMap is the function that returns UUID to device index mapping
 	getUniqueIdToDeviceIndexMap GetUniqueIdToDeviceIndexMap
+
+	// reserveGPUs is the function that returns a list of reserved GPUs
+	reserveGPUs ReserveGPUs
 }
 
 // SpecUpdateOp specifies type of update operation on the OCI spec
@@ -141,6 +149,9 @@ func (oci *oci_t) parseArgs() {
 			oci.isCreate = true
 		}
 	}
+	if len(args) > 0 {
+		oci.containerId = args[len(args)-1]
+	}
 
 	// By default, updateSpecPath is the same as origSpecPath
 	oci.updatedSpecPath = oci.origSpecPath
@@ -148,138 +159,22 @@ func (oci *oci_t) parseArgs() {
 
 // getAMDEnv reads the value of "AMD_VISIBLE_DEVICES" or "DOCKER_RESOURCE_*" environment variables
 // in the spec. Supports both device indices and hex unique IDs.
-func (oci *oci_t) getAMDEnv() {
-	getDevs := func(devs string) []int {
-		dl := []int{}
-
-		if devs == "all" || devs == "All" || devs == "ALL" {
-			dl = append(dl, -1)
-			return dl
-		}
-
-		// Get unique ID to device index mapping for hex ID support
-		uniqueIdMap, err := oci.getUniqueIdToDeviceIndexMap()
-		if err != nil {
-			logger.Log.Printf("Failed to get unique ID mapping: %v", err)
-			uniqueIdMap = make(map[string][]int) // Continue with empty map
-		}
-
-		invalidDevsRange := []string{}
-		invalidDevs := []string{}
-		for _, c := range strings.Split(devs, ",") {
-			// Check if it's a hex unique ID (starts with 0x or is a long hex string)
-			if strings.HasPrefix(c, "0x") || strings.HasPrefix(c, "0X") ||
-				(len(c) > 8 && isHexString(c)) {
-				// Normalize hex format
-				hexId := strings.ToLower(c)
-				if !strings.HasPrefix(hexId, "0x") {
-					hexId = "0x" + hexId
-				}
-
-				if deviceIndices, exists := uniqueIdMap[hexId]; exists {
-					dl = append(dl, deviceIndices...)
-				} else {
-					// Also try without 0x prefix
-					hexIdNoPrefix := strings.TrimPrefix(hexId, "0x")
-					if deviceIndices, exists := uniqueIdMap[hexIdNoPrefix]; exists {
-						dl = append(dl, deviceIndices...)
-					} else {
-						invalidDevs = append(invalidDevs, c)
-					}
-				}
-			} else if strings.Contains(c, "-") {
-				// Range of device indices
-				devsRange := strings.SplitN(c, "-", 2)
-				start, err0 := strconv.Atoi(devsRange[0])
-				end, err1 := strconv.Atoi(devsRange[1])
-				if err0 != nil || err1 != nil || start < 0 ||
-					end < 0 || start > end {
-					invalidDevsRange = append(invalidDevsRange, c)
-				} else {
-					for i := start; i <= end; i++ {
-						dl = append(dl, i)
-					}
-				}
-			} else {
-				// Device index
-				i, err := strconv.Atoi(c)
-				if err == nil {
-					if i >= 0 {
-						dl = append(dl, i)
-					} else {
-						invalidDevs = append(invalidDevs, c)
-					}
-				} else {
-					invalidDevs = append(invalidDevs, c)
-				}
-			}
-		}
-
-		if len(invalidDevsRange) > 0 {
-			fmt.Printf("Ignoring %v GPUs Ranges as they are invalid\n", invalidDevsRange)
-		}
-
-		if len(invalidDevs) > 0 {
-			fmt.Printf("Ignoring %v GPUs as they are not available\n", invalidDevs)
-		}
-
-		sort.Ints(dl)
-
-		return dl
-	}
-
-	validateGPUs := func(gpus []int) []int {
-		devs, err := oci.getGPUs()
-		if err != nil {
-			return []int{}
-		}
-
-		if len(devs) == 0 {
-			fmt.Printf("No GPUs available\n")
-			return []int{}
-		}
-
-		if len(gpus) == 1 && gpus[0] == -1 {
-			// all GPUs
-			return gpus
-		}
-
-		for i, gpu := range gpus {
-			if gpu >= len(devs) {
-				fmt.Printf("Ignoring %v GPUs as they are not available\n", gpus[i:])
-				return gpus[:i]
-			}
-		}
-
-		return gpus
-	}
-
+func (oci *oci_t) getAMDEnv() error {
 	if oci.spec != nil && oci.spec.Process != nil {
 		envs := oci.spec.Process.Env
-		gpus := []int{}
 		for _, env := range envs {
 			pts := strings.SplitN(env, "=", 2)
 			if len(pts) == 2 && (pts[0] == "AMD_VISIBLE_DEVICES" || strings.HasPrefix(pts[0], "DOCKER_RESOURCE_")) {
-				gpus = getDevs(pts[1])
-				if len(gpus) > 0 {
-					oci.amdDevices = validateGPUs(gpus)
+				var err error
+				oci.amdDevices, err = oci.reserveGPUs(pts[1], oci.containerId)
+				if err != nil {
+					return err
 				}
 			}
 		}
 	}
-}
 
-// isHexString checks if a string contains only hexadecimal characters
-func isHexString(s string) bool {
-	if len(s) == 0 {
-		return false
-	}
-	for _, c := range s {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
-			return false
-		}
-	}
-	return true
+	return nil
 }
 
 // getSpec reads the input OCI spec file into memory
@@ -332,15 +227,6 @@ func (oci *oci_t) addHook() error {
 	return nil
 }
 
-// isAddAllGPUs returns true if all GPUs must be added to OCI spec
-func (oci *oci_t) isAddAllGPUs() bool {
-	if len(oci.amdDevices) == 1 && oci.amdDevices[0] == -1 {
-		return true
-	}
-
-	return false
-}
-
 // isAddNoGPUs returns true if no GPUs need to be added to OCI spec
 func (oci *oci_t) isAddNoGPUs() bool {
 	if len(oci.amdDevices) == 0 {
@@ -368,6 +254,11 @@ func (oci *oci_t) addGPUDevices() error {
 		return nil
 	}
 
+	err := oci.getAMDEnv()
+	if err != nil {
+		return err
+	}
+
 	if oci.isAddNoGPUs() {
 		logger.Log.Printf("No GPUs to be added to OCI spec")
 		return nil
@@ -378,26 +269,29 @@ func (oci *oci_t) addGPUDevices() error {
 		return err
 	}
 
-	cnt := 0
-	if oci.isAddAllGPUs() {
-		for _, gpus := range devs {
-			addGpus(gpus)
-			cnt++
-		}
-	} else {
-		for _, idx := range oci.amdDevices {
-			addGpus(devs[idx])
-			cnt++
-		}
+	for _, idx := range oci.amdDevices {
+		addGpus(devs[idx].DrmDevices)
 	}
 
-	if cnt > 0 {
-		kfd, err := oci.getGPU("/dev/kfd")
-		if err != nil {
-			return err
-		}
-		oci.addGPUDevice(kfd)
+	kfd, err := oci.getGPU("/dev/kfd")
+	if err != nil {
+		return err
 	}
+	oci.addGPUDevice(kfd)
+
+	if oci.spec.Hooks == nil {
+		oci.spec.Hooks = &specs.Hooks{}
+	}
+	hook1 := specs.Hook{
+		Path: "/usr/local/bin/amd-ctk",
+		Args: []string{
+			"amd-ctk",
+			"gpu-tracker",
+			"release",
+			oci.containerId,
+		},
+	}
+	oci.spec.Hooks.Poststop = append(oci.spec.Hooks.Poststop, hook1)
 
 	return nil
 }
@@ -445,21 +339,25 @@ func (oci *oci_t) addGPUDevice(gpu amdgpu.AMDGPU) error {
 
 // New creates an OCI instance
 func New(argv []string) (Interface, error) {
+	gpuTracker, err := gpuTracker.New()
+	if err != nil {
+		return nil, err
+	}
+
 	oci := &oci_t{
 		args:                        argv,
 		hookPath:                    DEFAULT_HOOK_PATH,
 		getGPUs:                     amdgpu.GetAMDGPUs,
 		getGPU:                      amdgpu.GetAMDGPU,
 		getUniqueIdToDeviceIndexMap: amdgpu.GetUniqueIdToDeviceIndexMap,
+		reserveGPUs:                 gpuTracker.ReserveGPUs,
 	}
 
 	oci.parseArgs()
-	err := oci.getSpec()
+	err = oci.getSpec()
 	if err != nil {
 		return nil, err
 	}
-
-	oci.getAMDEnv()
 
 	return oci, nil
 }
