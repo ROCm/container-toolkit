@@ -2,6 +2,7 @@ package oci
 
 import (
 	"fmt"
+	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -98,9 +99,10 @@ func TestParseArgs(t *testing.T) {
 func TestGetAMDEnv(t *testing.T) {
 	setup(t)
 	oci := &oci_t{
-		origSpecPath: TEST_OCI_SPEC_PATH,
-		getGPUs:      mockGetAMDGPUs,
-		getGPU:       mockGetAMDGPU,
+		origSpecPath:                TEST_OCI_SPEC_PATH,
+		getGPUs:                     mockGetAMDGPUs,
+		getGPU:                      mockGetAMDGPU,
+		getUniqueIdToDeviceIndexMap: mockGetUniqueIdToDeviceIndexMap,
 	}
 	err := oci.getSpec()
 	Assert(t, err == nil, fmt.Sprintf("failed to get OCI spec, Err: %v", err))
@@ -120,9 +122,10 @@ func TestGetAMDEnv(t *testing.T) {
 func TestAddGPUDevice(t *testing.T) {
 	setup(t)
 	oci := &oci_t{
-		origSpecPath: TEST_OCI_SPEC_PATH,
-		getGPUs:      mockGetAMDGPUs,
-		getGPU:       mockGetAMDGPU,
+		origSpecPath:                TEST_OCI_SPEC_PATH,
+		getGPUs:                     mockGetAMDGPUs,
+		getGPU:                      mockGetAMDGPU,
+		getUniqueIdToDeviceIndexMap: mockGetUniqueIdToDeviceIndexMap,
 	}
 	err := oci.getSpec()
 	Assert(t, err == nil, fmt.Sprintf("failed to get OCI spec, Err: %v", err))
@@ -177,9 +180,10 @@ func TestInterface(t *testing.T) {
 	setup(t)
 
 	oci := &oci_t{
-		origSpecPath: TEST_OCI_SPEC_PATH,
-		getGPUs:      mockGetAMDGPUs,
-		getGPU:       mockGetAMDGPU,
+		origSpecPath:                TEST_OCI_SPEC_PATH,
+		getGPUs:                     mockGetAMDGPUs,
+		getGPU:                      mockGetAMDGPU,
+		getUniqueIdToDeviceIndexMap: mockGetUniqueIdToDeviceIndexMap,
 	}
 	err := oci.getSpec()
 	Assert(t, err == nil, fmt.Sprintf("failed to get OCI spec, Err: %v", err))
@@ -201,4 +205,232 @@ func Assert(t *testing.T, b bool, errString string) {
 	if !b {
 		t.Errorf(errString)
 	}
+}
+
+func TestIsHexString(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{
+			name:     "valid hex string lowercase",
+			input:    "abc123",
+			expected: true,
+		},
+		{
+			name:     "valid hex string uppercase",
+			input:    "ABC123",
+			expected: true,
+		},
+		{
+			name:     "valid hex string mixed case",
+			input:    "aBc123DeF",
+			expected: true,
+		},
+		{
+			name:     "invalid hex string with g",
+			input:    "abc123g",
+			expected: false,
+		},
+		{
+			name:     "invalid hex string with special chars",
+			input:    "abc123-def",
+			expected: false,
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: false,
+		},
+		{
+			name:     "single valid hex char",
+			input:    "a",
+			expected: true,
+		},
+		{
+			name:     "long valid hex string",
+			input:    "ef2c1799a1f3e2ed",
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isHexString(tt.input)
+			Assert(t, result == tt.expected, fmt.Sprintf("isHexString(%s) = %t, expected %t", tt.input, result, tt.expected))
+		})
+	}
+}
+
+// Mock for GetUniqueIdToDeviceIndexMap
+func mockGetUniqueIdToDeviceIndexMap() (map[string][]int, error) {
+	return map[string][]int{
+		"0xef2c1799a1f3e2ed": {0},
+		"ef2c1799a1f3e2ed":   {0},
+		"0x1234567890abcdef": {1},
+		"1234567890abcdef":   {1},
+		"0xpartitionedgpu":   {0, 1}, // Example partitioned GPU with multiple indices
+		"partitionedgpu":     {0, 1},
+	}, nil
+}
+
+func TestGetAMDEnvWithUUID(t *testing.T) {
+	setup(t)
+
+	// Test with hex UUID in AMD_VISIBLE_DEVICES
+	testSpec := `{
+		"process": {
+			"env": [
+				"AMD_VISIBLE_DEVICES=0xef2c1799a1f3e2ed,0x1234567890abcdef"
+			]
+		}
+	}`
+
+	// Create a temporary test file
+	tmpDir := t.TempDir()
+	specPath := tmpDir + "/config.json"
+	err := os.WriteFile(specPath, []byte(testSpec), 0644)
+	Assert(t, err == nil, fmt.Sprintf("failed to write test spec, Err: %v", err))
+
+	oci := &oci_t{
+		origSpecPath:                tmpDir,
+		getGPUs:                     mockGetAMDGPUs,
+		getGPU:                      mockGetAMDGPU,
+		getUniqueIdToDeviceIndexMap: mockGetUniqueIdToDeviceIndexMap,
+	}
+	err = oci.getSpec()
+	Assert(t, err == nil, fmt.Sprintf("failed to get OCI spec, Err: %v", err))
+
+	oci.getAMDEnv()
+	expectedDevs := []int{0, 1}
+	Assert(t, slices.Equal(oci.amdDevices, expectedDevs), fmt.Sprintf("expected amdDevices %v, got %v", expectedDevs, oci.amdDevices))
+}
+
+func TestGetAMDEnvWithDockerResource(t *testing.T) {
+	setup(t)
+
+	// Test with DOCKER_RESOURCE_GPU containing hex UUIDs
+	testSpec := `{
+		"process": {
+			"env": [
+				"DOCKER_RESOURCE_GPU=ef2c1799a1f3e2ed"
+			]
+		}
+	}`
+
+	// Create a temporary test file
+	tmpDir := t.TempDir()
+	specPath := tmpDir + "/config.json"
+	err := os.WriteFile(specPath, []byte(testSpec), 0644)
+	Assert(t, err == nil, fmt.Sprintf("failed to write test spec, Err: %v", err))
+
+	oci := &oci_t{
+		origSpecPath:                tmpDir,
+		getGPUs:                     mockGetAMDGPUs,
+		getGPU:                      mockGetAMDGPU,
+		getUniqueIdToDeviceIndexMap: mockGetUniqueIdToDeviceIndexMap,
+	}
+	err = oci.getSpec()
+	Assert(t, err == nil, fmt.Sprintf("failed to get OCI spec, Err: %v", err))
+
+	oci.getAMDEnv()
+	expectedDevs := []int{0}
+	Assert(t, slices.Equal(oci.amdDevices, expectedDevs), fmt.Sprintf("expected amdDevices %v, got %v", expectedDevs, oci.amdDevices))
+}
+
+func TestGetAMDEnvWithMixedDevices(t *testing.T) {
+	setup(t)
+
+	// Test with mixed device indices and UUIDs (different indices)
+	testSpec := `{
+		"process": {
+			"env": [
+				"AMD_VISIBLE_DEVICES=1,0xef2c1799a1f3e2ed"
+			]
+		}
+	}`
+
+	// Create a temporary test file
+	tmpDir := t.TempDir()
+	specPath := tmpDir + "/config.json"
+	err := os.WriteFile(specPath, []byte(testSpec), 0644)
+	Assert(t, err == nil, fmt.Sprintf("failed to write test spec, Err: %v", err))
+
+	oci := &oci_t{
+		origSpecPath:                tmpDir,
+		getGPUs:                     mockGetAMDGPUs,
+		getGPU:                      mockGetAMDGPU,
+		getUniqueIdToDeviceIndexMap: mockGetUniqueIdToDeviceIndexMap,
+	}
+	err = oci.getSpec()
+	Assert(t, err == nil, fmt.Sprintf("failed to get OCI spec, Err: %v", err))
+
+	oci.getAMDEnv()
+	expectedDevs := []int{0, 1} // UUID maps to 0, device index is 1, sorted result should be [0, 1]
+	Assert(t, slices.Equal(oci.amdDevices, expectedDevs), fmt.Sprintf("expected amdDevices %v, got %v", expectedDevs, oci.amdDevices))
+}
+
+func TestGetAMDEnvWithInvalidUUID(t *testing.T) {
+	setup(t)
+
+	// Test with invalid UUID that doesn't exist in mapping
+	testSpec := `{
+		"process": {
+			"env": [
+				"AMD_VISIBLE_DEVICES=0xdeadbeefdeadbeef"
+			]
+		}
+	}`
+
+	// Create a temporary test file
+	tmpDir := t.TempDir()
+	specPath := tmpDir + "/config.json"
+	err := os.WriteFile(specPath, []byte(testSpec), 0644)
+	Assert(t, err == nil, fmt.Sprintf("failed to write test spec, Err: %v", err))
+
+	oci := &oci_t{
+		origSpecPath:                tmpDir,
+		getGPUs:                     mockGetAMDGPUs,
+		getGPU:                      mockGetAMDGPU,
+		getUniqueIdToDeviceIndexMap: mockGetUniqueIdToDeviceIndexMap,
+	}
+	err = oci.getSpec()
+	Assert(t, err == nil, fmt.Sprintf("failed to get OCI spec, Err: %v", err))
+
+	oci.getAMDEnv()
+	expectedDevs := []int{} // Invalid UUID should result in no devices
+	Assert(t, slices.Equal(oci.amdDevices, expectedDevs), fmt.Sprintf("expected amdDevices %v, got %v", expectedDevs, oci.amdDevices))
+}
+
+func TestGetAMDEnvWithDuplicateDevices(t *testing.T) {
+	setup(t)
+
+	// Test with duplicate device specification (same device via index and UUID)
+	testSpec := `{
+		"process": {
+			"env": [
+				"AMD_VISIBLE_DEVICES=0,0xef2c1799a1f3e2ed"
+			]
+		}
+	}`
+
+	// Create a temporary test file
+	tmpDir := t.TempDir()
+	specPath := tmpDir + "/config.json"
+	err := os.WriteFile(specPath, []byte(testSpec), 0644)
+	Assert(t, err == nil, fmt.Sprintf("failed to write test spec, Err: %v", err))
+
+	oci := &oci_t{
+		origSpecPath:                tmpDir,
+		getGPUs:                     mockGetAMDGPUs,
+		getGPU:                      mockGetAMDGPU,
+		getUniqueIdToDeviceIndexMap: mockGetUniqueIdToDeviceIndexMap,
+	}
+	err = oci.getSpec()
+	Assert(t, err == nil, fmt.Sprintf("failed to get OCI spec, Err: %v", err))
+
+	oci.getAMDEnv()
+	expectedDevs := []int{0, 0} // Both device index 0 and UUID that maps to 0 should result in [0, 0] - duplicates allowed
+	Assert(t, slices.Equal(oci.amdDevices, expectedDevs), fmt.Sprintf("expected amdDevices %v, got %v", expectedDevs, oci.amdDevices))
 }

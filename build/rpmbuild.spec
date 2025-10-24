@@ -12,6 +12,17 @@ Requires: jq
 %description
 This package contains pre-built binaries for AMD containter toolkit
 
+%pre
+# Check if AMD GPU driver is installed before installation
+echo "Checking for AMD GPU driver..."
+if [ ! -d "/sys/module/amdgpu/drivers/" ]; then
+    echo "Error: AMD GPU driver (amdgpu) is not installed or loaded."
+    echo "The AMD Container Toolkit requires the amdgpu driver to be installed and loaded."
+    echo "Please install the AMD GPU driver before installing the container toolkit."
+    exit 1
+fi
+echo "AMD GPU driver found."
+
 %preun
 /bin/bash /usr/share/amd-container-toolkit/cleanup.sh
 

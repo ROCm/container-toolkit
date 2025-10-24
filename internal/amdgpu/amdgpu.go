@@ -297,3 +297,45 @@ func ParseTopologyPropertiesString(fs FileSystem, path string, re *regexp.Regexp
 
 	return "", fmt.Errorf("property not found in %s", path)
 }
+
+// GetUniqueIdToDeviceIndexMap returns a map of unique_id (as hex string) to device indices
+func GetUniqueIdToDeviceIndexMap() (map[string][]int, error) {
+	return GetUniqueIdToDeviceIndexMapWithFS(defaultFS)
+}
+
+// GetUniqueIdToDeviceIndexMapWithFS creates a mapping from unique_id (hex format) to device indices
+func GetUniqueIdToDeviceIndexMapWithFS(fs FileSystem) (map[string][]int, error) {
+	devs, err := GetAMDGPUsWithFS(fs)
+	if err != nil {
+		return nil, err
+	}
+
+	renderDevIds := GetDevIdsFromTopology(fs)
+	uniqueIdToIndex := make(map[string][]int)
+
+	// Process each device group and assign index
+	for deviceIndex, deviceGroup := range devs {
+		// Find the render minor for this device group
+		for _, device := range deviceGroup {
+			// Extract render minor from device path like /dev/dri/renderD128
+			if strings.Contains(device, "renderD") {
+				renderMinorStr := strings.TrimPrefix(filepath.Base(device), "renderD")
+				if renderMinor, err := strconv.Atoi(renderMinorStr); err == nil {
+					if uniqueId, exists := renderDevIds[renderMinor]; exists {
+						// Convert decimal unique_id to hex format (without 0x prefix)
+						if uniqueIdInt, err := strconv.ParseUint(uniqueId, 10, 64); err == nil {
+							hexUniqueId := fmt.Sprintf("0x%x", uniqueIdInt)
+							uniqueIdToIndex[hexUniqueId] = append(uniqueIdToIndex[hexUniqueId], deviceIndex)
+							// Also support without 0x prefix
+							hexUniqueIdNoPrefix := fmt.Sprintf("%x", uniqueIdInt)
+							uniqueIdToIndex[hexUniqueIdNoPrefix] = append(uniqueIdToIndex[hexUniqueIdNoPrefix], deviceIndex)
+						}
+					}
+				}
+				break // Only need one render device per group
+			}
+		}
+	}
+
+	return uniqueIdToIndex, nil
+}
