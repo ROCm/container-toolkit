@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"os/user"
 
+	"github.com/ROCm/container-toolkit/cmd/amd-ctk/gpu-tracker/disable"
+	"github.com/ROCm/container-toolkit/cmd/amd-ctk/gpu-tracker/enable"
 	"github.com/ROCm/container-toolkit/cmd/amd-ctk/gpu-tracker/initialize"
 	"github.com/ROCm/container-toolkit/cmd/amd-ctk/gpu-tracker/release"
 	"github.com/ROCm/container-toolkit/cmd/amd-ctk/gpu-tracker/reset"
@@ -55,6 +57,8 @@ amd-ctk gpu-tracker [command] [options]`,
 	}
 
 	gpuTrackerCmd.Subcommands = []*cli.Command{
+		disable.AddNewCommand(),
+		enable.AddNewCommand(),
 		initialize.AddNewCommand(),
 		reset.AddNewCommand(),
 		release.AddNewCommand(),
