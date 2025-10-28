@@ -15,7 +15,7 @@ func mockIsGPUTrackerInitialized() (bool, error) {
 	return true, nil
 }
 
-func mockInitializeGPUTracker(op string) error {
+func mockInitializeGPUTracker() error {
 	return nil
 }
 
@@ -143,6 +143,7 @@ func mockParseGPUsList(gpus string) ([]int, []string, []string, error) {
 
 func mockReadGPUTrackerFile() (gpu_tracker_data_t, error) {
 	return gpu_tracker_data_t{
+		Enabled: true,
 		GPUsStatus: map[int]gpu_status_t{
 			0: {
 				UUID:          "0xef2c1799a1f3e2ed",
@@ -203,6 +204,12 @@ func TestInterface(t *testing.T) {
 
 	err := gpuTracker.Init()
 	Assert(t, err == nil, fmt.Sprintf("Init() returned error %v", err))
+
+	err = gpuTracker.Enable()
+	Assert(t, err == nil, fmt.Sprintf("Enable() returned error %v", err))
+
+	err = gpuTracker.Disable()
+	Assert(t, err == nil, fmt.Sprintf("Disable() returned error %v", err))
 
 	err = gpuTracker.ShowStatus()
 	Assert(t, err == nil, fmt.Sprintf("ShowStatus() returned error %v", err))
