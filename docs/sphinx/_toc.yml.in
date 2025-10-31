@@ -18,6 +18,10 @@ subtrees:
         title: Developer Guide
       - file: container-runtime/docker-compose.rst
         title: Docker Compose Usage
-      - file: container-runtime/enroot-pyxis-installation.md      
+      - file: container-runtime/enroot-pyxis-installation.md
+      - file: container-runtime/docker-swarm.md
+        title: Docker Swarm
+      - file: container-runtime/gpu-tracker
+        title: GPU Tracker
       - file: container-runtime/release-notes.rst
         title: Release Notes
