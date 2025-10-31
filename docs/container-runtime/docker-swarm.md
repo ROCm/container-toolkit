@@ -58,14 +58,3 @@ Deploy the service:
 ```bash
 docker stack deploy -c docker-compose.yml rocm-stack
 ```
-
-
-**Benefits of Swarm Integration**
-
-**UUID-Based Scheduling**: Prevents mismatched device mapping across nodes.
-
-**Cluster-Aware Resource Allocation**: Swarm recognizes GPU availability and schedules workloads accordingly.
-
-**Scalable GPU Management**: Simplifies distributed workloads using multiple GPUs or nodes.
-
-**Seamless Orchestration**: Integrates with Docker’s built-in scheduling and scaling mechanisms.
