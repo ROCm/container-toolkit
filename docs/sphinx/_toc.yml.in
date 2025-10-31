@@ -19,6 +19,7 @@ subtrees:
       - file: container-runtime/docker-compose.rst
         title: Docker Compose Usage
       - file: container-runtime/enroot-pyxis-installation.md
+        title: Enroot Pyxis Installation
       - file: container-runtime/docker-swarm.md
         title: Docker Swarm
       - file: container-runtime/gpu-tracker
