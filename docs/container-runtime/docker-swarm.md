@@ -2,11 +2,7 @@
 
 ### Purpose
 
-Docker Swarm integration allows orchestrated GPU workloads to be deployed across multiple nodes by leveraging **GPU UUIDs** and Docker’s **generic resource** framework.
-
-This ensures consistent GPU assignment, regardless of hardware order or node topology.
-
----
+Docker Swarm integration allows orchestrated GPU workloads to be deployed across multiple nodes by leveraging **GPU UUIDs** and Docker’s resource framework.
 
 ### Docker Daemon Configuration for Swarm
 
