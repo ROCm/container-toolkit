@@ -21,7 +21,7 @@ subtrees:
       - file: container-runtime/enroot-pyxis-installation.md
         title: Enroot Pyxis Installation
       - file: container-runtime/docker-swarm.md
-        title: Docker Swarm
+        title: Support for Docker Swarm
       - file: container-runtime/gpu-tracker
         title: GPU Tracker
       - file: container-runtime/release-notes.rst
