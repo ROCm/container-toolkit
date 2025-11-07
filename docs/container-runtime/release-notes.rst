@@ -59,7 +59,7 @@ New Features
 - **GPU Tracker**
 
    - GPU Tracker is an extremely lightweight feature of AMD Container Toolkit that allows you to track access of GPUs in containers.
-   - GPU Tracker provides CLIs that can be used to control the accessibility of GPUs in containers. The accessibility of GPUs can be        set to either `shared` or `exclusive`.
+   - GPU Tracker provides CLIs that can be used to control the accessibility of GPUs in containers. The accessibility of GPUs can be set to either `shared` or `exclusive`.
 
 - **Docker Swarm Support**
 
