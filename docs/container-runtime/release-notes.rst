@@ -66,11 +66,6 @@ New Features
   - Allows users to deploy and manage GPU-accelerated containers across a cluster instead of being limited to a single host.
   - Uses GPU UUIDs for accurate resource mapping and scheduling, ensuring workloads run on specific GPUs.
 
-Known Issues
-~~~~~~~~~~~~
-
-- None reported for this release.
-
 Upgrade Notes
 -------------
 
