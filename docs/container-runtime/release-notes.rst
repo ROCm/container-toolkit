@@ -12,6 +12,9 @@ Compatibility Matrix
    * - AMD Container Toolkit
      - Docker Version
      - Supported OS
+   * - 1.2.0
+     - 25.0+ 
+     - Ubuntu 22.04, Ubuntu 24.04, RHEL 9.5
    * - 1.1.0
      - 25.0+ (``--gpus`` flag in 28.3.0+)
      - Ubuntu 22.04, Ubuntu 24.04, RHEL 9.5
@@ -28,13 +31,46 @@ Versioning Information
    * - Version
      - Release Date
      - Highlights
+   * - v1.2.0
+     - November 2025
+     - GPU Tracker feature support, Docker Swarm Support
    * - v1.1.0
      - July 2025
      - GPU Partitioning Support , Docker --gpus Support, RHEL 9.5 Support
    * - v1.0.0
      - June 2025
      - Initial Release with `amd-ctk`, CDI, Docker Integration, Ubuntu 22.04/24.04 Support
-     
+
+-------------------
+v1.2.0 (November 2025)
+-------------------
+
+Overview
+--------
+
+Version 1.2.0 of the AMD Container Toolkit introduces two major enhancements aimed at improving GPU visibility and orchestration flexibility in containerized environments:
+
+- **GPU Tracker:** A new monitoring utility for real-time tracking of GPU usage across containers.
+- **Docker Swarm Support:** Native integration with Docker Swarm for orchestrating AMD GPU workloads at scale.
+
+New Features
+~~~~~~~~~~~~
+
+- **GPU Tracker**
+
+  - GPU Tracker is an extremely lightweight feature of AMD Container Toolkit that allows you to track access of GPUs in containers.
+  - GPU Tracker provides CLIs that can be used to control the accessibility of GPUs in containers. The accessibility of GPUs can be set to either `shared` or `exclusive`.
+
+- **Docker Swarm Support**
+
+  - Allows users to deploy and manage GPU-accelerated containers across a cluster instead of being limited to a single host.
+  - Uses GPU UUIDs for accurate resource mapping and scheduling, ensuring workloads run on specific GPUs.
+
+Upgrade Notes
+-------------
+
+-  GPU Tracker feature is currently supported only if containers are started using the `docker run` command and GPUs are made accessible in containers using the `AMD_VISIBLE_DEVICES` environment variable. If containers are started and granted access to GPUs in any other manner, GPU Tracker feature is not supported.
+
 -------------------
 v1.1.0 (July 2025)
 -------------------
