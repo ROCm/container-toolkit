@@ -14,7 +14,7 @@ Compatibility Matrix
      - Supported OS
    * - 1.2.0
      - 25.0+ 
-     - Ubuntu 22.04, Ubuntu 24.04, RHEL 9.5
+     - Ubuntu 22.04, Ubuntu 24.04
    * - 1.1.0
      - 25.0+ (``--gpus`` flag in 28.3.0+)
      - Ubuntu 22.04, Ubuntu 24.04, RHEL 9.5
