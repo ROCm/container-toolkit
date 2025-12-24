@@ -1,0 +1,13 @@
+# Sample testbed yaml file 
+host1:
+  host: 11.22.33.44 # Mandatory : IP address of the GPU node 
+  user: 'enroot' # Mandatory : Username of the GPU node to be used for ssh 
+  password: 'password' # Optional if key is provided: Password for ssh access of the node
+  key: 'Path/to/the/key' # Optional if password is provided:  Path to the ssh key 
+  slurm_version: '24.05.4' # Optional:  Version of slurm to be installed on the host , this key can be commented out if latest version is to be used. (Recomended to use same version on all hosts)
+  enroot_version: '4.0.1' # Optional: Enroot version to be installed on the host, this key can be commented out if latest enroot version is to be used. (Recomended to use same version on all hosts)
+
+
+
+
+
