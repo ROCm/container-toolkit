@@ -202,36 +202,36 @@ def create_cgroup_conf_file(amd_host):
         return exit_code
     return exit_code
     
-def create_gpu_stress_script(amd_host,local_stress_script,parent_dir="/tmp/test_pytorch" ):
+def create_helper_script(amd_host,local_helper_script,parent_dir="/tmp/test_pytorch" ):
     """
     Create /tmp/test_pytorch dir and /tmp/test_pytorch/gpu_stress_10s.py file on the remote host 
     """
     # Create file contents
-    remote_stress_script =  f"{parent_dir}/gpu_stress_10s.py"
+    remote_helper_script =  f"{parent_dir}/" + local_helper_script.name
     
     exit_code, output = amd_host.execute_command(f"mkdir -p {parent_dir}")
     if exit_code:
         log.info(f"Error creating {parent_dir} : {output['stderr']}")
         return exit_code
 
-    exit_code = amd_host.copy_to_host(local_stress_script,remote_stress_script)
+    exit_code = amd_host.copy_to_host(local_helper_script,remote_helper_script)
     if exit_code:
-        log.info(f"Could not copy {local_stress_script}")
+        log.info(f"Could not copy {local_helper_script}")
         return exit_code
     
 
-    exit_code, output = amd_host.execute_command(f"chmod +x {remote_stress_script}")
+    exit_code, output = amd_host.execute_command(f"chmod +x {remote_helper_script}")
     if exit_code:
-        log.info(f"Error giving execute permission to {remote_stress_script}: {output['stderr']}")
+        log.info(f"Error giving execute permission to {remote_helper_script}: {output['stderr']}")
         return exit_code
 
     return exit_code
 
-def create_batch_script(amd_host,local_batch_script, remote_batch_script):
+def create_batch_script(amd_host,local_batch_script):
     """
     Create batch script file on the remote host 
     """
-    
+    remote_batch_script = str(local_batch_script.name)
     exit_code = amd_host.copy_to_host(local_batch_script,remote_batch_script)
     if exit_code:
         log.info(f"Could not copy {local_batch_script}")
