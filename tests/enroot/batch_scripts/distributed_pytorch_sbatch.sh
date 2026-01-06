@@ -28,19 +28,36 @@ set -e
 mkdir -p pytorch_logs
 
 # USER CONFIGURABLE
+export IMAGE_NAME=ubuntu22_pytorch.sqsh
+export DOCKER_IMAGE=docker://rocm/pytorch:rocm7.0.2_ubuntu22.04_py3.10_pytorch_release_2.7.1
+export ENROOT_DATA_PATH=/tmp/enroot/data
+export ENROOT_CACHE_PATH=/tmp/enroot/cache
 
-IMAGE_NAME=ubuntu22_pytorch.sqsh
-IMAGE_PATH=$PWD/$IMAGE_NAME
-DOCKER_IMAGE=rocm/pytorch:rocm7.0.2_ubuntu22.04_py3.10_pytorch_release_2.7.1
+# Stage image ONCE per node
+# Create temporary directories on all nodes
+echo "Creating temporary directories on all nodes..."
+srun --ntasks-per-node=1 bash -lc 'mkdir -p /tmp/xdg-$SLURM_NODEID/enroot /tmp/xdg-cache-$SLURM_NODEID /tmp/enroot/cache /tmp/enroot/data /tmp/enroot/runtime'
 
-# Create image only once
+# Create temporary directories on all nodes
+echo "Creating enroot image on all nodes..."
+srun --nodes=2 --ntasks=2 \
+     --ntasks-per-node=1 \
+     bash -c '
+    mkdir -p "$ENROOT_DATA_PATH" "$ENROOT_CACHE_PATH"
 
-if [[ ! -f "$IMAGE_PATH" ]]; then
-    echo "Creating Enroot image..."
-    enroot import -o "$IMAGE_PATH" docker://$DOCKER_IMAGE
-else
-    echo "Using existing Enroot image"
-fi
+        if [ ! -f "$ENROOT_DATA_PATH/$IMAGE_NAME" ]; then
+            echo "[$(hostname)] Importing enroot image..."
+            enroot import -o "$ENROOT_DATA_PATH/$IMAGE_NAME" "$DOCKER_IMAGE"
+        else
+            echo "[$(hostname)] Image already present"
+        fi
+     '
+
+
+# Barrier (all nodes must have image)
+srun --nodes=2 --ntasks=2 \
+     --ntasks-per-node=1 \
+     bash -c 'echo "[\$(hostname)] Image ready"'
 
 retry_command() {
     local max_attempts=$1
@@ -71,10 +88,6 @@ echo "  Total Tasks: $SLURM_NTASKS"
 echo "  Tasks/Node: $SLURM_NTASKS_PER_NODE"
 echo "  Number of Nodes: $SLURM_JOB_NUM_NODES"
 echo "================================================"
-
-# Create temporary directories on all nodes
-echo "Creating temporary directories on all nodes..."
-srun --ntasks-per-node=1 bash -lc 'mkdir -p /tmp/xdg-$SLURM_NODEID/enroot /tmp/xdg-cache-$SLURM_NODEID /tmp/enroot/cache /tmp/enroot/data /tmp/enroot/runtime'
 
 # Get master node IP using srun
 echo "Detecting master node IP..."
@@ -113,11 +126,9 @@ echo "  Socket Interface: $SOCKET_IFNAME"
 echo "================================================"
 
 # Run the distributed training
-srun --ntasks-per-node=8 \
-     --cpus-per-task=8 \
+srun --unbuffered \
      --export=ALL,XDG_DATA_HOME=/tmp/xdg-\$SLURM_NODEID,XDG_CACHE_HOME=/tmp/xdg-cache-\$SLURM_NODEID,ENROOT_CACHE_PATH=/tmp/enroot/cache,ENROOT_DATA_PATH=/tmp/enroot/data,ENROOT_RUNTIME_PATH=/tmp/enroot/runtime \
-     --unbuffered \
-     --container-image="$IMAGE_PATH"\
+     --container-image="$ENROOT_DATA_PATH/$IMAGE_NAME" \
      --container-mounts=$(pwd)/test_pytorch:/workspace \
      --container-workdir=/workspace \
      bash -c '
@@ -139,4 +150,3 @@ srun --ntasks-per-node=8 \
 echo "================================================"
 echo "Job completed: $(date)"
 echo "================================================"
-

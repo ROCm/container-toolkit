@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+set -x
 export DEBIAN_FRONTEND=noninteractive
 sudo grep -qxF "nameserver 8.8.8.8" /etc/resolv.conf || sudo sh -c 'echo "nameserver 8.8.8.8" >> /etc/resolv.conf'
 export SLURMUSER=1003
@@ -24,7 +24,7 @@ sudo useradd -m -c "MUNGE Uid 'N' Gid Emporium" -d /var/lib/munge -u $MUNGEUSER 
 id slurm
 id munge
 yes "Y" | DEBIAN_FRONTEND=noninteractive sudo apt --fix-broken install
-yes "Y" | DEBIAN_FRONTEND=noninteractive sudo apt install munge libmunge2 libmunge-
+yes "Y" | DEBIAN_FRONTEND=noninteractive sudo apt install munge libmunge2 libmunge-dev
 sudo mkdir -p  /etc/munge/ /var/log/munge/ /var/lib/munge/ /run/mun
 sudo chown -R munge: /etc/munge/ /var/log/munge/ /var/lib/munge/ /run/munge/
 sudo chmod 0700 /etc/munge/ /var/log/munge/ /var/lib/munge/
@@ -80,14 +80,16 @@ EXTRACTED_DIR=$(tar -tf "$SLURM_TARBALL" | head -1 | cut -d/ -f1)
 yes "Y" | DEBIAN_FRONTEND=noninteractive sudo apt install equivs
 yes "Y" | DEBIAN_FRONTEND=noninteractive sudo apt install libswitch-perl equivs mk-build-deps
 yes "Y" | DEBIAN_FRONTEND=noninteractive sudo apt install devscripts equivs
+sudo sed -i 's/^# deb-src/deb-src/' /etc/apt/sources.list
+cd "$EXTRACTED_DIR"
+pwd
 sudo DEBIAN_FRONTEND=noninteractive mk-build-deps -i -t 'apt-get -y --no-install-recommends' debian/control
 yes "Y" | DEBIAN_FRONTEND=noninteractive sudo apt install libmunge-dev libgtk2.0-dev libpam0g-dev libperl-dev liblua5.3-dev libhwloc-dev dh-exec 
 yes "Y" | DEBIAN_FRONTEND=noninteractive sudo apt install libdbus-1-dev librdkafka
 sudo groupadd slurm
 sudo useradd -m -r -s /bin/false -d /tmp/slurm -g slurm slurm
-cd "$EXTRACTED_DIR"
-pwd
 sudo DEBIAN_FRONTEND=noninteractive debuild -b -uc -us
+sudo sed -i 's/^deb-src/# deb-src/' /etc/apt/sources.list
 sudo mkdir -p /etc/slurm
 sudo mkdir -p /var/spool/slurm/savestate
 sudo mkdir -p /var/spool/slurmd

@@ -264,6 +264,17 @@ def test_single_node_pytorch():
     Raises:
         AssertionError: Above validation points are failed
     """
+
+    # Create batch script
+    head_node = pytest.testdata.amd_host[0]
+    local_script = batch_scripts_folder / "pytorch_gpu_util_sbatch.sh"
+    remote_script = str(local_script.name)
+    log.info(f"Creating {local_script.name} on {head_node.host_ip}...")
+    exit_code = create_batch_script(head_node,local_script)
+    if exit_code:
+        assert False, f"{local_script.name} on {head_node.host_ip} couldnt be created!!"
+    log.info(f"Creating {local_script.name} on {head_node.host_ip} - Successfull !!")
+
     for amd_host in  pytest.testdata.amd_host:
         # Create /tmp/test_pytorch/gpu_stress_10s.py
         parent_dir = "/tmp/test_pytorch"
@@ -275,14 +286,6 @@ def test_single_node_pytorch():
             assert False, f"{local_stress_script.name} on {amd_host.host_ip} couldnt be created!!"
         log.info(f"Creating {local_stress_script.name} on {amd_host.host_ip} - Successfull !!")
 
-        # Create batch script
-        local_script = batch_scripts_folder / "pytorch_gpu_util_sbatch.sh"
-        remote_script = str(local_script.name)
-        log.info(f"Creating {local_script.name} on {amd_host.host_ip}...")
-        exit_code = create_batch_script(amd_host,local_script)
-        if exit_code:
-            assert False, f"{local_script.name} on {amd_host.host_ip} couldnt be created!!"
-        log.info(f"Creating {local_script.name} on {amd_host.host_ip} - Successfull !!")
         #Get host name 
         exit_code, output = amd_host.execute_command(f"sudo hostname -s ")
         if exit_code :
@@ -290,7 +293,6 @@ def test_single_node_pytorch():
         node = output['stdout'].strip()
 
         # Run the batch script -> get jobid 
-        head_node = pytest.testdata.amd_host[0]
         sbatch_cmd = f"sbatch --parsable --nodelist={node}  --gres=gpu:{amd_host.gpu_num} {remote_script} "
         exit_code, output = head_node.execute_command(sbatch_cmd)
         assert not exit_code, f"sbatch command couldnt be launched !! : {output['stderr']}"
@@ -299,7 +301,6 @@ def test_single_node_pytorch():
 
         # Wait for job completion
         job_state, sacct_output = wait_for_job_completion(head_node,job_id) 
-
         log.info(f"Job state of {job_id} : {job_state}")
         log.info(f"sacct output : {sacct_output}")
         err_file = f"pytorch_logs/pytorch-util-{job_id}.err"
@@ -344,10 +345,10 @@ def test_single_node_pytorch():
         if exit_code :
             assert False , f" Error deleting the folder {parent_dir} !, {output['stderr']}"  
 
-        # Delete the batch script on the remote host 
-        exit_code, output = amd_host.execute_command(f"sudo rm -rf {remote_script}")
-        if exit_code :
-            assert False , f" Error deleting the script {remote_script}!, {output['stderr']}"  
+    # Delete the batch script on the remote host 
+    exit_code, output = head_node.execute_command(f"sudo rm -rf {remote_script}")
+    if exit_code :
+        assert False , f" Error deleting the script {remote_script}!, {output['stderr']}"  
 
 def test_multi_node_distributed_pytorch():
     """    
@@ -367,15 +368,17 @@ def test_multi_node_distributed_pytorch():
         AssertionError: Above validation points are failed
     """
     # Create helper script
-    amd_host = pytest.testdata.amd_host[0]
     parent_dir = "test_pytorch"
     copy_file_list =[]
-    local_stress_script = helper_scripts_folder / "distributed_pytorch.py"
-    log.info(f"Creating {local_stress_script.name} on {amd_host.host_ip}...")
-    exit_code = create_helper_script(amd_host,local_stress_script,parent_dir)
-    if exit_code:
-        assert False, f"{local_stress_script.name} on {amd_host.host_ip} couldnt be created!!"
-    log.info(f"Creating {local_stress_script.name} on {amd_host.host_ip} - Successfull !!")
+    for amd_host in  pytest.testdata.amd_host:
+        local_pytorch_script = helper_scripts_folder / "distributed_pytorch.py"
+        log.info(f"Creating {local_pytorch_script.name} on {amd_host.host_ip}...")
+        exit_code = create_helper_script(amd_host,local_pytorch_script,parent_dir)
+        if exit_code:
+            assert False, f"{local_pytorch_script.name} on {amd_host.host_ip} couldnt be created!!"
+        log.info(f"Creating {local_pytorch_script.name} on {amd_host.host_ip} - Successfull !!")
+
+    amd_host = pytest.testdata.amd_host[0]
     # Create batch script
     local_script = batch_scripts_folder / "distributed_pytorch_sbatch.sh"
     remote_script = str(local_script.name)
