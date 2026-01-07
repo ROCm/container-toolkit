@@ -37,6 +37,7 @@ class testcache(object):
     results_dir = ""
     slurm_version = ""
     enroot_version = ""
+    slurm_ip = ""
 
 testdata = testcache()
 
@@ -78,6 +79,7 @@ def connect_handles():
         amd_host.connect(host['user'], host.get('password',None),key=host.get('key',str(rsa_key)))
         testdata.slurm_version = host.get('slurm_version',"")
         testdata.enroot_version = host.get('enroot_version',"")
+        testdata.slurm_ip = host.get('slurm_ip',"")
         amd_host.helper_obj = HelperLib(amd_host)
         amd_hosts.append(amd_host)
     testdata.amd_host = amd_hosts

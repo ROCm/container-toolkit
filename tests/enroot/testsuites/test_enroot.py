@@ -159,10 +159,13 @@ def setup_test():
     # # Configure /etc/hosts file 
     host_entries=[]
     for amd_host in  pytest.testdata.amd_host:
-        exit_code, ip_address = amd_host.get_ip()
-        if exit_code :
-            assert False, f"Could not retrieve the remote server's IP Address !!"
-        exit_code, output = amd_host.execute_command(f"sudo hostname -s ")
+        if not pytest.testdata.slurm_ip:
+            exit_code, ip_address = amd_host.get_ip()
+            if exit_code :
+                assert False, f"Could not retrieve the remote server's IP Address !!"
+            exit_code, output = amd_host.execute_command(f"sudo hostname -s ")
+        else:
+            ip_address = pytest.testdata.slurm_ip
         if exit_code :
             assert False , f" Failed to get the host name !! , {output['stderr']}"  
         host_name = output['stdout'].strip()
@@ -261,25 +264,28 @@ def test_single_node_pytorch():
     Raises:
         AssertionError: Above validation points are failed
     """
+
+    # Create batch script
+    head_node = pytest.testdata.amd_host[0]
+    local_script = batch_scripts_folder / "pytorch_gpu_util_sbatch.sh"
+    remote_script = str(local_script.name)
+    log.info(f"Creating {local_script.name} on {head_node.host_ip}...")
+    exit_code = create_batch_script(head_node,local_script)
+    if exit_code:
+        assert False, f"{local_script.name} on {head_node.host_ip} couldnt be created!!"
+    log.info(f"Creating {local_script.name} on {head_node.host_ip} - Successfull !!")
+
     for amd_host in  pytest.testdata.amd_host:
         # Create /tmp/test_pytorch/gpu_stress_10s.py
         parent_dir = "/tmp/test_pytorch"
         copy_file_list =[]
         local_stress_script = helper_scripts_folder / "gpu_stress_10s.py"
         log.info(f"Creating {local_stress_script.name} on {amd_host.host_ip}...")
-        exit_code = create_gpu_stress_script(amd_host,local_stress_script,parent_dir)
+        exit_code = create_helper_script(amd_host,local_stress_script,parent_dir)
         if exit_code:
             assert False, f"{local_stress_script.name} on {amd_host.host_ip} couldnt be created!!"
         log.info(f"Creating {local_stress_script.name} on {amd_host.host_ip} - Successfull !!")
 
-        # Create batch script
-        local_script = batch_scripts_folder / "pytorch_gpu_util_sbatch.sh"
-        remote_script = str(local_script.name)
-        log.info(f"Creating {local_script.name} on {amd_host.host_ip}...")
-        exit_code = create_batch_script(amd_host,local_script, remote_script)
-        if exit_code:
-            assert False, f"{local_script.name} on {amd_host.host_ip} couldnt be created!!"
-        log.info(f"Creating {local_script.name} on {amd_host.host_ip} - Successfull !!")
         #Get host name 
         exit_code, output = amd_host.execute_command(f"sudo hostname -s ")
         if exit_code :
@@ -287,7 +293,6 @@ def test_single_node_pytorch():
         node = output['stdout'].strip()
 
         # Run the batch script -> get jobid 
-        head_node = pytest.testdata.amd_host[0]
         sbatch_cmd = f"sbatch --parsable --nodelist={node}  --gres=gpu:{amd_host.gpu_num} {remote_script} "
         exit_code, output = head_node.execute_command(sbatch_cmd)
         assert not exit_code, f"sbatch command couldnt be launched !! : {output['stderr']}"
@@ -296,7 +301,6 @@ def test_single_node_pytorch():
 
         # Wait for job completion
         job_state, sacct_output = wait_for_job_completion(head_node,job_id) 
-
         log.info(f"Job state of {job_id} : {job_state}")
         log.info(f"sacct output : {sacct_output}")
         err_file = f"pytorch_logs/pytorch-util-{job_id}.err"
@@ -313,7 +317,8 @@ def test_single_node_pytorch():
         # Print rocm-smi, cuda device_count output
         exit_code, output = amd_host.execute_command(f"cat {output_file} | head -n 20")
         assert not exit_code, f"{amd_host.host_ip}:Couldnt print the batch output file {output_file} : {output['stderr']}"
-        log.info(f"Output file : {output['stdout']}")
+        log.info(f"Output : ")
+        log.info(output['stdout'].encode().decode('unicode_escape'))
 
         # Check for gpu_max_utilization.log in /tmp/test_pytorch and validate
         log.info(f"Checking {parent_dir}/gpu_max_utilization.log ...")
@@ -322,12 +327,11 @@ def test_single_node_pytorch():
         exit_code, output = amd_host.execute_command(f"cat {parent_dir}/gpu_max_utilization.log ")
         if exit_code :
             assert False , f" Error retrieving the file {parent_dir}/gpu_max_utilization.log !, {output['stderr']}"  
-        log.info(f"Output : {output['stdout']}")
- 
+        log.info(f"Output : ")
+        log.info(output['stdout'].encode().decode('unicode_escape'))
         # Copy back results and deleted the directory and files
         log.info(f"Copying all the results to {str(pytest.testdata.results_dir)}...")
         
-
         for file in copy_file_list:
             local_file = pytest.testdata.results_dir / Path(file).name
             exit_code = amd_host.copy_from_host(file,local_file)
@@ -341,15 +345,100 @@ def test_single_node_pytorch():
         if exit_code :
             assert False , f" Error deleting the folder {parent_dir} !, {output['stderr']}"  
 
-        # Delete the batch script on the remote host 
-        exit_code, output = amd_host.execute_command(f"sudo rm -rf {remote_script}")
-        if exit_code :
-            assert False , f" Error deleting the script {remote_script}!, {output['stderr']}"  
-        
+    # Delete the batch script on the remote host 
+    exit_code, output = head_node.execute_command(f"sudo rm -rf {remote_script}")
+    if exit_code :
+        assert False , f" Error deleting the script {remote_script}!, {output['stderr']}"  
+
+def test_multi_node_distributed_pytorch():
+    """    
+    Use sbatch to run distributed pytorch test on multiple nodes
+
+    TestID: TCID-ENROOT-MULTI-NODE-PYTORCH
+
+    Setup:
+        1.Create test_pytorch dir  
+        2.Copy batch file to the home directory
+        3.Copy helper script - distributed_pytorch.py to the test_pytorch directory
+    Validation:
+        1. Verify if sbatch test is completed
+        2. Verify if the output file - test-summary-{job-id}.txt is created and print that output
+        2. Verify and print the results
+    Raises:
+        AssertionError: Above validation points are failed
+    """
+    # Create helper script
+    parent_dir = "test_pytorch"
+    copy_file_list =[]
+    for amd_host in  pytest.testdata.amd_host:
+        local_pytorch_script = helper_scripts_folder / "distributed_pytorch.py"
+        log.info(f"Creating {local_pytorch_script.name} on {amd_host.host_ip}...")
+        exit_code = create_helper_script(amd_host,local_pytorch_script,parent_dir)
+        if exit_code:
+            assert False, f"{local_pytorch_script.name} on {amd_host.host_ip} couldnt be created!!"
+        log.info(f"Creating {local_pytorch_script.name} on {amd_host.host_ip} - Successfull !!")
+
+    amd_host = pytest.testdata.amd_host[0]
+    # Create batch script
+    local_script = batch_scripts_folder / "distributed_pytorch_sbatch.sh"
+    remote_script = str(local_script.name)
+    log.info(f"Creating {local_script.name} on {amd_host.host_ip}...")
+    exit_code = create_batch_script(amd_host,local_script)
+    if exit_code:
+        assert False, f"{local_script.name} on {amd_host.host_ip} couldnt be created!!"
+    log.info(f"Creating {local_script.name} on {amd_host.host_ip} - Successfull !!")
+    
+    # Run the batch script -> get jobid 
+    exit_code, output = amd_host.execute_command(f"sbatch --parsable --gres=gpu:{amd_host.gpu_num} {remote_script} ")
+    assert not exit_code, f"sbatch command couldnt be launched !! : {output['stderr']}"
+    job_id = output['stdout'].strip()
+    log.info(f"sbatch job - {job_id} submitted !!")  
+
+    # Wait for job completion
+    job_state, sacct_output = wait_for_job_completion(amd_host,job_id) 
+    log.info(f"Job state of {job_id} : {job_state}")
+    log.info(f"sacct output : {sacct_output}")
+    err_file = f"pytorch_logs/pytorch-rccl-{job_id}.err"
+    output_file = f"pytorch_logs/pytorch-rccl-{job_id}.out"
+    copy_file_list.append(output_file)
+    copy_file_list.append(err_file)
+
+    if "COMPLETED" not in job_state:
+        exit_code, output = amd_host.execute_command(f"cat {err_file}")
+        assert not exit_code, f"{amd_host.host_ip}:Couldnt print the batch error file {err_file} : {output['stderr']}"
+        log.info(f"ERROR file : {output['stdout']}")
+        assert False, "Distributed Pytorch test case failed.. !! "
+
+    # Check for test_summary.txt in test_pytorch and validate
+    log.info(f"Checking {parent_dir}/ ...")
+    test_summary_log = f"{parent_dir}/test_summary_{job_id}.txt"
+    copy_file_list.append(test_summary_log)
+    exit_code, output = amd_host.execute_command(f"cat {test_summary_log} ")
+    assert not exit_code, f" Error retrieving the file {test_summary_log}!, {output['stderr']}"  
+    log.info(f"Output : ")
+    log.info(output['stdout'].encode().decode('unicode_escape'))
+ 
+    # Copy back results and deleted the directory and files
+    log.info(f"Copying all the results to {str(pytest.testdata.results_dir)}...")
+    
+    for file in copy_file_list:
+        local_file = pytest.testdata.results_dir / Path(file).name
+        exit_code = amd_host.copy_from_host(file,local_file)
+        assert not exit_code, f" Error copying the file {file} !"
+        exit_code, output = amd_host.execute_command(f"sudo rm -rf {file}")
+        assert not exit_code , f" Error deleting the file {file} !, {output['stderr']}"  
+
+    # Remove the parent directory
+    exit_code, output = amd_host.execute_command(f"sudo rm -rf {parent_dir}")
+    assert not exit_code, f" Error deleting the folder {parent_dir} !, {output['stderr']}"  
+
+    # Delete the batch script on the remote host 
+    exit_code, output = amd_host.execute_command(f"sudo rm -rf {remote_script}")
+    assert not exit_code , f" Error deleting the script {remote_script}!, {output['stderr']}"  
+
 def teardown_test():
     """
     Teardown the testbed
-    
     1.Uninstall slurm
     2.Uninstall enroot
 
@@ -358,8 +447,14 @@ def teardown_test():
         log.info("Setup uninstallation skipped... Nothing to teardown...!")
         return
     uninstall_script = "uninstall_slurm.sh"
-    local_uninstall_script = config_folder/uninstall_script    
+    local_uninstall_script = config_folder/uninstall_script   
+    pytorch_logs = "pytorch_logs"  
     for amd_host in  pytest.testdata.amd_host:
+        # Remove the logs directory
+        log.info(f"Removing {pytorch_logs} directory")
+        exit_code, output = amd_host.execute_command(f"sudo rm -rf {pytorch_logs}")
+        assert not exit_code, f" Error deleting the folder {pytorch_logs} !, {output['stderr']}"  
+
         log.info(f"Uninstalling slurm on {amd_host.host_ip}... ")
         amd_host.helper_obj.run_scripts(local_uninstall_script, uninstall_script,pytest.testdata.results_dir)
         log.info(f"Uninstalling slurm on {amd_host.host_ip}... SUCCESSFUL  !!")
