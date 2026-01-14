@@ -18,7 +18,6 @@ package validate
 
 import (
 	"fmt"
-	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -63,11 +62,6 @@ func AddNewCommand() *cli.Command {
 }
 
 func validateValOptions(c *cli.Context, valOptions *validateOptions) error {
-	curUser, err := user.Current()
-	if err != nil || curUser.Uid != "0" {
-		return fmt.Errorf("Permission denied: Not running as root")
-	}
-
 	out, err := filepath.Abs(valOptions.cdiSpecPath)
 	if err != nil {
 		return fmt.Errorf("Incorrect CDI spec file, Error: %v", err)
