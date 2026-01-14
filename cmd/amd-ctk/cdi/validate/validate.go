@@ -19,7 +19,6 @@ package validate
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/ROCm/container-toolkit/internal/cdi"
 	"github.com/urfave/cli/v2"
@@ -62,17 +61,11 @@ func AddNewCommand() *cli.Command {
 }
 
 func validateValOptions(c *cli.Context, valOptions *validateOptions) error {
-	out, err := filepath.Abs(valOptions.cdiSpecPath)
+	_, err := filepath.Abs(valOptions.cdiSpecPath)
 	if err != nil {
 		return fmt.Errorf("Incorrect CDI spec file, Error: %v", err)
 	}
 
-	f := filepath.Base(out)
-	if f != defaultCDISpecFile {
-		return fmt.Errorf("CDI spec file name must be amd.json")
-	}
-
-	valOptions.cdiSpecPath = strings.TrimSuffix(out, f)
 	return nil
 }
 

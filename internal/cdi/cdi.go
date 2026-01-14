@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strconv"
 
@@ -30,11 +31,8 @@ import (
 
 // Constants
 const (
-	// Default path and name for CDI spec
-	CDI_SPEC_PATH = "/var/run/cdi"
-
-	// CDI spec file name
-	CDI_SPEC = "amd.json"
+	// Default full CDI spec path
+	CDI_SPEC_PATH = "/var/run/cdi/amd.json"
 )
 
 // GetGPUs is the type for functions that return the lists of all the GPU devices on the system
@@ -170,9 +168,7 @@ func (cdi *cdi_t) GetSpec() specs.Spec {
 }
 
 func (cdi *cdi_t) WriteSpec() error {
-	f := cdi.specPath + CDI_SPEC
-
-	file, err := os.Create(f)
+	file, err := os.Create(cdi.specPath)
 	if err != nil {
 		logger.Log.Printf("Error creating file, Error: %v", err)
 		return err
@@ -186,8 +182,8 @@ func (cdi *cdi_t) WriteSpec() error {
 		return err
 	}
 
-	logger.Log.Printf("Wrote spec to %v", f)
-	fmt.Printf("Generated CDI spec: %v\n", f)
+	logger.Log.Printf("Wrote spec to %v", cdi.specPath)
+	fmt.Printf("Generated CDI spec: %v\n", cdi.specPath)
 	return nil
 }
 
@@ -205,13 +201,11 @@ func (cdi *cdi_t) PrintSpec() error {
 }
 
 func (cdi *cdi_t) ValidateSpec() (bool, error) {
-	f := cdi.specPath + CDI_SPEC
+	fmt.Printf("Validating CDI spec: %v\n", cdi.specPath)
 
-	fmt.Printf("Validating CDI spec: %v\n", f)
-
-	savedCDISpec, err := readSpecFromFile(f)
+	savedCDISpec, err := readSpecFromFile(cdi.specPath)
 	if err != nil {
-		fmt.Printf("Failed to parse %v, Err: %v\n", f, err)
+		fmt.Printf("Failed to parse %v, Err: %v\n", cdi.specPath, err)
 		return false, err
 	}
 
@@ -223,7 +217,7 @@ func (cdi *cdi_t) ValidateSpec() (bool, error) {
 
 	equal := reflect.DeepEqual(*savedCDISpec, cdi.spec)
 	if equal != true {
-		logger.Log.Printf("CDI spec: %v is invalid. Please regenerate CDI spec", f)
+		logger.Log.Printf("CDI spec: %v is invalid. Please regenerate CDI spec", cdi.specPath)
 		fmt.Printf("CDI spec is invalid\nPlease regenerate CDI spec\n")
 		return false, nil
 	}
@@ -236,10 +230,11 @@ func New(sp string) (Interface, error) {
 		sp = CDI_SPEC_PATH
 	}
 
-	if _, err := os.Stat(sp); os.IsNotExist(err) {
-		err := os.Mkdir(sp, 0755)
+	dir := filepath.Dir(sp)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err := os.MkdirAll(dir, 0755)
 		if err != nil {
-			logger.Log.Printf("Failed to create %v, Err: %v", sp, err)
+			logger.Log.Printf("Failed to create %v, Err: %v", dir, err)
 			return nil, err
 		}
 	}

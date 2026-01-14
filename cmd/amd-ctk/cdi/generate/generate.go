@@ -19,7 +19,6 @@ package generate
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/ROCm/container-toolkit/internal/cdi"
 	"github.com/urfave/cli/v2"
@@ -62,17 +61,11 @@ func AddNewCommand() *cli.Command {
 }
 
 func validateGenOptions(c *cli.Context, genOptions *generateOptions) error {
-	out, err := filepath.Abs(genOptions.output)
+	_, err := filepath.Abs(genOptions.output)
 	if err != nil {
 		return fmt.Errorf("incorrect output file, Err: %v", err)
 	}
 
-	f := filepath.Base(out)
-	if f != defaultOutputFile {
-		return fmt.Errorf("output file name must be amd.json")
-	}
-
-	genOptions.output = strings.TrimSuffix(out, f)
 	return nil
 }
 
