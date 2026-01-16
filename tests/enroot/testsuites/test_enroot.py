@@ -65,13 +65,13 @@ def setup_test():
     # Run rocm-smi
     for amd_host in  pytest.testdata.amd_host:
         log.info(f"Listing the GPUs on the host {amd_host.host_ip} using rocm-smi")
-        exit_code, output = amd_host.execute_command(f"sudo rocm-smi")
+        exit_code, output = amd_host.execute_command(f"rocm-smi")
         if exit_code :
             assert False , f" rocm-smi command execution failed !! , {output['stderr']}"
         log.debug(f"{output['stdout']}")
         amd_host.gpu_info = parse_rocm_smi_result(output['stdout'])
         amd_host.gpu_num = len(amd_host.gpu_info)
-        exit_code, output = amd_host.execute_command(f"sudo rocm-smi --showuniqueid ")
+        exit_code, output = amd_host.execute_command(f"rocm-smi --showuniqueid ")
         if exit_code :
             assert False , f" rocm-smi command execution failed !! , {output['stderr']}"
         log.debug(f"GPU info : {amd_host.gpu_info}, pytest.testdata.gpu_num : {amd_host.gpu_num} ")
@@ -82,14 +82,14 @@ def setup_test():
         return
 
     # Uninstall slurm
-    uninstall_script = "uninstall_slurm.sh"
-    local_uninstall_script = config_folder/uninstall_script    
-    for amd_host in  pytest.testdata.amd_host:
-        log.info(f"Uninstalling slurm on {amd_host.host_ip}... ")
-        amd_host.helper_obj.run_scripts(local_uninstall_script, uninstall_script,pytest.testdata.results_dir)
-        log.info(f"Uninstalling slurm on {amd_host.host_ip}... SUCCESSFUL  !!")
+   # uninstall_script = "uninstall_slurm.sh"
+   # local_uninstall_script = config_folder/uninstall_script    
+   # for amd_host in  pytest.testdata.amd_host:
+   #     log.info(f"Uninstalling slurm on {amd_host.host_ip}... ")
+   #     amd_host.helper_obj.run_scripts(local_uninstall_script, uninstall_script,pytest.testdata.results_dir)
+   #     log.info(f"Uninstalling slurm on {amd_host.host_ip}... SUCCESSFUL  !!")
 
-    exit_code, output = pytest.testdata.amd_host[0].execute_command(f"sudo hostname -s ")
+    exit_code, output = pytest.testdata.amd_host[0].execute_command(f"hostname -s ")
     if exit_code :
         assert False , f" Failed to get the host name !! , {output['stderr']}"  
     head_node = output['stdout'].strip()
@@ -106,26 +106,26 @@ def setup_test():
     # Installation and config file creation
     for amd_host in  pytest.testdata.amd_host:
         # Create /etc/slurm/slurm.conf
-        log.info(f"Creating /etc/slurm/slurm.conf on {amd_host.host_ip}...")
-        local_slurm_conf = config_folder / "slurm.conf"
-        exit_code = create_conf_file(amd_host,local_slurm_conf,head_node,node_name)
-        if exit_code:
-            assert False, f"/etc/slurm/slurm.conf couldnt be created!!"
-        log.info(f"Creating /etc/slurm/slurm.conf on {amd_host.host_ip} - Successfull !!")
+    #    log.info(f"Creating /etc/slurm/slurm.conf on {amd_host.host_ip}...")
+    #    local_slurm_conf = config_folder / "slurm.conf"
+    #    exit_code = create_conf_file(amd_host,local_slurm_conf,head_node,node_name)
+    #    if exit_code:
+    #        assert False, f"/etc/slurm/slurm.conf couldnt be created!!"
+    #    log.info(f"Creating /etc/slurm/slurm.conf on {amd_host.host_ip} - Successfull !!")
 
-        # Create /etc/slurm/gres.conf
-        log.info(f"Creating /etc/slurm/gres.conf on {amd_host.host_ip}...")
-        exit_code = create_gres_conf_file(amd_host)
-        if exit_code:
-            assert False, f"/etc/slurm/gres.conf couldnt be created!!"
-        log.info(f"Creating /etc/slurm/gres.conf  on {amd_host.host_ip}- Successfull !!")
+    #    # Create /etc/slurm/gres.conf
+    #    log.info(f"Creating /etc/slurm/gres.conf on {amd_host.host_ip}...")
+    #    exit_code = create_gres_conf_file(amd_host)
+    #    if exit_code:
+    #        assert False, f"/etc/slurm/gres.conf couldnt be created!!"
+    #    log.info(f"Creating /etc/slurm/gres.conf  on {amd_host.host_ip}- Successfull !!")
 
         # Create /etc/slurm/cgroup.conf
-        log.info(f"Creating /etc/slurm/cgroup.conf on {amd_host.host_ip}...")
-        exit_code = create_cgroup_conf_file(amd_host)
-        if exit_code:
-            assert False, f"/etc/slurm/cgroup.conf couldnt be created!!"
-        log.info(f"Creating /etc/slurm/cgroup.conf  on {amd_host.host_ip} - Successfull !!")
+    #    log.info(f"Creating /etc/slurm/cgroup.conf on {amd_host.host_ip}...")
+    #    exit_code = create_cgroup_conf_file(amd_host)
+    #    if exit_code:
+    #        assert False, f"/etc/slurm/cgroup.conf couldnt be created!!"
+    #    log.info(f"Creating /etc/slurm/cgroup.conf  on {amd_host.host_ip} - Successfull !!")
 
         # Add the user to render/video groups 
         exit_code, output = amd_host.execute_command(f"whoami ")
@@ -133,7 +133,7 @@ def setup_test():
             assert False , f" Failed to get the user name !! , {output['stderr']}"  
         user_name = output['stdout'].strip() 
         log.info(f"Adding {user_name} to groups render/video on {amd_host.host_ip} ...")
-        exit_code, output = amd_host.execute_command(f"sudo usermod -aG render,video {user_name}")
+        exit_code, output = amd_host.execute_command(f"usermod -aG render,video {user_name}")
         if exit_code :
             assert False , f" Failed to add the user to render,video groups !! , {output['stderr']}" 
         log.info(f"Adding {user_name} to groups render/video on {amd_host.host_ip} Successfull !!")
@@ -141,11 +141,11 @@ def setup_test():
         amd_host.reconnect()
 
         # Install slurm 
-        install_script = "install_slurm.sh"
-        local_install_script = config_folder/install_script
-        log.info(f"Installing slurm on {amd_host.host_ip}... ")
-        amd_host.helper_obj.run_scripts(local_install_script,install_script,pytest.testdata.results_dir,pytest.testdata.slurm_version)
-        log.info(f"Installing slurm on {amd_host.host_ip}... SUCCESSFUL  !!")
+    #    install_script = "install_slurm.sh"
+    #    local_install_script = config_folder/install_script
+    #    log.info(f"Installing slurm on {amd_host.host_ip}... ")
+    #    amd_host.helper_obj.run_scripts(local_install_script,install_script,pytest.testdata.results_dir,pytest.testdata.slurm_version)
+    #    log.info(f"Installing slurm on {amd_host.host_ip}... SUCCESSFUL  !!")
 
         # Install  enroot 
         install_enroot = "install_enroot.sh"
@@ -163,7 +163,7 @@ def setup_test():
             exit_code, ip_address = amd_host.get_ip()
             if exit_code :
                 assert False, f"Could not retrieve the remote server's IP Address !!"
-            exit_code, output = amd_host.execute_command(f"sudo hostname -s ")
+            exit_code, output = amd_host.execute_command(f"hostname -s ")
         else:
             ip_address = pytest.testdata.slurm_ip
         if exit_code :
@@ -176,63 +176,63 @@ def setup_test():
     for amd_host in  pytest.testdata.amd_host:
         for entry in host_entries:
             #log.info(f"Adding---{entry}--- to {amd_host.host_ip} /etc/hosts file... ")
-            command = f"grep -qF \"{entry}\" {hosts_file} || echo \"{entry}\" | sudo tee -a {hosts_file} > /dev/null"
+            command = f"grep -qF \"{entry}\" {hosts_file} || echo \"{entry}\" | tee -a {hosts_file} > /dev/null"
             exit_code, output = amd_host.execute_command(command)
             if exit_code :
                 assert False , f" Failed to update the {hosts_file} !! , {output['stderr']}"  
             log.info(f"Adding---{entry}--- to {amd_host.host_ip} /etc/hosts file-Successfull !! ")
 
     # Create /etc.munge/munge.key and change file permission 
-    exit_code, output = pytest.testdata.amd_host[0].helper_obj.create_munge_key()
-    if exit_code :
-        assert False , f"Munge key creation on {pytest.testdata.amd_host[0].host_ip} failed :{output['stderr']} "  
-    log.info(f"Munge key creation on {pytest.testdata.amd_host[0].host_ip} successful ")
+   # exit_code, output = pytest.testdata.amd_host[0].helper_obj.create_munge_key()
+   # if exit_code :
+   #     assert False , f"Munge key creation on {pytest.testdata.amd_host[0].host_ip} failed :{output['stderr']} "  
+   # log.info(f"Munge key creation on {pytest.testdata.amd_host[0].host_ip} successful ")
     
     # Copy to all the hosts
-    munge_path = "/etc/munge/munge.key"
-    exit_code = pytest.testdata.amd_host[0].copy_munge_to_hosts(pytest.testdata.amd_host[1:],munge_path )
-    if exit_code:
-        assert False, "Munge key copy to all the hosts failed !!"
+   # munge_path = "/etc/munge/munge.key"
+   # exit_code = pytest.testdata.amd_host[0].copy_munge_to_hosts(pytest.testdata.amd_host[1:],munge_path )
+   # if exit_code:
+   #     assert False, "Munge key copy to all the hosts failed !!"
     
     # Change back the permission of all munge keys to 700 and restart munge,slurm and slurmctld
-    exit_code, output = pytest.testdata.amd_host[0].helper_obj.configure_head_node()
-    if exit_code :
-        assert False, f"Head node configuration on {pytest.testdata.amd_host[0].host_ip} failed :{output['stderr']} "  
-    log.info(f"Head node configuration on  {pytest.testdata.amd_host[0].host_ip} successfull ")
+   # exit_code, output = pytest.testdata.amd_host[0].helper_obj.configure_head_node()
+   # if exit_code :
+   #     assert False, f"Head node configuration on {pytest.testdata.amd_host[0].host_ip} failed :{output['stderr']} "  
+   # log.info(f"Head node configuration on  {pytest.testdata.amd_host[0].host_ip} successfull ")
 
-    for amd_host in  pytest.testdata.amd_host[1:]:
-        exit_code, output = amd_host.helper_obj.configure_munge()
-        if exit_code :
-            assert False, f"Munge key configuration on {amd_host.host_ip} failed :{output['stderr']} "  
-        log.info(f"Munge key configuration on {amd_host.host_ip} successfull ")
+   # for amd_host in  pytest.testdata.amd_host[1:]:
+   #     exit_code, output = amd_host.helper_obj.configure_munge()
+   #     if exit_code :
+   #         assert False, f"Munge key configuration on {amd_host.host_ip} failed :{output['stderr']} "  
+   #     log.info(f"Munge key configuration on {amd_host.host_ip} successfull ")
     
     # Configuring slurmdb
-    amd_host=pytest.testdata.amd_host[0]
-    local_slurmdbd_file = config_folder / "slurmdbd.conf"
-    log.info(f"Creating /etc/slurm/slurmdbd.conf on {amd_host.host_ip}...")
-    exit_code = create_conf_file(amd_host,local_slurmdbd_file )
-    if exit_code:
-        assert False, f"/etc/slurm/slurmdbd.conf couldnt be created!!"
-    log.info(f"Creating /etc/slurm/slurmdbd.conf  on {amd_host.host_ip} - Successfull !!")
+   # amd_host=pytest.testdata.amd_host[0]
+   # local_slurmdbd_file = config_folder / "slurmdbd.conf"
+   # log.info(f"Creating /etc/slurm/slurmdbd.conf on {amd_host.host_ip}...")
+   # exit_code = create_conf_file(amd_host,local_slurmdbd_file )
+   # if exit_code:
+   #     assert False, f"/etc/slurm/slurmdbd.conf couldnt be created!!"
+   # log.info(f"Creating /etc/slurm/slurmdbd.conf  on {amd_host.host_ip} - Successfull !!")
     
-    log.info(f"Configuring Slurmdbd ...")
-    slurmdb_config = "slurmdb_config.sh"
-    local_slurmdb_config = config_folder/slurmdb_config
-    amd_host.helper_obj.run_scripts(local_slurmdb_config,slurmdb_config,pytest.testdata.results_dir)  
-    log.info(f"Slurmdbd configuration on {amd_host.host_ip} successfull ")
+   # log.info(f"Configuring Slurmdbd ...")
+   # slurmdb_config = "slurmdb_config.sh"
+   # local_slurmdb_config = config_folder/slurmdb_config
+   # amd_host.helper_obj.run_scripts(local_slurmdb_config,slurmdb_config,pytest.testdata.results_dir)  
+   # log.info(f"Slurmdbd configuration on {amd_host.host_ip} successfull ")
     
-    for amd_host in  pytest.testdata.amd_host:
-        exit_code, output = amd_host.execute_command("sudo systemctl restart slurmd")
-        if exit_code :
-            assert False, f"slurmd restart failed on {amd_host.host_ip} : {output['stderr']}"
-        log.info(f"slurmd restart on {amd_host.host_ip} : \n {output['stdout']}")
+   # for amd_host in  pytest.testdata.amd_host:
+   #     exit_code, output = amd_host.execute_command("systemctl restart slurmd")
+   #     if exit_code :
+   #         assert False, f"slurmd restart failed on {amd_host.host_ip} : {output['stderr']}"
+   #     log.info(f"slurmd restart on {amd_host.host_ip} : \n {output['stdout']}")
 
     amd_host = pytest.testdata.amd_host[0]
-    exit_code, output = amd_host.execute_command("sudo sacctmgr list cluster")
+    exit_code, output = amd_host.execute_command("sacctmgr list cluster")
     if exit_code :
         assert False, f"failed to get sacct cluster on {amd_host.host_ip} : {output['stderr']}"
     log.info(f"sacct cluster  : \n {output['stdout']}")    
-    amd_host.execute_command("sudo systemctl restart slurmctld")
+   # amd_host.execute_command("systemctl restart slurmctld")
 
     install_pyxis = "install_pyxis.sh"
     local_install_pyxis = config_folder/install_pyxis
@@ -287,7 +287,7 @@ def test_single_node_pytorch():
         log.info(f"Creating {local_stress_script.name} on {amd_host.host_ip} - Successfull !!")
 
         #Get host name 
-        exit_code, output = amd_host.execute_command(f"sudo hostname -s ")
+        exit_code, output = amd_host.execute_command(f"hostname -s ")
         if exit_code :
             assert False , f" Failed to get the host name !!, {output['stderr']}"  
         node = output['stdout'].strip()
@@ -336,17 +336,17 @@ def test_single_node_pytorch():
             local_file = pytest.testdata.results_dir / Path(file).name
             exit_code = amd_host.copy_from_host(file,local_file)
             assert not exit_code, f" Error copying the file {file} !"
-            exit_code, output = amd_host.execute_command(f"sudo rm -rf {file}")
+            exit_code, output = amd_host.execute_command(f"rm -rf {file}")
             if exit_code :
                 assert False , f" Error deleting the file {file} !, {output['stderr']}"  
 
         # Remove the parent directory
-        exit_code, output = amd_host.execute_command(f"sudo rm -rf {parent_dir}")
+        exit_code, output = amd_host.execute_command(f"rm -rf {parent_dir}")
         if exit_code :
             assert False , f" Error deleting the folder {parent_dir} !, {output['stderr']}"  
 
     # Delete the batch script on the remote host 
-    exit_code, output = head_node.execute_command(f"sudo rm -rf {remote_script}")
+    exit_code, output = head_node.execute_command(f"rm -rf {remote_script}")
     if exit_code :
         assert False , f" Error deleting the script {remote_script}!, {output['stderr']}"  
 
@@ -425,15 +425,15 @@ def test_multi_node_distributed_pytorch():
         local_file = pytest.testdata.results_dir / Path(file).name
         exit_code = amd_host.copy_from_host(file,local_file)
         assert not exit_code, f" Error copying the file {file} !"
-        exit_code, output = amd_host.execute_command(f"sudo rm -rf {file}")
+        exit_code, output = amd_host.execute_command(f"rm -rf {file}")
         assert not exit_code , f" Error deleting the file {file} !, {output['stderr']}"  
 
     # Remove the parent directory
-    exit_code, output = amd_host.execute_command(f"sudo rm -rf {parent_dir}")
+    exit_code, output = amd_host.execute_command(f"rm -rf {parent_dir}")
     assert not exit_code, f" Error deleting the folder {parent_dir} !, {output['stderr']}"  
 
     # Delete the batch script on the remote host 
-    exit_code, output = amd_host.execute_command(f"sudo rm -rf {remote_script}")
+    exit_code, output = amd_host.execute_command(f"rm -rf {remote_script}")
     assert not exit_code , f" Error deleting the script {remote_script}!, {output['stderr']}"  
 
 def teardown_test():
@@ -452,7 +452,7 @@ def teardown_test():
     for amd_host in  pytest.testdata.amd_host:
         # Remove the logs directory
         log.info(f"Removing {pytorch_logs} directory")
-        exit_code, output = amd_host.execute_command(f"sudo rm -rf {pytorch_logs}")
+        exit_code, output = amd_host.execute_command(f"rm -rf {pytorch_logs}")
         assert not exit_code, f" Error deleting the folder {pytorch_logs} !, {output['stderr']}"  
 
         log.info(f"Uninstalling slurm on {amd_host.host_ip}... ")
@@ -460,7 +460,7 @@ def teardown_test():
         log.info(f"Uninstalling slurm on {amd_host.host_ip}... SUCCESSFUL  !!")
 
         log.info(f"Uninstalling enroot on {amd_host.host_ip}... ")
-        exit_code, output = amd_host.execute_command(f"""yes "Y" | sudo  DEBIAN_FRONTEND=noninteractive apt purge enroot """)
+        exit_code, output = amd_host.execute_command(f"""yes "Y" | DEBIAN_FRONTEND=noninteractive apt purge enroot """)
         if exit_code :
             assert False , f" Error uninstalling enroot on {amd_host.host_ip}, {output['stderr']}"  
         

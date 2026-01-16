@@ -14,21 +14,21 @@
 # limitations under the License.
 
 export DEBIAN_FRONTEND=noninteractive
-yes "Y" | sudo DEBIAN_FRONTEND=noninteractive apt --fix-broken install
-yes "Y" | sudo DEBIAN_FRONTEND=noninteractive apt update
-yes "Y" | sudo DEBIAN_FRONTEND=noninteractive apt install -y devscripts
-yes "Y" | sudo DEBIAN_FRONTEND=noninteractive apt install -y debhelper
-sudo rm -rf pyxis
+yes "Y" | DEBIAN_FRONTEND=noninteractive apt --fix-broken install
+yes "Y" | DEBIAN_FRONTEND=noninteractive apt update
+yes "Y" | DEBIAN_FRONTEND=noninteractive apt install -y devscripts
+yes "Y" | DEBIAN_FRONTEND=noninteractive apt install -y debhelper
+rm -rf pyxis
 mkdir -p pyxis_main
 cd pyxis_main
 git clone https://github.com/NVIDIA/pyxis
 cd pyxis && pwd && make orig && make deb
-sudo dpkg -i --force-depends ../nvslurm-plugin-pyxis_*_amd64.deb
-sudo mkdir /etc/slurm/plugstack.conf.d
-sudo ln -s /usr/share/pyxis/pyxis.conf /etc/slurm/plugstack.conf.d/pyxis.conf
-sudo touch /etc/slurm/plugstack.conf
-echo "include /etc/slurm/plugstack.conf.d/*" | sudo tee -a /etc/slurm/plugstack.conf
-sudo systemctl restart slurmctld slurmd
+dpkg -i --force-depends ../nvslurm-plugin-pyxis_*_amd64.deb
+mkdir /etc/slurm/plugstack.conf.d
+ln -s /usr/share/pyxis/pyxis.conf /etc/slurm/plugstack.conf.d/pyxis.conf
+touch /etc/slurm/plugstack.conf
+echo "include /etc/slurm/plugstack.conf.d/*" | tee -a /etc/slurm/plugstack.conf
+#systemctl restart slurmctld slurmd
 srun -h | grep container-image
 cd ../../
-sudo rm -rf pyxis_main
+rm -rf pyxis_main

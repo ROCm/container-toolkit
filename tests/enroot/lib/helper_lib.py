@@ -73,7 +73,7 @@ class HelperLib():
 
         Return: int, string
         """
-        exit_code, result = self.host.execute_command("sudo update-alternatives --display rocm")
+        exit_code, result = self.host.execute_command("update-alternatives --display rocm")
         if exit_code == 0 :
             match = re.search(r"link currently points to \/opt\/rocm-(\d+\.\d+)(.*)", result['stdout'])
             if match:
@@ -102,7 +102,7 @@ class HelperLib():
         if exit_code:
             log.err(f"Error giving exec permission to {remote_script} : {output['stderr']}")
             return exit_code,output
-        self.host.execute_command_channel(f"sudo nohup ./{remote_script} {version} > {log_file} ")
+        self.host.execute_command_channel(f"nohup ./{remote_script} {version} > {log_file} ")
         self.wait_for_script_completion(remote_script,log_file)
 
         # Copy log from the host
@@ -113,7 +113,7 @@ class HelperLib():
             return exit_code
 
         # Delete the log file and script file on remote host 
-        exit_code, output = self.host.execute_command(f"sudo rm -rf {log_file} {remote_script}")
+        exit_code, output = self.host.execute_command(f"rm -rf {log_file} {remote_script}")
         if exit_code:
             log.err(f"Error deleting the log: {log_file} : {output['stderr']}")
             return exit_code

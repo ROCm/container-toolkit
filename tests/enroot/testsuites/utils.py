@@ -148,12 +148,12 @@ def get_node_name(amd_host):
     exit_code = amd_host.create_file(script_name,get_node_name_script)
     if exit_code:
         return exit_code,output
-    exit_code, output = amd_host.execute_command(f"sudo sh {script_name}")
+    exit_code, output = amd_host.execute_command(f"sh {script_name}")
     if exit_code:
         log.info(f"Error getting the output for nodename : {output['stderr']}")
         return exit_code,output
     node_info = output['stdout'].strip()
-    exit_code, output = amd_host.execute_command(f"sudo rm -rf  {script_name}")
+    exit_code, output = amd_host.execute_command(f"rm -rf  {script_name}")
     if exit_code:
         log.info(f"Error deleting the script : {output['stderr']}")
         return exit_code,output
