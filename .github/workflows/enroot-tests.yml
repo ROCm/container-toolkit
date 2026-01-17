@@ -1,0 +1,90 @@
+name: Enroot Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_name:
+        description: 'Select test to run'
+        required: true
+        type: choice
+        options:
+          - test_single_node_pytorch
+          - test_multi_node_distributed_pytorch
+      no_install:
+        description: 'Skip installation (--no-install)'
+        required: false
+        type: boolean
+        default: false
+      no_uninstall:
+        description: 'Skip uninstallation (--no-uninstall)'
+        required: false
+        type: boolean
+        default: false
+      docker_image:
+        description: 'Docker image to use (default: rocm/pytorch:latest for single-node, docker://rocm/pytorch:rocm7.0.2_ubuntu22.04_py3.10_pytorch_release_2.7.1 for multi-node)'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  run-enroot-tests:
+    runs-on: enroot-runners
+    timeout-minutes: 120
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+      
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -r tests/enroot/requirements.txt
+      
+      - name: Set PYTHONPATH
+        run: |
+          echo "PYTHONPATH=${{ github.workspace }}/tests/enroot:$PYTHONPATH" >> $GITHUB_ENV
+      
+      - name: Update Docker image in batch script
+        if: ${{ inputs.docker_image != '' }}
+        run: |
+          if [ "${{ inputs.test_name }}" = "test_single_node_pytorch" ]; then
+            echo "Updating pytorch_gpu_util_sbatch.sh with image: ${{ inputs.docker_image }}"
+            sed -i 's|DOCKER_IMAGE=.*|DOCKER_IMAGE=${{ inputs.docker_image }}|' tests/enroot/batch_scripts/pytorch_gpu_util_sbatch.sh
+          elif [ "${{ inputs.test_name }}" = "test_multi_node_distributed_pytorch" ]; then
+            echo "Updating distributed_pytorch_sbatch.sh with image: ${{ inputs.docker_image }}"
+            sed -i 's|export DOCKER_IMAGE=.*|export DOCKER_IMAGE=${{ inputs.docker_image }}|' tests/enroot/batch_scripts/distributed_pytorch_sbatch.sh
+          fi
+      
+      - name: Build pytest command
+        id: build-cmd
+        run: |
+          CMD="python3 -m pytest test_enroot.py --testbed ../testbed/enroot_tb.yml -k ${{ inputs.test_name }}"
+          
+          if [ "${{ inputs.no_install }}" = "true" ]; then
+            CMD="$CMD --no-install"
+          fi
+          
+          if [ "${{ inputs.no_uninstall }}" = "true" ]; then
+            CMD="$CMD --no-uninstall"
+          fi
+          
+          echo "command=$CMD" >> $GITHUB_OUTPUT
+          echo "Running command: $CMD"
+      
+      - name: Run enroot tests
+        working-directory: tests/enroot/testsuites
+        run: ${{ steps.build-cmd.outputs.command }}
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ inputs.test_name }}-${{ github.run_number }}
+          path: tests/enroot/results/
+          if-no-files-found: warn
+          retention-days: 30
