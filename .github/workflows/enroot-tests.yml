@@ -45,40 +45,10 @@ jobs:
           python3 -m pip install --upgrade pip
           pip install -r tests/enroot/requirements.txt
       
-      - name: Set PYTHONPATH
-        run: |
-          echo "PYTHONPATH=${{ github.workspace }}/tests/enroot:$PYTHONPATH" >> $GITHUB_ENV
-      
-      - name: Update Docker image in batch script
-        if: ${{ inputs.docker_image != '' }}
-        run: |
-          if [ "${{ inputs.test_name }}" = "test_single_node_pytorch" ]; then
-            echo "Updating pytorch_gpu_util_sbatch.sh with image: ${{ inputs.docker_image }}"
-            sed -i 's|DOCKER_IMAGE=.*|DOCKER_IMAGE=${{ inputs.docker_image }}|' tests/enroot/batch_scripts/pytorch_gpu_util_sbatch.sh
-          elif [ "${{ inputs.test_name }}" = "test_multi_node_distributed_pytorch" ]; then
-            echo "Updating distributed_pytorch_sbatch.sh with image: ${{ inputs.docker_image }}"
-            sed -i 's|export DOCKER_IMAGE=.*|export DOCKER_IMAGE=${{ inputs.docker_image }}|' tests/enroot/batch_scripts/distributed_pytorch_sbatch.sh
-          fi
-      
-      - name: Build pytest command
-        id: build-cmd
-        run: |
-          CMD="python3 -m pytest test_enroot.py --testbed ../testbed/enroot_tb.yml -k ${{ inputs.test_name }}"
-          
-          if [ "${{ inputs.no_install }}" = "true" ]; then
-            CMD="$CMD --no-install"
-          fi
-          
-          if [ "${{ inputs.no_uninstall }}" = "true" ]; then
-            CMD="$CMD --no-uninstall"
-          fi
-          
-          echo "command=$CMD" >> $GITHUB_OUTPUT
-          echo "Running command: $CMD"
-      
       - name: Run enroot tests
-        working-directory: tests/enroot/testsuites
-        run: ${{ steps.build-cmd.outputs.command }}
+        working-directory: tests/enroot
+        run: |
+          python3 run_test.py "${{ inputs.test_name }}" "${{ inputs.docker_image }}" "${{ inputs.no_install }}" "${{ inputs.no_uninstall }}"
       
       - name: Upload test results
         if: always()
