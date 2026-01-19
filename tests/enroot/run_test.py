@@ -37,7 +37,7 @@ def main():
     no_uninstall = sys.argv[4] if len(sys.argv) > 4 else "false"
     testbed_file = sys.argv[5] if len(sys.argv) > 5 and sys.argv[5] else DEFAULT_TESTBED
 
-    # Validate testbed path eaxists
+    # Validate testbed file exists
     if not Path(testbed_file).exists():
         print(f"[ERROR] Testbed file not found: {testbed_file}")
         sys.exit(1)
