@@ -4,6 +4,8 @@ import subprocess
 import re
 from pathlib import Path
 
+DEFAULT_TESTBED = "testbed/enroot_tb.yml"
+
 def update_docker_image(test_name, docker_image):
     """Update DOCKER_IMAGE in the appropriate batch script."""
     if test_name == "test_single_node_pytorch":
@@ -26,13 +28,19 @@ def update_docker_image(test_name, docker_image):
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: run_test.py <test_name> [docker_image] [no_install] [no_uninstall]")
+        print("Usage: run_test.py <test_name> [docker_image] [no_install] [no_uninstall] [testbed_file] ")
         sys.exit(1)
     
     test_name = sys.argv[1]
     docker_image = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] else None
     no_install = sys.argv[3] if len(sys.argv) > 3 else "false"
     no_uninstall = sys.argv[4] if len(sys.argv) > 4 else "false"
+    testbed_file = sys.argv[5] if len(sys.argv) > 5 and sys.argv[5] else DEFAULT_TESTBED
+
+    # Validate testbed file exists
+    if not Path(testbed_file).exists():
+        print(f"[ERROR] Testbed file not found: {testbed_file}")
+        sys.exit(1)
     
     # Update Docker image if provided
     if docker_image:
@@ -42,7 +50,7 @@ def main():
     cmd = [
         "python3", "-m", "pytest",
         "testsuites/test_enroot.py",
-        "--testbed", "testbed/enroot_tb.yml",
+        "--testbed", testbed_file,
         "-k", test_name
     ]
     
