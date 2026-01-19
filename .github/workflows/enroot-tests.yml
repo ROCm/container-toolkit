@@ -25,6 +25,12 @@ on:
         required: false
         type: string
         default: ''
+      testbed_file:
+        description: 'Path to testbed file (e.g. tests/enroot/testbeds/mi325.yaml)'
+        required: false
+        type: string
+        default: 'testbed/enroot_tb.yml'
+
 
 jobs:
   run-enroot-tests:
@@ -48,7 +54,7 @@ jobs:
       - name: Run enroot tests
         working-directory: tests/enroot
         run: |
-          python3 run_test.py "${{ inputs.test_name }}" "${{ inputs.docker_image }}" "${{ inputs.no_install }}" "${{ inputs.no_uninstall }}"
+          python3 run_test.py "${{ inputs.test_name }}" "${{ inputs.docker_image }}" "${{ inputs.no_install }}" "${{ inputs.no_uninstall }}" "${{ inputs.testbed_file }}"
       
       - name: Upload test results
         if: always()
