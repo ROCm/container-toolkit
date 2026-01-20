@@ -418,7 +418,82 @@ def test_multi_node_distributed_pytorch():
     log.info(f"Output : ")
     log.info(output['stdout'].encode().decode('unicode_escape'))
  
-    # Copy back results and deleted the directory and files
+    # Copy back results and delete the directory and files
+    log.info(f"Copying all the results to {str(pytest.testdata.results_dir)}...")
+    
+    for file in copy_file_list:
+        local_file = pytest.testdata.results_dir / Path(file).name
+        exit_code = amd_host.copy_from_host(file,local_file)
+        assert not exit_code, f" Error copying the file {file} !"
+        exit_code, output = amd_host.execute_command(f"sudo rm -rf {file}")
+        assert not exit_code , f" Error deleting the file {file} !, {output['stderr']}"  
+
+    # Remove the parent directory
+    exit_code, output = amd_host.execute_command(f"sudo rm -rf {parent_dir}")
+    assert not exit_code, f" Error deleting the folder {parent_dir} !, {output['stderr']}"  
+
+    # Delete the batch script on the remote host 
+    exit_code, output = amd_host.execute_command(f"sudo rm -rf {remote_script}")
+    assert not exit_code , f" Error deleting the script {remote_script}!, {output['stderr']}"  
+
+def  test_multi_node_rccl():
+    """    
+    Use sbatch to run rccl test on multiple nodes
+
+    TestID: TCID-ENROOT-MULTI-NODE-RCCL
+
+    Setup:
+        1.Copy batch file to the home directory
+        2.Launch the sbatch script
+
+    Validation:
+        1. Verify if sbatch test is completed
+        2. Verify if the output file - logs/rccl_test_%j.out is created and print that output
+        2. Verify and print the results
+    Raises:
+        AssertionError: Above validation points are failed
+    """
+
+    amd_host = pytest.testdata.amd_host[0]
+    # Create batch script
+    local_script = batch_scripts_folder / "rccl_tests_sbatch.sh"
+    remote_script = str(local_script.name)
+    log.info(f"Creating {local_script.name} on {amd_host.host_ip}...")
+    exit_code = create_batch_script(amd_host,local_script)
+    if exit_code:
+        assert False, f"{local_script.name} on {amd_host.host_ip} couldnt be created!!"
+    log.info(f"Creating {local_script.name} on {amd_host.host_ip} - Successfull !!")
+    
+    # Run the batch script -> get jobid 
+    exit_code, output = amd_host.execute_command(f"sbatch --parsable --gres=gpu:{amd_host.gpu_num} {remote_script} ")
+    assert not exit_code, f"sbatch command couldnt be launched !! : {output['stderr']}"
+    job_id = output['stdout'].strip()
+    log.info(f"sbatch job - {job_id} submitted !!")  
+
+    # Wait for job completion
+    job_state, sacct_output = wait_for_job_completion(amd_host,job_id) 
+    log.info(f"Job state of {job_id} : {job_state}")
+    log.info(f"sacct output : {sacct_output}")
+    err_file = f"logs/rccl_test_{job_id}.err"
+    output_file = f"logs/rccl_test_{job_id}.out"
+    copy_file_list.append(output_file)
+    copy_file_list.append(err_file)
+
+    if "COMPLETED" not in job_state:
+        exit_code, output = amd_host.execute_command(f"cat {err_file}")
+        assert not exit_code, f"{amd_host.host_ip}:Couldnt print the batch error file {err_file} : {output['stderr']}"
+        log.info(f"ERROR file : {output['stdout']}")
+        assert False, "RCCL test case failed.. !! "
+
+    # Check for output file and print the results
+    parent_dir="logs"
+    log.info(f"Checking {parent_dir}/ ...")
+    exit_code, output = amd_host.execute_command(f"cat {output_file} ")
+    assert not exit_code, f" Error retrieving the file {output_file}!, {output['stderr']}"  
+    log.info(f"Output : ")
+    log.info(output['stdout'].encode().decode('unicode_escape'))
+ 
+    # Copy back results and delete the directory and files
     log.info(f"Copying all the results to {str(pytest.testdata.results_dir)}...")
     
     for file in copy_file_list:
