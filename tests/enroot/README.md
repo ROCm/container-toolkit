@@ -118,7 +118,11 @@ Test flow :
     * Copy batch file and helper script required
     * Launch sbatch to run the test
     * Once the test is complete, copy back all the results and logs to "results" folder
-4. Testbed teardown:
+4. Run the *test_multi_node_rccl* test:
+    * Copy the sbatch file to the host
+    * Launch sbatch to run the test
+    * Once the test is complete, copy back all the results and logs to "results" folder
+5. Testbed teardown:
     * Uninstall slurm, enroot and pyxis(skip this if *--no-uninstall* flag is given in the command line)
 
 ```bash
@@ -147,6 +151,11 @@ Run only the multinode distributed pytorch test and skip installation, if slurm,
 
 ```bash
 python3 -m pytest test_enroot.py --testbed ../testbed/enroot_tb.yml -k test_multi_node_distributed_pytorch --no-install --no-uninstall
+```
+Run only the multinode rccl test and skip installation, if slurm, enroot and pyxis are already installed
+
+```bash
+python3 -m pytest test_enroot.py --testbed ../testbed/enroot_tb.yml -k test_multi_node_rccl --no-install --no-uninstall
 ```
 
 ---
