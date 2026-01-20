@@ -18,7 +18,6 @@ package generate
 
 import (
 	"fmt"
-	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -63,11 +62,6 @@ func AddNewCommand() *cli.Command {
 }
 
 func validateGenOptions(c *cli.Context, genOptions *generateOptions) error {
-	curUser, err := user.Current()
-	if err != nil || curUser.Uid != "0" {
-		return fmt.Errorf("Permission denied: Not running as root")
-	}
-
 	out, err := filepath.Abs(genOptions.output)
 	if err != nil {
 		return fmt.Errorf("incorrect output file, Err: %v", err)
