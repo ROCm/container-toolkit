@@ -1,6 +1,9 @@
 name: Enroot Tests
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       test_name:
@@ -10,6 +13,7 @@ on:
         options:
           - test_single_node_pytorch
           - test_multi_node_distributed_pytorch
+          - test_multi_node_rccl
       no_install:
         description: 'Skip installation (--no-install)'
         required: false
@@ -26,41 +30,89 @@ on:
         type: string
         default: ''
       testbed_file:
-        description: 'Path to testbed file (e.g. tests/enroot/testbeds/mi325.yaml)'
+        description: 'Path to testbed file (e.g. tests/enroot/testbeds/mi325.yaml) - defaults to secrets.TESTBED_FILE'
         required: false
         type: string
-        default: 'testbed/enroot_tb.yml'
+        default: ''
 
 
 jobs:
   run-enroot-tests:
     runs-on: enroot-runners
     timeout-minutes: 120
+    strategy:
+      matrix:
+        test_name: 
+          - test_single_node_pytorch
+          - test_multi_node_distributed_pytorch
+          - test_multi_node_rccl
+      max-parallel: 1  # Run tests sequentially
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        if: ${{ (github.event_name == 'push' && matrix.test_name != 'test_multi_node_rccl') || (github.event_name == 'workflow_dispatch' && inputs.test_name == matrix.test_name) }}
       
       - name: Set up Python
         uses: actions/setup-python@v5
+        if: ${{ (github.event_name == 'push' && matrix.test_name != 'test_multi_node_rccl') || (github.event_name == 'workflow_dispatch' && inputs.test_name == matrix.test_name) }}
         with:
           python-version: '3.8'
       
       - name: Install dependencies
+        if: ${{ (github.event_name == 'push' && matrix.test_name != 'test_multi_node_rccl') || (github.event_name == 'workflow_dispatch' && inputs.test_name == matrix.test_name) }}
         run: |
           python3 -m pip install --upgrade pip
           pip install -r tests/enroot/requirements.txt
       
       - name: Run enroot tests
+        if: ${{ (github.event_name == 'push' && matrix.test_name != 'test_multi_node_rccl') || (github.event_name == 'workflow_dispatch' && inputs.test_name == matrix.test_name) }}
         working-directory: tests/enroot
         run: |
-          python3 run_test.py "${{ inputs.test_name }}" "${{ inputs.docker_image }}" "${{ inputs.no_install }}" "${{ inputs.no_uninstall }}" "${{ inputs.testbed_file }}"
+          # Use matrix test_name for the test to run
+          TEST_NAME="${{ matrix.test_name }}"
+          
+          # Determine testbed file based on test type
+          if [ "${{ github.event_name }}" = "push" ]; then
+            # For push events: use test-type-specific secrets
+            if [ "$TEST_NAME" = "test_single_node_pytorch" ]; then
+              DEFAULT_TESTBED="${{ secrets.SINGLE_NODE_TESTBED_FILE }}"
+            else
+              DEFAULT_TESTBED="${{ secrets.MULTI_NODE_TESTBED_FILE }}"
+            fi
+            DOCKER_IMAGE=""
+            NO_INSTALL="false"
+            NO_UNINSTALL="false"
+            TESTBED_FILE="$DEFAULT_TESTBED"
+          else
+            # For workflow_dispatch: allow input override, otherwise use test-type-specific secrets
+            if [ -n "${{ inputs.testbed_file }}" ]; then
+              TESTBED_FILE="${{ inputs.testbed_file }}"
+            else
+              if [ "$TEST_NAME" = "test_single_node_pytorch" ]; then
+                TESTBED_FILE="${{ secrets.SINGLE_NODE_TESTBED_FILE }}"
+              else
+                # Both multi-node tests use MULTI_NODE_TESTBED_FILE
+                TESTBED_FILE="${{ secrets.MULTI_NODE_TESTBED_FILE }}"
+              fi
+            fi
+            DOCKER_IMAGE="${{ inputs.docker_image }}"
+            NO_INSTALL="${{ inputs.no_install }}"
+            NO_UNINSTALL="${{ inputs.no_uninstall }}"
+          fi
+          
+          # Run RCCL test differently (pytest directly with hardcoded flags)
+          if [ "$TEST_NAME" = "test_multi_node_rccl" ]; then
+            python3 -m pytest test_enroot.py --testbed "$TESTBED_FILE" -k test_multi_node_rccl --no-install --no-uninstall
+          else
+            python3 run_test.py "$TEST_NAME" "$DOCKER_IMAGE" "$NO_INSTALL" "$NO_UNINSTALL" "$TESTBED_FILE"
+          fi
       
       - name: Upload test results
-        if: always()
+        if: ${{ always() && ((github.event_name == 'push' && matrix.test_name != 'test_multi_node_rccl') || (github.event_name == 'workflow_dispatch' && inputs.test_name == matrix.test_name)) }}
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ inputs.test_name }}-${{ github.run_number }}
+          name: test-results-${{ matrix.test_name }}-${{ github.run_number }}
           path: tests/enroot/results/
           if-no-files-found: warn
           retention-days: 30
