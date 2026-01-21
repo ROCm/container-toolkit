@@ -455,6 +455,7 @@ def  test_multi_node_rccl():
     """
 
     amd_host = pytest.testdata.amd_host[0]
+    copy_file_list =[]
     # Create batch script
     local_script = batch_scripts_folder / "rccl_tests_sbatch.sh"
     remote_script = str(local_script.name)
