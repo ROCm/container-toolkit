@@ -113,7 +113,6 @@ if [ -z "$SOCKET_IFNAME" ]; then
     exit 1 
 fi
 
-
 echo "================================================"
 echo "Network Configuration:"
 echo "  Master Address: $MASTER_ADDR"
@@ -124,13 +123,21 @@ echo "================================================"
 # Export environmental variables 
 export MASTER_ADDR=$MASTER_ADDR 
 export MASTER_PORT=$MASTER_PORT
+
 # To enable NCCL/RCCL Debug logs 
 export NCCL_DEBUG=INFO
 export NCCL_DEBUG_SUBSYS=INIT,NET
+
 # Set Socket IF, if there are multiple interfaces for TCP communication 
 export NCCL_SOCKET_IFNAME=$SOCKET_IFNAME
 
-
+####################################
+# srun export : export XDG_DATA_HOME, XDG_CACHE_HOME in the srun if multiple nodes are sharing the same working directory
+# srun container-mount : 
+#          /test_pytorch     : Contains distributed pytorch script
+#          /etc/libibverbs.d : Contains libibverbs provider configuration files.
+#          /usr/lib          : Contains RDMA userspace provider shared libraries 
+####################################
 
 # Run the distributed training
 srun --unbuffered \
@@ -150,3 +157,4 @@ srun --unbuffered \
 echo "================================================"
 echo "Job completed: $(date)"
 echo "================================================"
+
