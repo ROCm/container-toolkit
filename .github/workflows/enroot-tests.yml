@@ -103,6 +103,9 @@ jobs:
           
           # Run RCCL test differently (pytest directly with hardcoded flags)
           if [ "$TEST_NAME" = "test_multi_node_rccl" ]; then
+            # Set PYTHONPATH and cd to testsuites directory for pytest
+            export PYTHONPATH=$(pwd):$PYTHONPATH
+            cd testsuites
             python3 -m pytest test_enroot.py --testbed "$TESTBED_FILE" -k test_multi_node_rccl --no-install --no-uninstall
           else
             python3 run_test.py "$TEST_NAME" "$DOCKER_IMAGE" "$NO_INSTALL" "$NO_UNINSTALL" "$TESTBED_FILE"
