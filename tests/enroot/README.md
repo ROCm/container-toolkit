@@ -11,6 +11,7 @@ On the remote GPU host :
 - GPU drivers should be installed and GPUS should be detected
 - **Rocm** should be installed and rocm-smi should be working
 - Make sure the /etc/hostname has the correct name of the device. 
+- RDMA should be enabled and all the related packages,IB devices,rdma driver should be installed 
 
 Ensure the following are installed on your test runner node:
 
@@ -118,6 +119,7 @@ Test flow :
     * Copy batch file and helper script required
     * Launch sbatch to run the test
     * Once the test is complete, copy back all the results and logs to "results" folder
+    * Validate the usage of IB/ROCe by the test  using rdma counters
 4. Run the *test_multi_node_rccl* test:
     * Copy the sbatch file to the host
     * Launch sbatch to run the test

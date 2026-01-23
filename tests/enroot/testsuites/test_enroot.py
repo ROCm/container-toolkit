@@ -387,6 +387,19 @@ def test_multi_node_distributed_pytorch():
     if exit_code:
         assert False, f"{local_script.name} on {amd_host.host_ip} couldnt be created!!"
     log.info(f"Creating {local_script.name} on {amd_host.host_ip} - Successfull !!")
+
+    log.info(f"Discovering IB devices on {amd_host.host_ip}...")
+    exit_code, all_devices = list_all_ib_devices_remote(amd_host)
+    assert not exit_code, f" IB devices couldn't be fetched on {amd_host.host_ip}" 
+    assert all_devices, f"No IB device found !!"
+    log.info(f"IB Devices : {all_devices}")
+
+    log.info(f"Reading counters BEFORE test ({len(all_devices)} devices)")
+    counters_before = {
+        dev: read_ib_counters_remote(amd_host, *dev)
+        for dev in all_devices
+    }
+    log.info(f"Counters before the test : {counters_before}")
     
     # Run the batch script -> get jobid 
     exit_code, output = amd_host.execute_command(f"sbatch --parsable --gres=gpu:{amd_host.gpu_num} {remote_script} ")
@@ -437,15 +450,48 @@ def test_multi_node_distributed_pytorch():
     exit_code, output = amd_host.execute_command(f"sudo rm -rf {remote_script}")
     assert not exit_code , f" Error deleting the script {remote_script}!, {output['stderr']}"  
 
-    try:
-        result = validate_ib_usage(local_output_file)
-        log.info("PASS: RDMA / InfiniBand was used")
-        log.info("IB evidence:")
-        for l in result["matched_ib_lines"][:5]:
-            log.info(" %s", l)
-    except AssertionError as e:
-        print("FAIL:", e)
-        raise
+    log.info("Parsing NCCL log...")
+    used_devices, net_ib_lines = parse_used_ib_devices_from_log(local_output_file)
+
+    log.info("NET/IB lines:")
+    for l in net_ib_lines[:5]:
+        log.info("  %s", l)
+
+    log.info("IB devices used:")
+    for d, p in used_devices:
+        log.info(f"  {d}:{p}")
+
+    log.info("Reading counters AFTER test")
+    counters_after = {
+        dev: read_ib_counters_remote(amd_host, *dev)
+        for dev in used_devices
+    }
+    log.info("RDMA counter deltas:")
+    rdma_seen = False
+
+    for dev in used_devices:
+        before = counters_before.get(dev)
+        after = counters_after.get(dev)
+
+        d = counter_delta(before, after)
+
+        tx = d["tx_rdma_ucast_bytes"]
+        rx = d["rx_rdma_ucast_bytes"]
+
+        log.info(f" Device {dev[0]}:{dev[1]}")
+        log.info(f"  TX delta: {tx}")
+        log.info(f"  RX delta: {rx}")
+
+        if tx > 0 or rx > 0:
+            rdma_seen = True
+            log.info("  RDMA traffic detected")
+        else:
+            log.info("  No RDMA traffic")
+
+    assert rdma_seen, "No RDMA traffic detected on used IB devices"
+
+    log.info("\n VALIDATION PASSED (REMOTE COUNTERS)")
+
 
 def  test_multi_node_rccl():
     """    
