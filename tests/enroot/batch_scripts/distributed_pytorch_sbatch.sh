@@ -32,6 +32,7 @@ export IMAGE_NAME=ubuntu22_pytorch.sqsh
 export DOCKER_IMAGE=docker://rocm/pytorch:rocm7.0.2_ubuntu22.04_py3.10_pytorch_release_2.7.1
 export ENROOT_DATA_PATH=/tmp/enroot/data
 export ENROOT_CACHE_PATH=/tmp/enroot/cache
+export ENROOT_RUNTIME_PATH=/tmp/enroot/runtime 
 
 # Stage image ONCE per node
 # Create temporary directories on all nodes
@@ -99,7 +100,6 @@ if [ -z "$MASTER_ADDR" ]; then
     echo "ERROR: Could not determine master IP address!"
     exit 1
 fi
-
 echo "Master: $MASTER_ADDR:$MASTER_PORT"
 
 # Detect network interface for the master IP
@@ -113,11 +113,6 @@ if [ -z "$SOCKET_IFNAME" ]; then
     exit 1 
 fi
 
-# Export and pass to all tasks
-export MASTER_ADDR
-export MASTER_PORT
-export NCCL_SOCKET_IFNAME
-
 echo "================================================"
 echo "Network Configuration:"
 echo "  Master Address: $MASTER_ADDR"
@@ -125,28 +120,41 @@ echo "  Master Port: $MASTER_PORT"
 echo "  Socket Interface: $SOCKET_IFNAME"
 echo "================================================"
 
+# Export environmental variables 
+export MASTER_ADDR=$MASTER_ADDR 
+export MASTER_PORT=$MASTER_PORT
+
+# To enable NCCL/RCCL Debug logs 
+export NCCL_DEBUG=INFO
+export NCCL_DEBUG_SUBSYS=INIT,NET
+
+# Set Socket IF, if there are multiple interfaces for TCP communication 
+export NCCL_SOCKET_IFNAME=$SOCKET_IFNAME
+
+####################################
+# srun export : export XDG_DATA_HOME, XDG_CACHE_HOME in the srun if multiple nodes are sharing the same working directory
+# srun container-mount : 
+#          /test_pytorch     : Contains distributed pytorch script
+#          /etc/libibverbs.d : Contains libibverbs provider configuration files.
+#          /usr/lib          : Contains RDMA userspace provider shared libraries 
+####################################
+
 # Run the distributed training
 srun --unbuffered \
-     --export=ALL,XDG_DATA_HOME=/tmp/xdg-\$SLURM_NODEID,XDG_CACHE_HOME=/tmp/xdg-cache-\$SLURM_NODEID,ENROOT_CACHE_PATH=/tmp/enroot/cache,ENROOT_DATA_PATH=/tmp/enroot/data,ENROOT_RUNTIME_PATH=/tmp/enroot/runtime \
+     --export=ALL,XDG_DATA_HOME=/tmp/xdg-\$SLURM_NODEID,XDG_CACHE_HOME=/tmp/xdg-cache-\$SLURM_NODEID \
      --container-image="$ENROOT_DATA_PATH/$IMAGE_NAME" \
-     --container-mounts=$(pwd)/test_pytorch:/workspace \
+     --container-mounts=$(pwd)/test_pytorch:/workspace,/etc/libibverbs.d:/etc/libibverbs.d,/usr/lib:/usr/lib \
      --container-workdir=/workspace \
      bash -c '
-         export MASTER_ADDR='"$MASTER_ADDR"'
-         export MASTER_PORT='"$MASTER_PORT"'
-         export WORLD_SIZE=$SLURM_NTASKS
-         export RANK=$SLURM_PROCID
-         export LOCAL_RANK=$SLURM_LOCALID
+     export WORLD_SIZE=$SLURM_NTASKS
+     export RANK=$SLURM_PROCID
+     export LOCAL_RANK=$SLURM_LOCALID
 
-         # NCCL/RCCL settings
-         export NCCL_IB_DISABLE=1
-         export NCCL_SOCKET_IFNAME='"$SOCKET_IFNAME"'
-
-         echo "[Rank $RANK on $SLURMD_NODENAME] Using $MASTER_ADDR:$MASTER_PORT on interface $NCCL_SOCKET_IFNAME"
-
-         python3 -u distributed_pytorch.py
+     echo "[Rank $RANK on $SLURMD_NODENAME] Using $MASTER_ADDR:$MASTER_PORT on interface $NCCL_SOCKET_IFNAME"
+     python3 -u distributed_pytorch.py
      '
 
 echo "================================================"
 echo "Job completed: $(date)"
 echo "================================================"
+

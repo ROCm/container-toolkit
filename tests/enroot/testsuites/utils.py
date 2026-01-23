@@ -267,3 +267,62 @@ def wait_for_job_completion(headnode, job_id):
         return state, sacct_output
 
     raise Exception(f"Job still running: {state}")
+
+def validate_ib_usage(nccl_log_path: str):
+    """
+    Validate whether NCCL/RCCL used InfiniBand/RDMA based on NCCL_DEBUG logs.
+
+    Requirements:
+      - NCCL_DEBUG=INFO
+      - NCCL_DEBUG_SUBSYS=INIT,NET
+
+    Raises:
+      AssertionError if IB was not used or if Socket transport is detected.
+
+    Returns:
+      dict with parsed evidence (for debugging / logging)
+    """
+
+    # STRICT patterns — only real NCCL transport selection
+    net_ib_regex = re.compile(r'\bNET/IB\b', re.IGNORECASE)
+    net_socket_regex = re.compile(r'\bNET/Socket\b', re.IGNORECASE)
+
+    ib_lines = []
+    socket_lines = []
+
+    log_path = Path(nccl_log_path)
+    if not log_path.exists():
+        raise FileNotFoundError(f"NCCL log file not found: {nccl_log_path}")
+
+    with log_path.open("r", errors="ignore") as f:
+        for line in f:
+            line = line.strip()
+
+            # Capture only real NET/IB lines
+            if net_ib_regex.search(line):
+                ib_lines.append(line)
+
+            # Capture socket fallback explicitly
+            if net_socket_regex.search(line):
+                socket_lines.append(line)
+
+    result = {
+        "ib_used": len(ib_lines) > 0,
+        "matched_ib_lines": ib_lines,
+        "matched_socket_lines": socket_lines,
+    }
+
+    # ---------------------------
+    # STRICT VALIDATION ASSERTS
+    # ---------------------------
+    assert ib_lines, (
+        "RDMA/InfiniBand was NOT used "
+        "(no 'NET/IB' lines found in NCCL logs)"
+    )
+
+    assert not socket_lines, (
+        "Socket transport detected (NET/Socket found in NCCL logs)"
+    )
+
+    return result
+

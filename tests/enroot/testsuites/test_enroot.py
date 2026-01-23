@@ -400,6 +400,7 @@ def test_multi_node_distributed_pytorch():
     log.info(f"sacct output : {sacct_output}")
     err_file = f"pytorch_logs/pytorch-rccl-{job_id}.err"
     output_file = f"pytorch_logs/pytorch-rccl-{job_id}.out"
+    local_output_file = pytest.testdata.results_dir / Path(output_file).name
     copy_file_list.append(output_file)
     copy_file_list.append(err_file)
 
@@ -435,6 +436,16 @@ def test_multi_node_distributed_pytorch():
     # Delete the batch script on the remote host 
     exit_code, output = amd_host.execute_command(f"sudo rm -rf {remote_script}")
     assert not exit_code , f" Error deleting the script {remote_script}!, {output['stderr']}"  
+
+    try:
+        result = validate_ib_usage(local_output_file)
+        log.info("PASS: RDMA / InfiniBand was used")
+        log.info("IB evidence:")
+        for l in result["matched_ib_lines"][:5]:
+            log.info(" %s", l)
+    except AssertionError as e:
+        print("FAIL:", e)
+        raise
 
 def  test_multi_node_rccl():
     """    
