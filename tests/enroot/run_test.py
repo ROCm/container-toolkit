@@ -18,6 +18,13 @@ def update_docker_image(test_name, docker_image):
         pattern = r'export DOCKER_IMAGE=.*'
         replacement = f'export DOCKER_IMAGE={docker_image}'
         print(f"Updating distributed_pytorch_sbatch.sh with image: {docker_image}")
+    elif test_name == "test_multi_node_rccl":
+        script_path = Path("batch_scripts/rccl_tests_sbatch.sh")
+        # Extract version tag from docker image (e.g., docker://rocm/roce-workload:version -> version)
+        version = docker_image.split(':')[-1] if ':' in docker_image else docker_image
+        pattern = r'DOCKER_IMAGE_VERSION=\${DOCKER_IMAGE_VERSION:-"[^"]*"}'
+        replacement = f'DOCKER_IMAGE_VERSION="${{DOCKER_IMAGE_VERSION:-"{version}"}}"'
+        print(f"Updating rccl_tests_sbatch.sh with image version: {version}")
     else:
         print(f"Unknown test name: {test_name}")
         return
