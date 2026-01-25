@@ -49,126 +49,190 @@ on:
 
 
 jobs:
-  run-enroot-tests:
+  # Single-node PyTorch test
+  test-single-node-pytorch:
+    if: github.event_name == 'push' || inputs.run_single_node_pytorch == true
     runs-on: enroot-runners
-    timeout-minutes: 360
-    strategy:
-      matrix:
-        test_name:
-          - test_single_node_pytorch
-          - test_multi_node_distributed_pytorch
-          - test_multi_node_rccl
-      max-parallel: 1
-      fail-fast: false
+    timeout-minutes: 120
     
     steps:
-      - name: Check if test should run
-        id: check
-        run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
-          elif [ "${{ matrix.test_name }}" = "test_single_node_pytorch" ] && [ "${{ inputs.run_single_node_pytorch }}" = "true" ]; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
-          elif [ "${{ matrix.test_name }}" = "test_multi_node_distributed_pytorch" ] && [ "${{ inputs.run_multi_node_pytorch }}" = "true" ]; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
-          elif [ "${{ matrix.test_name }}" = "test_multi_node_rccl" ] && [ "${{ inputs.run_multi_node_rccl }}" = "true" ]; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
-          else
-            echo "should_run=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Checkout repository
-        if: steps.check.outputs.should_run == 'true'
         uses: actions/checkout@v4
       
       - name: Set up Python
-        if: steps.check.outputs.should_run == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.8'
       
       - name: Install dependencies
-        if: steps.check.outputs.should_run == 'true'
         run: |
           python3 -m pip install --upgrade pip
           pip install -r tests/enroot/requirements.txt
       
       - name: Create testbed files from secrets
-        if: steps.check.outputs.should_run == 'true'
         working-directory: tests/enroot
         env:
           SINGLE_NODE_TESTBED: ${{ secrets.SINGLE_NODE_TESTBED_FILE }}
-          MULTI_NODE_TESTBED: ${{ secrets.MULTI_NODE_TESTBED_FILE }}
         run: |
           mkdir -p testbed
-          
-          # Write single-node testbed
           if [ -n "$SINGLE_NODE_TESTBED" ]; then
             printf '%s\n' "$SINGLE_NODE_TESTBED" > testbed/single_node_tb.yml
             echo "Created testbed/single_node_tb.yml from secret"
           else
-            echo "[WARNING] SINGLE_NODE_TESTBED_FILE secret is not set"
+            echo "[ERROR] SINGLE_NODE_TESTBED_FILE secret is not set"
+            exit 1
           fi
-          
-          # Write multi-node testbed
-          if [ -n "$MULTI_NODE_TESTBED" ]; then
-            printf '%s\n' "$MULTI_NODE_TESTBED" > testbed/multi_node_tb.yml
-            echo "Created testbed/multi_node_tb.yml from secret"
-          else
-            echo "[WARNING] MULTI_NODE_TESTBED_FILE secret is not set"
-          fi
-          
-          echo "Testbed files:"
-          ls -la testbed/
       
-      - name: Run ${{ matrix.test_name }}
-        if: steps.check.outputs.should_run == 'true'
+      - name: Run test_single_node_pytorch
         working-directory: tests/enroot
         run: |
-          # Determine testbed file and docker image based on test type
-          if [ "${{ matrix.test_name }}" = "test_single_node_pytorch" ]; then
-            TESTBED_FILE="testbed/single_node_tb.yml"
-            DOCKER_IMAGE="${{ inputs.docker_image_single_node }}"
-          else
-            # Multi-node tests use multi_node testbed
-            TESTBED_FILE="testbed/multi_node_tb.yml"
-            if [ "${{ matrix.test_name }}" = "test_multi_node_distributed_pytorch" ]; then
-              DOCKER_IMAGE="${{ inputs.docker_image_multi_node }}"
-            else
-              DOCKER_IMAGE="${{ inputs.docker_image_rccl }}"
-            fi
-          fi
-          
-          # Set flags based on event type
+          DOCKER_IMAGE="${{ inputs.docker_image_single_node }}"
           if [ "${{ github.event_name }}" = "push" ]; then
             NO_INSTALL="false"
             NO_UNINSTALL="false"
-            DOCKER_IMAGE=""
           else
             NO_INSTALL="${{ inputs.no_install }}"
             NO_UNINSTALL="${{ inputs.no_uninstall }}"
           fi
           
-          # Validate testbed file exists
-          if [ ! -f "$TESTBED_FILE" ]; then
-            echo "[ERROR] Testbed file not found: $TESTBED_FILE"
-            echo "Please ensure the appropriate secret is set:"
-            echo "  - SINGLE_NODE_TESTBED_FILE for single-node tests"
-            echo "  - MULTI_NODE_TESTBED_FILE for multi-node tests"
-            exit 1
-          fi
-          
-          echo "Running test: ${{ matrix.test_name }}"
-          echo "Testbed file: $TESTBED_FILE"
+          echo "Running test: test_single_node_pytorch"
           echo "Docker image: ${DOCKER_IMAGE:-'(using default from batch script)'}"
           
-          python3 run_test.py "${{ matrix.test_name }}" "$DOCKER_IMAGE" "$NO_INSTALL" "$NO_UNINSTALL" "$TESTBED_FILE"
+          python3 run_test.py "test_single_node_pytorch" "$DOCKER_IMAGE" "$NO_INSTALL" "$NO_UNINSTALL" "testbed/single_node_tb.yml"
       
       - name: Upload test results
-        if: always() && steps.check.outputs.should_run == 'true'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ matrix.test_name }}-${{ github.run_number }}
+          name: test-results-single-node-pytorch-${{ github.run_number }}
+          path: tests/enroot/results/
+          if-no-files-found: warn
+          retention-days: 30
+
+  # Multi-node distributed PyTorch test
+  test-multi-node-pytorch:
+    needs: test-single-node-pytorch
+    if: |
+      always() && 
+      (github.event_name == 'push' || inputs.run_multi_node_pytorch == true) &&
+      (needs.test-single-node-pytorch.result == 'success' || needs.test-single-node-pytorch.result == 'skipped')
+    runs-on: enroot-runners
+    timeout-minutes: 120
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+      
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -r tests/enroot/requirements.txt
+      
+      - name: Create testbed files from secrets
+        working-directory: tests/enroot
+        env:
+          MULTI_NODE_TESTBED: ${{ secrets.MULTI_NODE_TESTBED_FILE }}
+        run: |
+          mkdir -p testbed
+          if [ -n "$MULTI_NODE_TESTBED" ]; then
+            printf '%s\n' "$MULTI_NODE_TESTBED" > testbed/multi_node_tb.yml
+            echo "Created testbed/multi_node_tb.yml from secret"
+          else
+            echo "[ERROR] MULTI_NODE_TESTBED_FILE secret is not set"
+            exit 1
+          fi
+      
+      - name: Run test_multi_node_distributed_pytorch
+        working-directory: tests/enroot
+        run: |
+          DOCKER_IMAGE="${{ inputs.docker_image_multi_node }}"
+          if [ "${{ github.event_name }}" = "push" ]; then
+            NO_INSTALL="false"
+            NO_UNINSTALL="false"
+          else
+            NO_INSTALL="${{ inputs.no_install }}"
+            NO_UNINSTALL="${{ inputs.no_uninstall }}"
+          fi
+          
+          echo "Running test: test_multi_node_distributed_pytorch"
+          echo "Docker image: ${DOCKER_IMAGE:-'(using default from batch script)'}"
+          
+          python3 run_test.py "test_multi_node_distributed_pytorch" "$DOCKER_IMAGE" "$NO_INSTALL" "$NO_UNINSTALL" "testbed/multi_node_tb.yml"
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-multi-node-pytorch-${{ github.run_number }}
+          path: tests/enroot/results/
+          if-no-files-found: warn
+          retention-days: 30
+
+  # Multi-node RCCL test
+  test-multi-node-rccl:
+    needs: test-multi-node-pytorch
+    if: |
+      always() && 
+      (github.event_name == 'push' || inputs.run_multi_node_rccl == true) &&
+      (needs.test-multi-node-pytorch.result == 'success' || needs.test-multi-node-pytorch.result == 'skipped')
+    runs-on: enroot-runners
+    timeout-minutes: 120
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+      
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -r tests/enroot/requirements.txt
+      
+      - name: Create testbed files from secrets
+        working-directory: tests/enroot
+        env:
+          MULTI_NODE_TESTBED: ${{ secrets.MULTI_NODE_TESTBED_FILE }}
+        run: |
+          mkdir -p testbed
+          if [ -n "$MULTI_NODE_TESTBED" ]; then
+            printf '%s\n' "$MULTI_NODE_TESTBED" > testbed/multi_node_tb.yml
+            echo "Created testbed/multi_node_tb.yml from secret"
+          else
+            echo "[ERROR] MULTI_NODE_TESTBED_FILE secret is not set"
+            exit 1
+          fi
+      
+      - name: Run test_multi_node_rccl
+        working-directory: tests/enroot
+        run: |
+          DOCKER_IMAGE="${{ inputs.docker_image_rccl }}"
+          if [ "${{ github.event_name }}" = "push" ]; then
+            NO_INSTALL="false"
+            NO_UNINSTALL="false"
+          else
+            NO_INSTALL="${{ inputs.no_install }}"
+            NO_UNINSTALL="${{ inputs.no_uninstall }}"
+          fi
+          
+          echo "Running test: test_multi_node_rccl"
+          echo "Docker image: ${DOCKER_IMAGE:-'(using default from batch script)'}"
+          
+          python3 run_test.py "test_multi_node_rccl" "$DOCKER_IMAGE" "$NO_INSTALL" "$NO_UNINSTALL" "testbed/multi_node_tb.yml"
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-multi-node-rccl-${{ github.run_number }}
           path: tests/enroot/results/
           if-no-files-found: warn
           retention-days: 30
