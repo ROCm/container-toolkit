@@ -268,61 +268,85 @@ def wait_for_job_completion(headnode, job_id):
 
     raise Exception(f"Job still running: {state}")
 
-def validate_ib_usage(nccl_log_path: str):
-    """
-    Validate whether NCCL/RCCL used InfiniBand/RDMA based on NCCL_DEBUG logs.
+def list_all_ib_devices_remote(amd_host):
+    exit_code, output = amd_host.execute_command(f"ls /sys/class/infiniband")
+    if exit_code:
+        log.error(f"Error listing IB devices: {output['stderr']}")
+        return exit_code,0
 
-    Requirements:
-      - NCCL_DEBUG=INFO
-      - NCCL_DEBUG_SUBSYS=INIT,NET
+    devices = []
+    for dev in output['stdout'].split():
+        ports_cmd = f"ls /sys/class/infiniband/{dev}/ports"
+        exit_code, output = amd_host.execute_command(ports_cmd)
+        if exit_code:
+            log.error(f"Error listing IB devices Ports: {output['stderr']}")
+            return exit_code,0
+        ports_out = output['stdout']
+        for port in ports_out.split():
+            devices.append((dev, int(port)))
 
-    Raises:
-      AssertionError if IB was not used or if Socket transport is detected.
+    if not devices:
+        return exit_code,0
 
-    Returns:
-      dict with parsed evidence (for debugging / logging)
-    """
+    return exit_code, devices
 
-    # STRICT patterns — only real NCCL transport selection
-    net_ib_regex = re.compile(r'\bNET/IB\b', re.IGNORECASE)
-    net_socket_regex = re.compile(r'\bNET/Socket\b', re.IGNORECASE)
+def read_ib_counters_remote(amd_host, device, port):
+    base = f"/sys/class/infiniband/{device}/ports/{port}/hw_counters"
 
-    ib_lines = []
+    counters = {}
+    for name in (
+        "tx_rdma_ucast_bytes",
+        "rx_rdma_ucast_bytes",
+        "tx_rdma_ucast_pkts",
+        "rx_rdma_ucast_pkts",
+    ):
+        cmd = f"cat {base}/{name} 2>/dev/null || echo 0"
+        exit_code, output = amd_host.execute_command(cmd)
+        if exit_code:
+            log.error(f"Error listing IB devices: {output['stderr']}")
+            return exit_code,0
+        val = output['stdout']
+        counters[name] = int(val)
+
+    return counters
+
+def parse_used_ib_devices_from_log(log_path):
+
+    NET_IB_REGEX = re.compile(
+    r'\[\d+\]([a-zA-Z0-9_]+):(\d+)/(?:RoCE|IB)',
+    re.IGNORECASE)
+
+    devices = set()
+    net_ib_lines = []
     socket_lines = []
 
-    log_path = Path(nccl_log_path)
-    if not log_path.exists():
-        raise FileNotFoundError(f"NCCL log file not found: {nccl_log_path}")
-
-    with log_path.open("r", errors="ignore") as f:
+    with open(log_path, "r", errors="ignore") as f:
         for line in f:
             line = line.strip()
 
-            # Capture only real NET/IB lines
-            if net_ib_regex.search(line):
-                ib_lines.append(line)
-
-            # Capture socket fallback explicitly
-            if net_socket_regex.search(line):
+            if "NET/Socket" in line:
                 socket_lines.append(line)
 
-    result = {
-        "ib_used": len(ib_lines) > 0,
-        "matched_ib_lines": ib_lines,
-        "matched_socket_lines": socket_lines,
-    }
+            if "NET/IB" not in line:
+                continue
 
-    # ---------------------------
-    # STRICT VALIDATION ASSERTS
-    # ---------------------------
-    assert ib_lines, (
-        "RDMA/InfiniBand was NOT used "
-        "(no 'NET/IB' lines found in NCCL logs)"
-    )
+            net_ib_lines.append(line)
 
-    assert not socket_lines, (
-        "Socket transport detected (NET/Socket found in NCCL logs)"
-    )
+            for m in NET_IB_REGEX.finditer(line):
+                dev, port = m.groups()
+                devices.add((dev, int(port)))
 
-    return result
+    if not net_ib_lines:
+        raise AssertionError("No NET/IB lines found in NCCL log")
+
+    if socket_lines:
+        raise AssertionError(
+            "Socket fallback detected:\n" +
+            "\n".join(socket_lines[:3])
+        )
+
+    return sorted(devices), net_ib_lines
+
+def counter_delta(before, after):
+    return {k: after[k] - before[k] for k in before}
 
