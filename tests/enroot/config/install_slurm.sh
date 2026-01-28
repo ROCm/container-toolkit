@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 set -x
+SLURM_DIR="/tmp/slurm"
 export DEBIAN_FRONTEND=noninteractive
 sudo grep -qxF "nameserver 8.8.8.8" /etc/resolv.conf || sudo sh -c 'echo "nameserver 8.8.8.8" >> /etc/resolv.conf'
 export SLURMUSER=1003
@@ -38,8 +39,8 @@ yes "Y" | DEBIAN_FRONTEND=noninteractive sudo apt-get install build-essential fa
 yes "Y" | DEBIAN_FRONTEND=noninteractive sudo apt upgrade
 yes "Y" | DEBIAN_FRONTEND=noninteractive sudo apt install libpmix-dev libpmix2
 pwd
-mkdir /tmp/slurm
-cd /tmp/slurm
+mkdir $SLURM_DIR
+cd $SLURM_DIR
 pwd
 # Code to fetch the latest stable slurm version 
 SLURM_VERSION="${1:-latest}"
@@ -84,7 +85,15 @@ sudo sed -i 's/^# deb-src/deb-src/' /etc/apt/sources.list
 cd "$EXTRACTED_DIR"
 pwd
 sudo DEBIAN_FRONTEND=noninteractive mk-build-deps -i -t 'apt-get -y --no-install-recommends' debian/control
-yes "Y" | DEBIAN_FRONTEND=noninteractive sudo apt install libmunge-dev libgtk2.0-dev libpam0g-dev libperl-dev liblua5.3-dev libhwloc-dev dh-exec 
+# Pinning hwloc version 2.7 for slurm compatibility
+sudo tee /etc/apt/preferences.d/hwloc-pin <<'EOF'
+Package: hwloc libhwloc-dev libhwloc15 libhwloc-plugins
+Pin: version 2.*
+Pin-Priority: 1001
+EOF
+yes "Y" | DEBIAN_FRONTEND=noninteractive sudo apt update
+yes "Y" | DEBIAN_FRONTEND=noninteractive sudo apt install -y libhwloc-dev hwloc
+yes "Y" | DEBIAN_FRONTEND=noninteractive sudo apt install libmunge-dev libgtk2.0-dev libpam0g-dev libperl-dev liblua5.3-dev dh-exec 
 yes "Y" | DEBIAN_FRONTEND=noninteractive sudo apt install libdbus-1-dev librdkafka
 sudo groupadd slurm
 sudo useradd -m -r -s /bin/false -d /tmp/slurm -g slurm slurm
@@ -98,7 +107,8 @@ sudo chown -R slurm:slurm /var/spool/slurm/savestate
 sudo chown -R slurm:slurm /var/spool/slurmd
 sudo chown -R slurm:slurm /var/log/slurmctld.log
 cd ../ && DEBIAN_FRONTEND=noninteractive sudo dpkg -i slurm-*.deb
-systemctl restart slurmctld
-systemctl restart slurmd
+sudo systemctl restart slurmctld
+sudo systemctl restart slurmd
 sinfo
-
+cd 
+sudo rm -rf $SLURM_DIR
