@@ -1,0 +1,240 @@
+# Local workflow for testing with `act`
+# Usage: See act commands at the bottom of this file
+name: Enroot Tests (Local)
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_single_node_test:
+        description: 'Run single-node PyTorch test'
+        required: false
+        type: boolean
+        default: true
+      run_multi_node_test:
+        description: 'Run multi-node distributed PyTorch test'
+        required: false
+        type: boolean
+        default: true
+      run_rccl_test:
+        description: 'Run multi-node RCCL test'
+        required: false
+        type: boolean
+        default: true
+      base_image_single_node:
+        description: 'Docker image for single-node test'
+        required: false
+        type: string
+        default: ''
+      base_image_multi_node:
+        description: 'Docker image for multi-node test'
+        required: false
+        type: string
+        default: ''
+      base_image_rccl:
+        description: 'Docker image for RCCL test'
+        required: false
+        type: string
+        default: ''
+      no_install:
+        description: 'Skip installation (--no-install)'
+        required: false
+        type: boolean
+        default: false
+      no_uninstall:
+        description: 'Skip uninstallation (--no-uninstall)'
+        required: false
+        type: boolean
+        default: false
+      testbed_file:
+        description: 'Path to testbed file'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  run-enroot-tests:
+    # Use ubuntu-latest for act compatibility (or map enroot-runners with -P flag)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      matrix:
+        test_name: 
+          - test_single_node_pytorch
+          - test_multi_node_distributed_pytorch
+          - test_multi_node_rccl
+      max-parallel: 1
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        if: |
+          ${{
+            (matrix.test_name == 'test_single_node_pytorch' && inputs.run_single_node_test == true) ||
+            (matrix.test_name == 'test_multi_node_distributed_pytorch' && inputs.run_multi_node_test == true) ||
+            (matrix.test_name == 'test_multi_node_rccl' && inputs.run_rccl_test == true)
+          }}
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        if: |
+          ${{
+            (matrix.test_name == 'test_single_node_pytorch' && inputs.run_single_node_test == true) ||
+            (matrix.test_name == 'test_multi_node_distributed_pytorch' && inputs.run_multi_node_test == true) ||
+            (matrix.test_name == 'test_multi_node_rccl' && inputs.run_rccl_test == true)
+          }}
+        with:
+          python-version: '3.8'
+      
+      - name: Install dependencies
+        if: |
+          ${{
+            (matrix.test_name == 'test_single_node_pytorch' && inputs.run_single_node_test == true) ||
+            (matrix.test_name == 'test_multi_node_distributed_pytorch' && inputs.run_multi_node_test == true) ||
+            (matrix.test_name == 'test_multi_node_rccl' && inputs.run_rccl_test == true)
+          }}
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -r tests/enroot/requirements.txt
+      
+      - name: Run enroot tests
+        if: |
+          ${{
+            (matrix.test_name == 'test_single_node_pytorch' && inputs.run_single_node_test == true) ||
+            (matrix.test_name == 'test_multi_node_distributed_pytorch' && inputs.run_multi_node_test == true) ||
+            (matrix.test_name == 'test_multi_node_rccl' && inputs.run_rccl_test == true)
+          }}
+        working-directory: tests/enroot
+        run: |
+          TEST_NAME="${{ matrix.test_name }}"
+          
+          # Use input testbed_file or fall back to secrets
+          if [ -n "${{ inputs.testbed_file }}" ]; then
+            TESTBED_FILE="${{ inputs.testbed_file }}"
+          else
+            if [ "$TEST_NAME" = "test_single_node_pytorch" ]; then
+              TESTBED_FILE="${{ secrets.SINGLE_NODE_TESTBED_FILE }}"
+            else
+              TESTBED_FILE="${{ secrets.MULTI_NODE_TESTBED_FILE }}"
+            fi
+          fi
+          
+          NO_INSTALL="${{ inputs.no_install }}"
+          NO_UNINSTALL="${{ inputs.no_uninstall }}"
+          
+          # Set DOCKER_IMAGE based on test type
+          if [ "$TEST_NAME" = "test_single_node_pytorch" ]; then
+            DOCKER_IMAGE="${{ inputs.base_image_single_node }}"
+          elif [ "$TEST_NAME" = "test_multi_node_distributed_pytorch" ]; then
+            DOCKER_IMAGE="${{ inputs.base_image_multi_node }}"
+          elif [ "$TEST_NAME" = "test_multi_node_rccl" ]; then
+            DOCKER_IMAGE="${{ inputs.base_image_rccl }}"
+          fi
+          
+          echo "=== Test Configuration ==="
+          echo "TEST_NAME: $TEST_NAME"
+          echo "TESTBED_FILE: $TESTBED_FILE"
+          echo "DOCKER_IMAGE: $DOCKER_IMAGE"
+          echo "NO_INSTALL: $NO_INSTALL"
+          echo "NO_UNINSTALL: $NO_UNINSTALL"
+          echo "=========================="
+          
+          # Run RCCL test differently (pytest directly)
+          if [ "$TEST_NAME" = "test_multi_node_rccl" ]; then
+            if [ -n "$DOCKER_IMAGE" ]; then
+              DOCKER_IMAGE_VERSION=$(echo "$DOCKER_IMAGE" | sed 's/.*://')
+              export DOCKER_IMAGE_VERSION
+              echo "Using RCCL Docker image version: $DOCKER_IMAGE_VERSION"
+            fi
+            
+            export PYTHONPATH=$(pwd):$PYTHONPATH
+            cd testsuites
+            python3 -m pytest test_enroot.py --testbed "$TESTBED_FILE" -k test_multi_node_rccl --no-install --no-uninstall
+          else
+            python3 run_test.py "$TEST_NAME" "$DOCKER_IMAGE" "$NO_INSTALL" "$NO_UNINSTALL" "$TESTBED_FILE"
+          fi
+      
+      - name: Upload test results
+        if: |
+          ${{
+            always() && (
+              (matrix.test_name == 'test_single_node_pytorch' && inputs.run_single_node_test == true) ||
+              (matrix.test_name == 'test_multi_node_distributed_pytorch' && inputs.run_multi_node_test == true) ||
+              (matrix.test_name == 'test_multi_node_rccl' && inputs.run_rccl_test == true)
+            )
+          }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.test_name }}-${{ github.run_number }}
+          path: tests/enroot/results/
+          if-no-files-found: warn
+          retention-days: 30
+
+# =============================================================================
+# ACT COMMANDS TO RUN THIS WORKFLOW LOCALLY
+# =============================================================================
+#
+# Prerequisites:
+#   1. Install act: https://github.com/nektos/act
+#      - macOS: brew install act
+#      - Linux: curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
+#
+#   2. Create a secrets file at .secrets (in repo root):
+#      SINGLE_NODE_TESTBED_FILE=/path/to/your/single_node_testbed.yml
+#      MULTI_NODE_TESTBED_FILE=/path/to/your/multi_node_testbed.yml
+#
+# Run all three tests with defaults:
+#   act workflow_dispatch \
+#     -W .github/workflows/enroot-tests-local.yml \
+#     --secret-file .secrets \
+#     --input run_single_node_test=true \
+#     --input run_multi_node_test=true \
+#     --input run_rccl_test=true \
+#     --input no_install=false \
+#     --input no_uninstall=false
+#
+# Run only single-node test:
+#   act workflow_dispatch \
+#     -W .github/workflows/enroot-tests-local.yml \
+#     --secret-file .secrets \
+#     --input run_single_node_test=true \
+#     --input run_multi_node_test=false \
+#     --input run_rccl_test=false
+#
+# Run with custom testbed file:
+#   act workflow_dispatch \
+#     -W .github/workflows/enroot-tests-local.yml \
+#     --secret-file .secrets \
+#     --input run_single_node_test=true \
+#     --input run_multi_node_test=true \
+#     --input run_rccl_test=true \
+#     --input testbed_file=/path/to/testbed.yml
+#
+# Run with custom Docker images:
+#   act workflow_dispatch \
+#     -W .github/workflows/enroot-tests-local.yml \
+#     --secret-file .secrets \
+#     --input run_single_node_test=true \
+#     --input run_multi_node_test=true \
+#     --input run_rccl_test=true \
+#     --input base_image_single_node=rocm/pytorch:latest \
+#     --input base_image_multi_node=docker://rocm/pytorch:rocm7.0.2_ubuntu22.04_py3.10_pytorch_release_2.7.1 \
+#     --input base_image_rccl=docker://rocm/roce-workload:ubuntu24_rocm-7.0.2_rccl-7.0.2_anp-v1.2.0_ainic-1.117.5-a-56
+#
+# Run with --no-install and --no-uninstall flags:
+#   act workflow_dispatch \
+#     -W .github/workflows/enroot-tests-local.yml \
+#     --secret-file .secrets \
+#     --input run_single_node_test=true \
+#     --input run_multi_node_test=true \
+#     --input run_rccl_test=true \
+#     --input no_install=true \
+#     --input no_uninstall=true
+#
+# Additional act options:
+#   -v                    # Verbose output
+#   --container-architecture linux/amd64  # Specify architecture
+#   -P ubuntu-latest=catthehacker/ubuntu:act-latest  # Use different runner image
+#   --bind                # Bind working directory instead of copy
+#   -n                    # Dry run (don't actually run)
+#
+# =============================================================================

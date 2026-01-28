@@ -1,15 +1,41 @@
 name: Enroot Tests
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
-      test_name:
-        description: 'Select test to run'
-        required: true
-        type: choice
-        options:
-          - test_single_node_pytorch
-          - test_multi_node_distributed_pytorch
+      run_single_node_test:
+        description: 'Run single-node PyTorch test'
+        required: false
+        type: boolean
+        default: true
+      run_multi_node_test:
+        description: 'Run multi-node distributed PyTorch test'
+        required: false
+        type: boolean
+        default: true
+      run_rccl_test:
+        description: 'Run multi-node RCCL test'
+        required: false
+        type: boolean
+        default: true
+      base_image_single_node:
+        description: 'Docker image for single-node test (default: rocm/pytorch:latest from batch script)'
+        required: false
+        type: string
+        default: ''
+      base_image_multi_node:
+        description: 'Docker image for multi-node test (default: docker://rocm/pytorch:rocm7.0.2_ubuntu22.04_py3.10_pytorch_release_2.7.1 from batch script)'
+        required: false
+        type: string
+        default: ''
+      base_image_rccl:
+        description: 'Docker image for RCCL test (default: docker://rocm/roce-workload:ubuntu24_rocm-7.0.2_rccl-7.0.2_anp-v1.2.0_ainic-1.117.5-a-56 from batch script)'
+        required: false
+        type: string
+        default: ''
       no_install:
         description: 'Skip installation (--no-install)'
         required: false
@@ -20,47 +46,204 @@ on:
         required: false
         type: boolean
         default: false
-      docker_image:
-        description: 'Docker image to use (default: rocm/pytorch:latest for single-node, docker://rocm/pytorch:rocm7.0.2_ubuntu22.04_py3.10_pytorch_release_2.7.1 for multi-node)'
+      testbed_file:
+        description: 'Path to testbed file (overrides secret-based testbed). If not provided, uses SINGLE_NODE_TESTBED_FILE or MULTI_NODE_TESTBED_FILE secrets (which should contain YAML content).'
         required: false
         type: string
         default: ''
-      testbed_file:
-        description: 'Path to testbed file (e.g. tests/enroot/testbeds/mi325.yaml)'
-        required: false
-        type: string
-        default: 'testbed/enroot_tb.yml'
 
 
 jobs:
   run-enroot-tests:
     runs-on: enroot-runners
     timeout-minutes: 120
+    strategy:
+      matrix:
+        test_name: 
+          - test_single_node_pytorch
+          - test_multi_node_distributed_pytorch
+          - test_multi_node_rccl
+      max-parallel: 1  # Run tests sequentially
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        if: |
+          ${{
+            github.event_name == 'push' ||
+            (github.event_name == 'workflow_dispatch' && (
+              (matrix.test_name == 'test_single_node_pytorch' && inputs.run_single_node_test == true) ||
+              (matrix.test_name == 'test_multi_node_distributed_pytorch' && inputs.run_multi_node_test == true) ||
+              (matrix.test_name == 'test_multi_node_rccl' && inputs.run_rccl_test == true)
+            ))
+          }}
       
       - name: Set up Python
         uses: actions/setup-python@v5
+        if: |
+          ${{
+            github.event_name == 'push' ||
+            (github.event_name == 'workflow_dispatch' && (
+              (matrix.test_name == 'test_single_node_pytorch' && inputs.run_single_node_test == true) ||
+              (matrix.test_name == 'test_multi_node_distributed_pytorch' && inputs.run_multi_node_test == true) ||
+              (matrix.test_name == 'test_multi_node_rccl' && inputs.run_rccl_test == true)
+            ))
+          }}
         with:
           python-version: '3.8'
       
       - name: Install dependencies
+        if: |
+          ${{
+            github.event_name == 'push' ||
+            (github.event_name == 'workflow_dispatch' && (
+              (matrix.test_name == 'test_single_node_pytorch' && inputs.run_single_node_test == true) ||
+              (matrix.test_name == 'test_multi_node_distributed_pytorch' && inputs.run_multi_node_test == true) ||
+              (matrix.test_name == 'test_multi_node_rccl' && inputs.run_rccl_test == true)
+            ))
+          }}
         run: |
           python3 -m pip install --upgrade pip
           pip install -r tests/enroot/requirements.txt
       
+      - name: Create testbed file from secret
+        if: |
+          ${{
+            github.event_name == 'push' ||
+            (github.event_name == 'workflow_dispatch' && (
+              (matrix.test_name == 'test_single_node_pytorch' && inputs.run_single_node_test == true) ||
+              (matrix.test_name == 'test_multi_node_distributed_pytorch' && inputs.run_multi_node_test == true) ||
+              (matrix.test_name == 'test_multi_node_rccl' && inputs.run_rccl_test == true)
+            ))
+          }}
+        working-directory: tests/enroot
+        env:
+          SINGLE_NODE_TESTBED: ${{ secrets.SINGLE_NODE_TESTBED_FILE }}
+          MULTI_NODE_TESTBED: ${{ secrets.MULTI_NODE_TESTBED_FILE }}
+        run: |
+          # Create testbed files from secrets (secrets contain YAML content)
+          mkdir -p testbed
+          
+          # Write single-node testbed if secret exists
+          if [ -n "$SINGLE_NODE_TESTBED" ]; then
+            printf '%s\n' "$SINGLE_NODE_TESTBED" > testbed/single_node_tb.yml
+            echo "Created testbed/single_node_tb.yml from secret"
+          else
+            echo "[WARNING] SINGLE_NODE_TESTBED_FILE secret is not set"
+          fi
+          
+          # Write multi-node testbed if secret exists  
+          if [ -n "$MULTI_NODE_TESTBED" ]; then
+            printf '%s\n' "$MULTI_NODE_TESTBED" > testbed/multi_node_tb.yml
+            echo "Created testbed/multi_node_tb.yml from secret"
+          else
+            echo "[WARNING] MULTI_NODE_TESTBED_FILE secret is not set"
+          fi
+          
+          # List created testbed files for debugging
+          echo "Testbed files created:"
+          ls -la testbed/ || echo "No testbed directory"
+      
       - name: Run enroot tests
+        if: |
+          ${{
+            github.event_name == 'push' ||
+            (github.event_name == 'workflow_dispatch' && (
+              (matrix.test_name == 'test_single_node_pytorch' && inputs.run_single_node_test == true) ||
+              (matrix.test_name == 'test_multi_node_distributed_pytorch' && inputs.run_multi_node_test == true) ||
+              (matrix.test_name == 'test_multi_node_rccl' && inputs.run_rccl_test == true)
+            ))
+          }}
         working-directory: tests/enroot
         run: |
-          python3 run_test.py "${{ inputs.test_name }}" "${{ inputs.docker_image }}" "${{ inputs.no_install }}" "${{ inputs.no_uninstall }}" "${{ inputs.testbed_file }}"
+          # Use matrix test_name for the test to run
+          TEST_NAME="${{ matrix.test_name }}"
+          
+          # Determine testbed file and docker image based on test type and event
+          if [ "${{ github.event_name }}" = "push" ]; then
+            # For push events: use test-type-specific testbed files and default images from batch scripts
+            if [ "$TEST_NAME" = "test_single_node_pytorch" ]; then
+              TESTBED_FILE="testbed/single_node_tb.yml"
+            else
+              TESTBED_FILE="testbed/multi_node_tb.yml"
+            fi
+            DOCKER_IMAGE=""
+            NO_INSTALL="false"
+            NO_UNINSTALL="false"
+          else
+            # For workflow_dispatch: use inputs
+            if [ -n "${{ inputs.testbed_file }}" ]; then
+              TESTBED_FILE="${{ inputs.testbed_file }}"
+            else
+              if [ "$TEST_NAME" = "test_single_node_pytorch" ]; then
+                TESTBED_FILE="testbed/single_node_tb.yml"
+              else
+                TESTBED_FILE="testbed/multi_node_tb.yml"
+              fi
+            fi
+            NO_INSTALL="${{ inputs.no_install }}"
+            NO_UNINSTALL="${{ inputs.no_uninstall }}"
+            
+            # Set DOCKER_IMAGE based on test type
+            if [ "$TEST_NAME" = "test_single_node_pytorch" ]; then
+              DOCKER_IMAGE="${{ inputs.base_image_single_node }}"
+            elif [ "$TEST_NAME" = "test_multi_node_distributed_pytorch" ]; then
+              DOCKER_IMAGE="${{ inputs.base_image_multi_node }}"
+            elif [ "$TEST_NAME" = "test_multi_node_rccl" ]; then
+              DOCKER_IMAGE="${{ inputs.base_image_rccl }}"
+            fi
+          fi
+          
+          # Validate testbed file exists
+          if [ ! -f "$TESTBED_FILE" ]; then
+            echo "[ERROR] Testbed file not found: $TESTBED_FILE"
+            echo "Please ensure the appropriate secret is set:"
+            echo "  - SINGLE_NODE_TESTBED_FILE for single-node tests"
+            echo "  - MULTI_NODE_TESTBED_FILE for multi-node tests"
+            echo "Or provide a custom testbed_file input via workflow_dispatch."
+            exit 1
+          fi
+          echo "Using testbed file: $TESTBED_FILE"
+          
+          # Run RCCL test differently (pytest directly)
+          if [ "$TEST_NAME" = "test_multi_node_rccl" ]; then
+            # For RCCL test: extract version tag from docker image if provided
+            if [ -n "$DOCKER_IMAGE" ]; then
+              # Extract version tag from full docker image path
+              # Example: docker://rocm/roce-workload:ubuntu24_rocm-7.0.2_rccl-7.0.2_anp-v1.2.0_ainic-1.117.5-a-56
+              # Result: ubuntu24_rocm-7.0.2_rccl-7.0.2_anp-v1.2.0_ainic-1.117.5-a-56
+              DOCKER_IMAGE_VERSION=$(echo "$DOCKER_IMAGE" | sed 's/.*://')
+              export DOCKER_IMAGE_VERSION
+              echo "Using RCCL Docker image version: $DOCKER_IMAGE_VERSION"
+            fi
+            
+            # Convert testbed file to absolute path before changing directory
+            TESTBED_FILE_ABS="$(pwd)/$TESTBED_FILE"
+            
+            # Set PYTHONPATH and cd to testsuites directory for pytest
+            export PYTHONPATH=$(pwd):$PYTHONPATH
+            cd testsuites
+            python3 -m pytest test_enroot.py --testbed "$TESTBED_FILE_ABS" -k test_multi_node_rccl --no-install --no-uninstall
+          else
+            # For other tests: use run_test.py
+            python3 run_test.py "$TEST_NAME" "$DOCKER_IMAGE" "$NO_INSTALL" "$NO_UNINSTALL" "$TESTBED_FILE"
+          fi
       
       - name: Upload test results
-        if: always()
+        if: |
+          ${{
+            always() && (
+              github.event_name == 'push' ||
+              (github.event_name == 'workflow_dispatch' && (
+                (matrix.test_name == 'test_single_node_pytorch' && inputs.run_single_node_test == true) ||
+                (matrix.test_name == 'test_multi_node_distributed_pytorch' && inputs.run_multi_node_test == true) ||
+                (matrix.test_name == 'test_multi_node_rccl' && inputs.run_rccl_test == true)
+              ))
+            )
+          }}
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ inputs.test_name }}-${{ github.run_number }}
+          name: test-results-${{ matrix.test_name }}-${{ github.run_number }}
           path: tests/enroot/results/
           if-no-files-found: warn
           retention-days: 30
