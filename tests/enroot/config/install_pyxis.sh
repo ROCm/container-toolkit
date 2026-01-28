@@ -23,7 +23,7 @@ mkdir -p pyxis_main
 cd pyxis_main
 git clone https://github.com/NVIDIA/pyxis
 cd pyxis && pwd && make orig && make deb
-sudo dpkg -i --force-depends ../nvslurm-plugin-pyxis_*_amd64.deb
+sudo dpkg -i ../nvslurm-plugin-pyxis_*_amd64.deb
 sudo mkdir /etc/slurm/plugstack.conf.d
 sudo ln -s /usr/share/pyxis/pyxis.conf /etc/slurm/plugstack.conf.d/pyxis.conf
 sudo touch /etc/slurm/plugstack.conf
@@ -32,3 +32,4 @@ sudo systemctl restart slurmctld slurmd
 srun -h | grep container-image
 cd ../../
 sudo rm -rf pyxis_main
+

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 set -euo pipefail
-export sudo DEBIAN_FRONTEND=noninteractive
+export DEBIAN_FRONTEND=noninteractive
 
 sudo grep -qxF "nameserver 8.8.8.8" /etc/resolv.conf || sudo sh -c 'echo "nameserver 8.8.8.8" >> /etc/resolv.conf'
 mkdir -p enroot
@@ -60,9 +60,10 @@ wget -c "$CAPS_URL" || {
 }
 
 echo "Enroot and Enroot+caps (.deb) downloaded successfully"
-
-sudo apt install -y ./*.deb
-yes "Y" | sudo apt --fix-broken install
+sudo DEBIAN_FRONTEND=noninteractive apt-get update
+sudo DEBIAN_FRONTEND=noninteractive apt-get -y -f install
+sudo DEBIAN_FRONTEND=noninteractive apt-get -y install ./*.deb
 enroot version 
 which enroot
 hash -r
+
