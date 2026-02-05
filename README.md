@@ -98,7 +98,7 @@ To install the AMD Container Toolkit on RHEL/CentOS 9 systems, follow these step
           > docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0-3,5,8 rocm/rocm-terminal rocm-smi
           ```
 
-     2. Using [CDI](https://github.com/cncf-tags/container-device-interface) style
+     2. Using [CDI](docs/container-runtime/cdi-guide.rst) style
 
           - First, generate the CDI spec.
 
