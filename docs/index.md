@@ -19,5 +19,6 @@ This documentation site provides information about the AMD Container Toolkit, wh
 - [Docker Compose](container-runtime/docker-compose.rst)
 - [Enroot Pyxis Installation](container-runtime/enroot-pyxis-installation.md)
 - [Support for Docker Swarm](container-runtime/docker-swarm.md)
+- [Support for Container Device Interface](container-runtime/cdi-guide.rst)
 - [GPU Tracker](container-runtime/gpu-tracker.md)
 - [Release Notes](container-runtime/release-notes.rst)
