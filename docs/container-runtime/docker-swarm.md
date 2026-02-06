@@ -10,6 +10,7 @@ Configure each swarm node's Docker daemon with GPU resources in `/etc/docker/dae
 
 ```json
 {
+  "default-runtime": "amd",
   "runtimes": {
     "amd": {
       "path": "amd-container-runtime",
@@ -32,6 +33,8 @@ sudo systemctl restart docker
 
 Deploy services with specific GPU requirements using docker-compose:
 
+**Using generic resources:**
+
 ```yaml
 # docker-compose.yml for Swarm deployment
 version: '3.8'
@@ -39,7 +42,6 @@ services:
   rocm-service:
     image: rocm/dev-ubuntu-24.04
     command: rocm-smi
-    runtime: amd
     deploy:
       replicas: 1
       resources:
@@ -48,6 +50,21 @@ services:
             - discrete_resource_spec:
                 kind: 'AMD_GPU'  # Matches daemon.json key
                 value: 1
+```
+
+**Using environment variables:**
+
+```yaml
+# docker-compose.yml for Swarm deployment with environment variable
+version: '3.8'
+services:
+  rocm-service:
+    image: rocm/dev-ubuntu-24.04
+    command: rocm-smi
+    environment:
+      - AMD_VISIBLE_DEVICES=all
+    deploy:
+      replicas: 1
 ```
 
 Deploy the service:
