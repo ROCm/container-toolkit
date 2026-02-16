@@ -4,8 +4,8 @@ AMD Container Toolkit offers tools to streamline the use of AMD GPUs with contai
 -  ```amd-ctk``` - The AMD Container Toolkit CLI
 
 # Requirements
-- Ubuntu 22.02 or 24.04, or RHEL/CentOS 9
-- Docker version 25 or later
+- Ubuntu 22.04 or 24.04, or RHEL/CentOS 9
+- Docker version 25 or later (on Linux, use Docker Engine rather than Docker Desktop for GPU device access; see [troubleshooting](docs/container-runtime/troubleshooting.rst) if you see `/dev/kfd` errors)
 - All the 'amd-ctk runtime configure' commands should be run as root/sudo
 
 # Quick Start

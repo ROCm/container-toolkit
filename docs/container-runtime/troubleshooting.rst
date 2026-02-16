@@ -126,6 +126,24 @@ If issues persist, restart Docker:
 
    sudo systemctl restart docker
 
+6. **Docker Desktop and /dev/kfd Access (Linux)**
+-------------------------------------------------
+
+When Docker Desktop is running on Linux, containers cannot access host GPU devices such as ``/dev/kfd`` and ``/dev/dri``. You may see:
+
+.. code-block:: text
+
+   docker: Error response from daemon: error gathering device information while adding custom device "/dev/kfd": no such file or directory
+
+**Cause:** Docker Desktop on Linux runs the Docker daemon in a context where host device nodes are not visible, so ``--device=/dev/kfd`` and ``--device=/dev/dri`` (or runtime-injected GPU devices) are not available.
+
+**Workaround:**
+
+- **Use Docker Engine instead of Docker Desktop** for GPU workloads on Linux. Install Docker Engine via the ``docker.io`` package or Docker's official repository so the daemon runs directly on the host and can expose ``/dev/kfd`` and ``/dev/dri`` to containers.
+- **Or:** Quit Docker Desktop (or log out and back in) so that you are using Docker Engine; then run your ROCm container again.
+
+This applies to any run that relies on host GPU devices (e.g. ``docker run --device=/dev/kfd --device=/dev/dri ...`` or ``docker run --runtime=amd -e AMD_VISIBLE_DEVICES=...``). See the :doc:`requirements` section for the recommended Docker setup on Linux.
+
 Log File Reference
 ------------------
 

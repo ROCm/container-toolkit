@@ -18,6 +18,9 @@ Docker Compatibility
 - Docker 25.0+ is required for all features.
 - Docker 28.3.0+ is required to use the standardized ``--gpus`` flag for AMD GPU selection.
 
+.. note::
+   **Docker Desktop on Linux:** When Docker Desktop is running on Linux, host devices such as ``/dev/kfd`` and ``/dev/dri`` are not available to containers. This can cause errors like ``no such file or directory`` when using ``--device=/dev/kfd`` or when the AMD container runtime injects GPU devices. For GPU workloads on Linux, use **Docker Engine** (e.g. ``docker.io`` or Docker's official repository) instead of Docker Desktop, or quit Docker Desktop before running ROCm containers. See the :doc:`troubleshooting` guide for details.
+
 ROCm and Driver Compatibility
 -----------------------------
 - ROCm 6.4.1 or newer is required to view and verify partitioned GPUs inside containers.
