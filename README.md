@@ -4,7 +4,7 @@ AMD Container Toolkit offers tools to streamline the use of AMD GPUs with contai
 -  ```amd-ctk``` - The AMD Container Toolkit CLI
 
 # Requirements
-- Ubuntu 22.02 or 24.04, or RHEL/CentOS 9
+- Ubuntu 22.04 or 24.04, or RHEL/CentOS 9
 - Docker version 25 or later
 - All the 'amd-ctk runtime configure' commands should be run as root/sudo
 
@@ -163,7 +163,7 @@ amd.com/gpu=0
 
 # Device discovery and enumeration
 
-The following command can be used to list the GPUs available on the system and their enumberation. The GPUs are listed in the CDI format, but the same enumeration applies to usage with the OCI environment variable, ```AMD_VISIBLE_DEVICES```.
+The following command can be used to list the GPUs available on the system and their enumeration. The GPUs are listed in the CDI format, but the same enumeration applies to usage with the OCI environment variable, ```AMD_VISIBLE_DEVICES```.
 
 ```text
 > amd-ctk cdi list
@@ -327,9 +327,9 @@ docker stack deploy -c docker-compose.yml rocm-stack
 
 Currently, barebones Docker provides no way to track access of GPUs in containers. Additionally, by default, multiple containers in Docker can be granted access to the same GPU simultaneously. GPU Tracker is an extremely lightweight feature of AMD Container Toolkit that solves these issues.
 
-GPU Tracker state is initialized during AMD Container Toolkit installation and is by default disabled. Users can enable or disable the GPU Tracker feature by using the `enable` or `disable` CLIs. When enabled, the GPU Tracker automatically maintains the state of GPUs and the containers that they are made accessible to, only if the containers are launched and granted access to the GPUs using the `AMD_VISILE_DEVICES` environment variable. When the container process completes execution or is stopped, the GPU Tracker state is automatically updated to reflect GPUs released by the specific container.
+GPU Tracker state is initialized during AMD Container Toolkit installation and is by default disabled. Users can enable or disable the GPU Tracker feature by using the `enable` or `disable` CLIs. When enabled, the GPU Tracker automatically maintains the state of GPUs and the containers that they are made accessible to, only if the containers are launched and granted access to the GPUs using the `AMD_VISIBLE_DEVICES` environment variable. When the container process completes execution or is stopped, the GPU Tracker state is automatically updated to reflect GPUs released by the specific container.
 
-**NOTE:** GPU Tracker feature is currenly supported only if containers are started using the `docker run` command and GPUs are made accessible in containers using the `AMD_VISIBLE_DEVICES` environment variable. If containers are started and granted access to GPUs in any other manner, GPU Tracker feature is not supported.
+**NOTE:** GPU Tracker feature is currently supported only if containers are started using the `docker run` command and GPUs are made accessible in containers using the `AMD_VISIBLE_DEVICES` environment variable. If containers are started and granted access to GPUs in any other manner, GPU Tracker feature is not supported.
 
 GPU Tracker provides CLIs that can be used to control the accessibility of GPUs in containers. The accessibility of GPUs can be set to either `shared` or `exclusive`.
 - The `shared` accessibility indicates that the GPU can be made accessibile to multiple containers simultaneously. By default, all GPUs are granted the `shared` accessibility to reflect the default Docker behavior.
@@ -598,7 +598,7 @@ Device  Node  IDs              Temp    Power  Partitions          SCLK    MCLK  
 
   7. Resetting GPU Tracker Status:
 
-      Resetting GPU Tracker clears the GPU Tracker state, i.e. the accessibility of all GPU is set to `shared` and all information about which GPUs have been made accessible in containers is cleared. If GPU Tracker is enabled, then after the reset operation also the GPU Tracker is enabled. Conversely, if GPU Tracker is cdisabled, then after the reset operation also the GOU Tracker remains disabled.
+      Resetting GPU Tracker clears the GPU Tracker state, i.e. the accessibility of all GPUs is set to `shared` and all information about which GPUs have been made accessible in containers is cleared. If GPU Tracker is enabled, then after the reset operation also the GPU Tracker is enabled. Conversely, if GPU Tracker is disabled, then after the reset operation also the GPU Tracker remains disabled.
 
       Resetting GPU Tracker is primarily useful in cases where GPU Tracker is enabled and the partitioning scheme of the GPUs has been altered. Changing the partitioning scheme of the GPUs invalidated the CDI Spec and GPU Tracker state. In these cases, it is required to:
       - Stop all running containers
