@@ -18,6 +18,9 @@ Docker Compatibility
 - Docker 25.0+ is required for all features.
 - Docker 28.3.0+ is required to use the standardized ``--gpus`` flag for AMD GPU selection.
 
+.. note::
+   **Docker Desktop on Linux:** Docker Desktop on Linux is not supported for GPU workloads. See the :doc:`troubleshooting` guide for details.
+
 ROCm and Driver Compatibility
 -----------------------------
 - ROCm 6.4.1 or newer is required to view and verify partitioned GPUs inside containers.

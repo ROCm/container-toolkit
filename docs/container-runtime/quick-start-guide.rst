@@ -13,6 +13,9 @@ Before installing the AMD Container Toolkit, ensure the following dependencies a
    - Docker version 25.0 or newer is required for all features.
 
 .. note::
+   Docker Desktop on Linux is not supported for GPU workloads; see [troubleshooting](docs/container-runtime/troubleshooting.rst) to know more.
+
+.. note::
       - The Container Device Interface (CDI) format, used by modern container runtimes to abstract and expose GPUs, is not supported in older Docker versions.
       - Without Docker 25+, CDI functionality such as dynamic device enumeration and CDI-style run commands will not work as intended. 
   

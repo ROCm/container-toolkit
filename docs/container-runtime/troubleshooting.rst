@@ -126,6 +126,21 @@ If issues persist, restart Docker:
 
    sudo systemctl restart docker
 
+6. **Docker Desktop and /dev/kfd Access**
+-------------------------------------------------
+
+Docker Desktop on Linux is not supported for GPU workloads. You may see:
+
+.. code-block:: text
+
+   docker: Error response from daemon: error gathering device information while adding custom device "/dev/kfd": no such file or directory
+
+**Why:** Docker Desktop on Linux runs the Docker daemon inside a VM (or similar isolated context). That VM does not have the host's ``/dev/kfd`` and ``/dev/dri`` devices mounted, so containers started by that daemon cannot access them.
+
+**Workaround:** Install Docker via the ``docker.io`` package or Docker's official repository so the daemon runs on the host and can expose these devices to containers. Alternatively, quit Docker Desktop and use Docker installed on the host.
+
+This applies to any run that relies on host GPU devices (e.g. ``docker run --device=/dev/kfd --device=/dev/dri ...`` or ``docker run --runtime=amd -e AMD_VISIBLE_DEVICES=...``).
+
 Log File Reference
 ------------------
 
