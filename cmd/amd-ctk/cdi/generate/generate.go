@@ -63,7 +63,7 @@ func AddNewCommand() *cli.Command {
 func validateGenOptions(c *cli.Context, genOptions *generateOptions) error {
 	_, err := filepath.Abs(genOptions.output)
 	if err != nil {
-		return fmt.Errorf("incorrect output file, Err: %v", err)
+		return fmt.Errorf("incorrect output file: %w", err)
 	}
 
 	return nil
@@ -72,19 +72,19 @@ func validateGenOptions(c *cli.Context, genOptions *generateOptions) error {
 func performAction(c *cli.Context, genOptions *generateOptions) error {
 	cdi, err := cdi.New(genOptions.output)
 	if err != nil {
-		return fmt.Errorf("Failed to create CDI handler, Error: %v", err)
+		return fmt.Errorf("failed to create CDI handler: %w", err)
 	}
 
 	// Generate CDI spec
 	err = cdi.GenerateSpec()
 	if err != nil {
-		return fmt.Errorf("Failed to generate CDI spec, Error: %v", err)
+		return fmt.Errorf("failed to generate CDI spec: %w", err)
 	}
 
 	// Write updated CDI spec
 	err = cdi.WriteSpec()
 	if err != nil {
-		return fmt.Errorf("Failed to write generated runtime CDI spec, Error: %v", err)
+		return fmt.Errorf("failed to write CDI spec: %w", err)
 	}
 
 	return nil

@@ -64,7 +64,7 @@ func (fs *DefaultFS) GetDeviceStat(dev string, format string) (string, error) {
 	out, err := exec.Command("stat", "-c", format, dev).Output()
 	if err != nil {
 		logger.Log.Printf("stat failed for %v, Error: %v", dev, err)
-		return "", err
+		return "", fmt.Errorf("stat device %s (format %s): %w", dev, format, err)
 	}
 	return strings.TrimSpace(string(out)), nil
 }
@@ -98,7 +98,7 @@ func GetAMDGPUs() ([]DeviceInfo, error) {
 func GetAMDGPUsWithFS(fs FileSystem) ([]DeviceInfo, error) {
 	if _, err := fs.Stat("/sys/module/amdgpu/drivers/"); err != nil {
 		logger.Log.Printf("amdgpu driver unavailable: %s", err)
-		return nil, err
+		return nil, fmt.Errorf("amdgpu driver not found: %w", err)
 	}
 
 	renderDevIds := GetDevIdsFromTopology(fs)
@@ -111,7 +111,7 @@ func GetAMDGPUsWithFS(fs FileSystem) ([]DeviceInfo, error) {
 	pciDevs, err := fs.Glob("/sys/module/amdgpu/drivers/pci:amdgpu/[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]:*")
 	if err != nil {
 		logger.Log.Printf("Failed to find amdgpu driver directories: %s", err)
-		return nil, err
+		return nil, fmt.Errorf("read amdgpu driver info: %w", err)
 	}
 
 	// Process platform devices for partitions
@@ -144,7 +144,7 @@ func GetAMDGPUsWithFS(fs FileSystem) ([]DeviceInfo, error) {
 		drms, err := fs.Glob(path + "/drm/*")
 		if err != nil {
 			logger.Log.Printf("Failed to find amdgpu driver drm directories: %s", err)
-			return nil, err
+			return nil, fmt.Errorf("read device info from %s: %w", path, err)
 		}
 
 		drmDevs := []string{}
@@ -291,7 +291,7 @@ func GetDevIdsFromTopology(fs FileSystem, topoRootParam ...string) map[int]strin
 func ParseTopologyProperties(fs FileSystem, path string, re *regexp.Regexp) (int64, error) {
 	content, err := fs.ReadFile(path)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("read property from %s: %w", path, err)
 	}
 
 	scanner := bufio.NewScanner(strings.NewReader(string(content)))
@@ -310,7 +310,7 @@ func ParseTopologyProperties(fs FileSystem, path string, re *regexp.Regexp) (int
 func ParseTopologyPropertiesString(fs FileSystem, path string, re *regexp.Regexp) (string, error) {
 	content, err := fs.ReadFile(path)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("read property from %s: %w", path, err)
 	}
 
 	scanner := bufio.NewScanner(strings.NewReader(string(content)))
@@ -333,7 +333,7 @@ func GetUniqueIdToDeviceIndexMap() (map[string][]int, error) {
 func GetUniqueIdToDeviceIndexMapWithFS(fs FileSystem) (map[string][]int, error) {
 	devs, err := GetAMDGPUsWithFS(fs)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("lookup device: %w", err)
 	}
 
 	renderDevIds := GetDevIdsFromTopology(fs)

@@ -63,7 +63,7 @@ func AddNewCommand() *cli.Command {
 func validateValOptions(c *cli.Context, valOptions *validateOptions) error {
 	_, err := filepath.Abs(valOptions.cdiSpecPath)
 	if err != nil {
-		return fmt.Errorf("Incorrect CDI spec file, Error: %v", err)
+		return fmt.Errorf("incorrect CDI spec file: %w", err)
 	}
 
 	return nil
@@ -72,13 +72,13 @@ func validateValOptions(c *cli.Context, valOptions *validateOptions) error {
 func performAction(c *cli.Context, valOptions *validateOptions) error {
 	cdi, err := cdi.New(valOptions.cdiSpecPath)
 	if err != nil {
-		return fmt.Errorf("Failed to create CDI handler, Error: %v", err)
+		return fmt.Errorf("failed to create CDI handler: %w", err)
 	}
 
 	// Validate CDI spec
 	result, err := cdi.ValidateSpec()
 	if err != nil {
-		return fmt.Errorf("Failed to validate CDI spec")
+		return fmt.Errorf("failed to validate CDI spec: %w", err)
 	}
 	if result == true {
 		fmt.Printf("CDI spec is valid\n")
