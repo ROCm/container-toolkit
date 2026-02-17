@@ -24,7 +24,7 @@ To install the AMD Container Toolkit on Ubuntu systems, follow these steps:
    wget https://repo.radeon.com/rocm/rocm.gpg.key -O - | gpg --dearmor | tee /etc/apt/keyrings/rocm.gpg > /dev/null
    ```
 
-3. Add the repository to your system. Replace `noble` with `jammy` if you are using Ubuntu 22.04:
+3. Add the repository to the system. Replace `noble` with `jammy` when using Ubuntu 22.04:
    ```bash
    echo "deb [signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/amd-container-toolkit/apt/ noble main" > /etc/apt/sources.list.d/amd-container-toolkit.list
    ```
@@ -180,7 +180,7 @@ The AMD Container Toolkit supports GPU selection using unique identifiers (UUIDs
 
 ## Getting GPU UUIDs
 
-You can obtain GPU UUIDs using different tools:
+GPU UUIDs can be obtained using different tools:
 
 ### Using ROCm SMI
 ```bash
@@ -194,7 +194,7 @@ GPU[1]          : Unique ID: 0x1234567890abcdef
 ```
 
 ### Using AMD-SMI
-You can also use `amd-smi` to get the ASIC_SERIAL, which serves as the GPU UUID:
+The `amd-smi` tool can also be used to get the ASIC_SERIAL, which serves as the GPU UUID:
 
 ```bash
 amd-smi static -aB
@@ -223,7 +223,7 @@ GPU: 0
         MANUFACTURER_NAME: AMD
 ```
 
-Use the `ASIC_SERIAL` value (e.g., `0xD1CC3F11CFDD5112`) as the GPU UUID in your container configurations.
+Use the `ASIC_SERIAL` value (e.g., `0xD1CC3F11CFDD5112`) as the GPU UUID in container configurations.
 
 ## Using UUIDs with Environment Variables
 
@@ -325,7 +325,7 @@ docker stack deploy -c docker-compose.yml rocm-stack
 
 # GPU Tracker
 
-GPU Tracker is an optional, lightweight feature that tracks which containers use which GPUs and lets you set GPUs to `shared` or `exclusive` access. It is disabled by default; use `amd-ctk gpu-tracker enable` to turn it on, and `status` / `reset` to query or clear state. It only applies when containers are started with `docker run` and `AMD_VISIBLE_DEVICES`.
+GPU Tracker is an optional, lightweight feature that tracks which containers use which GPUs and lets users set GPUs to `shared` or `exclusive` access. It is disabled by default; users can run `amd-ctk gpu-tracker enable` to turn it on, and `status` / `reset` to query or clear state. It only applies when containers are started with `docker run` and `AMD_VISIBLE_DEVICES`.
 
 For full usage, examples, and limitations, see the [GPU Tracker documentation](docs/container-runtime/gpu-tracker.md) in this repo, or the [official documentation](https://instinct.docs.amd.com/projects/container-toolkit/en/latest).
 
