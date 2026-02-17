@@ -126,7 +126,7 @@ If issues persist, restart Docker:
 
    sudo systemctl restart docker
 
-6. **Docker Desktop and /dev/kfd Access (Linux)**
+6. **Docker Desktop and /dev/kfd Access**
 -------------------------------------------------
 
 Docker Desktop on Linux is not supported for GPU workloads. You may see:
