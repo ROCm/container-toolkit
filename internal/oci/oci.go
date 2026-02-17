@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/ROCm/container-toolkit/internal/amdgpu"
-	"github.com/ROCm/container-toolkit/internal/gpu-tracker"
+	gpuTracker "github.com/ROCm/container-toolkit/internal/gpu-tracker"
 	"github.com/ROCm/container-toolkit/internal/logger"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -168,7 +168,7 @@ func (oci *oci_t) getAMDEnv() error {
 				var err error
 				oci.amdDevices, err = oci.reserveGPUs(pts[1], oci.containerId)
 				if err != nil {
-					return err
+					return fmt.Errorf("reserve GPUs for env %s, container %s: %w", pts[1], oci.containerId, err)
 				}
 			}
 		}
@@ -189,7 +189,7 @@ func (oci *oci_t) getSpec() error {
 	file, err := os.Open(f)
 	if err != nil {
 		logger.Log.Printf("Error opening file, Error: %v", err)
-		return err
+		return fmt.Errorf("open OCI spec file %s: %w", f, err)
 	}
 
 	defer file.Close()
@@ -198,7 +198,7 @@ func (oci *oci_t) getSpec() error {
 	decoder := json.NewDecoder(file)
 	if err := decoder.Decode(&spec); err != nil {
 		logger.Log.Printf("Failed to decode JSON, Error: %v", err)
-		return err
+		return fmt.Errorf("decode OCI spec from %s: %w", f, err)
 	}
 
 	oci.spec = &spec
@@ -242,12 +242,12 @@ func (oci *oci_t) addGPUDevices() error {
 		for _, gpu := range gpus {
 			amdGPU, err := oci.getGPU(gpu)
 			if err != nil {
-				return err
+				return fmt.Errorf("get GPU device %s: %w", gpu, err)
 			}
 
 			err = oci.addGPUDevice(amdGPU)
 			if err != nil {
-				return err
+				return fmt.Errorf("add GPU device %s to spec: %w", gpu, err)
 			}
 		}
 
@@ -256,7 +256,7 @@ func (oci *oci_t) addGPUDevices() error {
 
 	err := oci.getAMDEnv()
 	if err != nil {
-		return err
+		return fmt.Errorf("get AMD env from spec: %w", err)
 	}
 
 	if oci.isAddNoGPUs() {
@@ -266,7 +266,7 @@ func (oci *oci_t) addGPUDevices() error {
 
 	devs, err := oci.getGPUs()
 	if err != nil {
-		return err
+		return fmt.Errorf("get GPUs for OCI spec: %w", err)
 	}
 
 	for _, idx := range oci.amdDevices {
@@ -275,7 +275,7 @@ func (oci *oci_t) addGPUDevices() error {
 
 	kfd, err := oci.getGPU("/dev/kfd")
 	if err != nil {
-		return err
+		return fmt.Errorf("get KFD device for OCI spec: %w", err)
 	}
 	oci.addGPUDevice(kfd)
 
@@ -341,7 +341,7 @@ func (oci *oci_t) addGPUDevice(gpu amdgpu.AMDGPU) error {
 func New(argv []string) (Interface, error) {
 	gpuTracker, err := gpuTracker.New()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create OCI instance (gpu tracker): %w", err)
 	}
 
 	oci := &oci_t{
@@ -356,7 +356,7 @@ func New(argv []string) (Interface, error) {
 	oci.parseArgs()
 	err = oci.getSpec()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("load OCI spec from %s: %w", oci.origSpecPath, err)
 	}
 
 	return oci, nil
@@ -379,7 +379,7 @@ func (oci *oci_t) WriteSpec() error {
 	file, err := os.Create(f)
 	if err != nil {
 		logger.Log.Printf("Error creating file, Error: %v", err)
-		return err
+		return fmt.Errorf("create OCI spec file %s: %w", f, err)
 	}
 
 	defer file.Close()
@@ -387,7 +387,7 @@ func (oci *oci_t) WriteSpec() error {
 	encoder := json.NewEncoder(file)
 	if err := encoder.Encode(oci.spec); err != nil {
 		fmt.Printf("Error encoding JSON: %s\n", err)
-		return err
+		return fmt.Errorf("encode OCI spec to %s: %w", f, err)
 	}
 
 	logger.Log.Printf("Wrote spec to %v", f)
@@ -411,7 +411,7 @@ func (oci *oci_t) PrintSpec() error {
 	prettyJSON, err := json.MarshalIndent(oci.spec, "", "  ")
 	if err != nil {
 		logger.Log.Printf("Failed to marshal JSON, Error: %v", err)
-		return err
+		return fmt.Errorf("marshal OCI spec to JSON: %w", err)
 	}
 
 	fmt.Printf(string(prettyJSON))

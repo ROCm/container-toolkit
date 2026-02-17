@@ -77,14 +77,14 @@ type cdi_t struct {
 func readSpecFromFile(f string) (*specs.Spec, error) {
 	file, err := os.Open(f)
 	if err != nil {
-		return &specs.Spec{}, err
+		return &specs.Spec{}, fmt.Errorf("open CDI spec file %s: %w", f, err)
 	}
 	defer file.Close()
 
 	var spec specs.Spec
 	err = json.NewDecoder(file).Decode(&spec)
 	if err != nil {
-		return &specs.Spec{}, err
+		return &specs.Spec{}, fmt.Errorf("decode CDI spec from %s: %w", f, err)
 	}
 
 	return &spec, nil
@@ -94,14 +94,14 @@ func (cdi *cdi_t) GenerateSpec() error {
 	gpus, err := cdi.getGPUs()
 	if err != nil {
 		logger.Log.Printf("Failed to get GPUs, Err: %v", err)
-		return err
+		return fmt.Errorf("get GPUs for CDI spec: %w", err)
 	}
 
 	getCDIDevNode := func(gpu string) (specs.DeviceNode, error) {
 		d, err := cdi.getGPU(gpu)
 		if err != nil {
 			logger.Log.Printf("Failed to get details of %v GPU, Err: %v", gpu, err)
-			return specs.DeviceNode{}, err
+			return specs.DeviceNode{}, fmt.Errorf("get device node for %s: %w", gpu, err)
 		}
 
 		dn := specs.DeviceNode{
@@ -120,7 +120,7 @@ func (cdi *cdi_t) GenerateSpec() error {
 
 	kfdDeviceNode, err := getCDIDevNode("/dev/kfd")
 	if err != nil {
-		return err
+		return fmt.Errorf("get KFD device node: %w", err)
 	}
 
 	cdiDevs := []specs.Device{}
@@ -130,7 +130,7 @@ func (cdi *cdi_t) GenerateSpec() error {
 		for _, gpu := range gpuList.DrmDevices {
 			dn, err := getCDIDevNode(gpu)
 			if err != nil {
-				return err
+				return fmt.Errorf("get device node for GPU %s: %w", gpu, err)
 			}
 			dnl = append(dnl, &dn)
 		}
@@ -171,15 +171,14 @@ func (cdi *cdi_t) WriteSpec() error {
 	file, err := os.Create(cdi.specPath)
 	if err != nil {
 		logger.Log.Printf("Error creating file, Error: %v", err)
-		return err
+		return fmt.Errorf("create CDI spec file %s: %w", cdi.specPath, err)
 	}
 
 	defer file.Close()
 
 	encoder := json.NewEncoder(file)
 	if err := encoder.Encode(cdi.spec); err != nil {
-		fmt.Printf("Error encoding JSON: %s\n", err)
-		return err
+		return fmt.Errorf("encode CDI spec to %s: %w", cdi.specPath, err)
 	}
 
 	logger.Log.Printf("Wrote spec to %v", cdi.specPath)
@@ -191,7 +190,7 @@ func (cdi *cdi_t) PrintSpec() error {
 	prettyJSON, err := json.MarshalIndent(cdi.spec, "", "  ")
 	if err != nil {
 		logger.Log.Printf("Failed to marshal JSON, Error: %v", err)
-		return err
+		return fmt.Errorf("marshal CDI spec to JSON: %w", err)
 	}
 
 	fmt.Printf(string(prettyJSON))
@@ -234,8 +233,8 @@ func New(sp string) (Interface, error) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err := os.MkdirAll(dir, 0755)
 		if err != nil {
-			logger.Log.Printf("Failed to create %v, Err: %v", dir, err)
-			return nil, err
+			logger.Log.Printf("Failed to create %v, Err: %v", sp, err)
+			return nil, fmt.Errorf("create CDI spec directory %s: %w", sp, err)
 		}
 	}
 
