@@ -37,6 +37,10 @@ const (
 	// AMD_GPU_DEVICE_MODE is the container env var to override GPU device file mode in the container (e.g. 0666).
 	// Host device permissions are unchanged. If unset, the host device mode is used.
 	AMD_GPU_DEVICE_MODE = "AMD_GPU_DEVICE_MODE"
+
+	// maxGPUDeviceMode is the maximum allowed value for AMD_GPU_DEVICE_MODE (0777 = rwxrwxrwx).
+	// Values above this are rejected to keep permissions within typical Unix bounds.
+	maxGPUDeviceMode = 0o777
 )
 
 // Interface for OCI package
@@ -243,14 +247,14 @@ func (oci *oci_t) isAddNoGPUs() bool {
 
 // addGPUDevices adds requested GPUs to the OCI spec
 func (oci *oci_t) addGPUDevices() error {
-	addGpus := func(gpus []string) error {
+	addGpus := func(gpus []string, modeOverride *os.FileMode) error {
 		for _, gpu := range gpus {
 			amdGPU, err := oci.getGPU(gpu)
 			if err != nil {
 				return err
 			}
 
-			err = oci.addGPUDevice(amdGPU)
+			err = oci.addGPUDevice(amdGPU, modeOverride)
 			if err != nil {
 				return err
 			}
@@ -274,15 +278,24 @@ func (oci *oci_t) addGPUDevices() error {
 		return err
 	}
 
+	// Parse AMD_GPU_DEVICE_MODE once for all devices instead of per device.
+	var modeOverride *os.FileMode
+	if oci.spec != nil && oci.spec.Process != nil {
+		if m, ok := oci.getGPUDeviceModeOverride(oci.spec.Process.Env); ok {
+			modeOverride = new(os.FileMode)
+			*modeOverride = m
+		}
+	}
+
 	for _, idx := range oci.amdDevices {
-		addGpus(devs[idx].DrmDevices)
+		addGpus(devs[idx].DrmDevices, modeOverride)
 	}
 
 	kfd, err := oci.getGPU("/dev/kfd")
 	if err != nil {
 		return err
 	}
-	oci.addGPUDevice(kfd)
+	oci.addGPUDevice(kfd, modeOverride)
 
 	if oci.spec.Hooks == nil {
 		oci.spec.Hooks = &specs.Hooks{}
@@ -301,8 +314,8 @@ func (oci *oci_t) addGPUDevices() error {
 	return nil
 }
 
-// getGPUDeviceModeOverride returns the GPU device file mode from AMD_GPU_DEVICE_MODE env if set and valid (octal, e.g. 0666).
-// The host device permissions are never changed; this only affects the mode of the device node inside the container.
+// getGPUDeviceModeOverride returns the GPU device file mode from AMD_GPU_DEVICE_MODE env if set and valid.
+// The value must be octal and in the range 0-0777 (typical Unix permission bounds). Host device permissions are never changed.
 func (oci *oci_t) getGPUDeviceModeOverride(env []string) (os.FileMode, bool) {
 	for _, e := range env {
 		if !strings.HasPrefix(e, AMD_GPU_DEVICE_MODE+"=") {
@@ -320,21 +333,22 @@ func (oci *oci_t) getGPUDeviceModeOverride(env []string) (os.FileMode, bool) {
 			logger.Log.Printf("Invalid %s value %q: %v", AMD_GPU_DEVICE_MODE, val, err)
 			return 0, false
 		}
+		if m > uint64(maxGPUDeviceMode) {
+			logger.Log.Printf("Invalid %s value %q: must be 0-0777, got %#o", AMD_GPU_DEVICE_MODE, val, m)
+			return 0, false
+		}
 		return os.FileMode(m), true
 	}
 	return 0, false
 }
 
-// addGPUDevice adds the requested GPU device to the OCI spec
-func (oci *oci_t) addGPUDevice(gpu amdgpu.AMDGPU) error {
+// addGPUDevice adds the requested GPU device to the OCI spec. modeOverride is optional and
+// is parsed once by addGPUDevices; when non-nil, it overrides the host device mode.
+func (oci *oci_t) addGPUDevice(gpu amdgpu.AMDGPU, modeOverride *os.FileMode) error {
 	fileMode := &gpu.FileMode
-	if oci.spec != nil && oci.spec.Process != nil {
-		if override, ok := oci.getGPUDeviceModeOverride(oci.spec.Process.Env); ok {
-			m := new(os.FileMode)
-			*m = override
-			fileMode = m
-			logger.Log.Printf("Using GPU device mode override %#o for %s", override, gpu.Path)
-		}
+	if modeOverride != nil {
+		fileMode = modeOverride
+		logger.Log.Printf("Using GPU device mode override %#o for %s", *modeOverride, gpu.Path)
 	}
 	dev := specs.LinuxDevice{
 		Path:     gpu.Path,

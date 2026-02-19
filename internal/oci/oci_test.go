@@ -11,6 +11,7 @@ import (
 
 	"github.com/ROCm/container-toolkit/internal/amdgpu"
 	"github.com/ROCm/container-toolkit/internal/logger"
+	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 // Constants
@@ -245,7 +246,7 @@ func TestAddGPUDevice(t *testing.T) {
 		Access:   "rwm",
 	}
 
-	err = oci.addGPUDevice(gpu)
+	err = oci.addGPUDevice(gpu, nil)
 	Assert(t, err == nil, fmt.Sprintf("addGpuDevice returned error %v", err))
 
 	Assert(t, oci.spec.Linux != nil, "oci.spec.Linux is nil")
@@ -273,6 +274,105 @@ func TestAddGPUDevice(t *testing.T) {
 		}
 	}
 	Assert(t, resDevFound, fmt.Sprintf("dev %v,%v not found in spec", gpu.Major, gpu.Minor))
+}
+
+func TestGetGPUDeviceModeOverride(t *testing.T) {
+	tests := []struct {
+		env    []string
+		want   os.FileMode
+		wantOk bool
+	}{
+		{nil, 0, false},
+		{[]string{}, 0, false},
+		{[]string{"AMD_GPU_DEVICE_MODE=0666"}, 0o666, true},
+		{[]string{"PATH=/bin", "AMD_GPU_DEVICE_MODE=0660"}, 0o660, true},
+		{[]string{"AMD_GPU_DEVICE_MODE=0o777"}, 0o777, true},
+		{[]string{"AMD_GPU_DEVICE_MODE=0O666"}, 0o666, true}, // capital O
+		{[]string{"AMD_GPU_DEVICE_MODE=07777"}, 0, false},   // above 0777, rejected
+		{[]string{"AMD_GPU_DEVICE_MODE=01000"}, 0, false},   // above 0777, rejected
+		{[]string{"AMD_GPU_DEVICE_MODE=invalid"}, 0, false},
+		{[]string{"AMD_GPU_DEVICE_MODE="}, 0, false},
+		{[]string{"OTHER_VAR=1"}, 0, false}, // env var not set
+	}
+	setup(t)
+	oci := &oci_t{spec: &specs.Spec{}}
+	for _, tt := range tests {
+		oci.spec.Process = &specs.Process{Env: tt.env}
+		got, ok := oci.getGPUDeviceModeOverride(tt.env)
+		if ok != tt.wantOk || (ok && got != tt.want) {
+			t.Errorf("getGPUDeviceModeOverride(%v) = (%#o, %v), want (%#o, %v)", tt.env, got, ok, tt.want, tt.wantOk)
+		}
+	}
+}
+
+func TestAddGPUDeviceWithModeOverride(t *testing.T) {
+	setup(t)
+	oci := &oci_t{
+		origSpecPath:                TEST_OCI_SPEC_PATH,
+		getGPUs:                     mockGetAMDGPUs,
+		getGPU:                      mockGetAMDGPU,
+		getUniqueIdToDeviceIndexMap: mockGetUniqueIdToDeviceIndexMap,
+	}
+	err := oci.getSpec()
+	Assert(t, err == nil, fmt.Sprintf("failed to get OCI spec, Err: %v", err))
+
+	gpu := amdgpu.AMDGPU{
+		Path:     "/dev/dri/renderD128",
+		Major:    226,
+		Minor:    128,
+		FileMode: 0o660,
+		Gid:      44,
+		Uid:      0,
+		Allow:    true,
+		DevType:  "c",
+		Access:   "rwm",
+	}
+	modeOverride := os.FileMode(0o666)
+	err = oci.addGPUDevice(gpu, &modeOverride)
+	Assert(t, err == nil, fmt.Sprintf("addGPUDevice returned error %v", err))
+
+	// addGPUDevice appends; find the last device with this path (the one we added with override)
+	var dev *specs.LinuxDevice
+	for i := range oci.spec.Linux.Devices {
+		if oci.spec.Linux.Devices[i].Path == gpu.Path {
+			dev = &oci.spec.Linux.Devices[i]
+		}
+	}
+	Assert(t, dev != nil, "device not found in spec")
+	Assert(t, dev.FileMode != nil, "FileMode is nil")
+	Assert(t, *dev.FileMode == 0o666, fmt.Sprintf("expected FileMode 0666, got %#o", *dev.FileMode))
+}
+
+// TestAddGPUDevicesWithModeOverrideEnv verifies the full path: AMD_GPU_DEVICE_MODE in spec env
+// is parsed in addGPUDevices and applied to all GPU devices added to the spec.
+func TestAddGPUDevicesWithModeOverrideEnv(t *testing.T) {
+	setup(t)
+	oci := &oci_t{
+		origSpecPath:                TEST_OCI_SPEC_PATH,
+		getGPUs:                     mockGetAMDGPUs,
+		getGPU:                      mockGetAMDGPU,
+		getUniqueIdToDeviceIndexMap: mockGetUniqueIdToDeviceIndexMap,
+		reserveGPUs:                 mockReserveGPUs,
+	}
+	err := oci.getSpec()
+	Assert(t, err == nil, fmt.Sprintf("failed to get OCI spec, Err: %v", err))
+	oci.spec.Process.Env = append(oci.spec.Process.Env, "AMD_GPU_DEVICE_MODE=0666")
+
+	err = oci.getAMDEnv()
+	Assert(t, err == nil, fmt.Sprintf("getAMDEnv returned error %v", err))
+	err = oci.addGPUDevices()
+	Assert(t, err == nil, fmt.Sprintf("addGPUDevices returned error %v", err))
+
+	// At least one GPU device in the spec should have FileMode 0666 (from env override)
+	found := false
+	for i := range oci.spec.Linux.Devices {
+		d := &oci.spec.Linux.Devices[i]
+		if (strings.Contains(d.Path, "/dev/dri") || d.Path == "/dev/kfd") && d.FileMode != nil && *d.FileMode == 0o666 {
+			found = true
+			break
+		}
+	}
+	Assert(t, found, "expected at least one GPU device with FileMode 0666 from AMD_GPU_DEVICE_MODE env")
 }
 
 func TestNew(t *testing.T) {
