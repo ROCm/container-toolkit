@@ -87,6 +87,8 @@ To use AMD GPUs with Docker:
 
      sudo docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/rocm-terminal rocm-smi
 
+  Optionally, set ``AMD_GPU_DEVICE_MODE`` to an octal value (e.g. ``0666``) to override GPU device permissions inside the container; host permissions are unchanged.
+
 - CDI style:
 
   .. code-block:: bash

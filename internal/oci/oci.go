@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/ROCm/container-toolkit/internal/amdgpu"
@@ -32,6 +33,10 @@ import (
 const (
 	// Default path for AMD Container Runtime OCI hook
 	DEFAULT_HOOK_PATH = "/usr/bin/amd-container-runtime-hook"
+
+	// AMD_GPU_DEVICE_MODE is the container env var to override GPU device file mode in the container (e.g. 0666).
+	// Host device permissions are unchanged. If unset, the host device mode is used.
+	AMD_GPU_DEVICE_MODE = "AMD_GPU_DEVICE_MODE"
 )
 
 // Interface for OCI package
@@ -296,14 +301,47 @@ func (oci *oci_t) addGPUDevices() error {
 	return nil
 }
 
+// getGPUDeviceModeOverride returns the GPU device file mode from AMD_GPU_DEVICE_MODE env if set and valid (octal, e.g. 0666).
+// The host device permissions are never changed; this only affects the mode of the device node inside the container.
+func (oci *oci_t) getGPUDeviceModeOverride(env []string) (os.FileMode, bool) {
+	for _, e := range env {
+		if !strings.HasPrefix(e, AMD_GPU_DEVICE_MODE+"=") {
+			continue
+		}
+		val := strings.TrimSpace(strings.TrimPrefix(e, AMD_GPU_DEVICE_MODE+"="))
+		if val == "" {
+			return 0, false
+		}
+		// Accept octal: 0666 or 0o666
+		val = strings.TrimPrefix(val, "0o")
+		val = strings.TrimPrefix(val, "0O")
+		m, err := strconv.ParseUint(val, 8, 32)
+		if err != nil {
+			logger.Log.Printf("Invalid %s value %q: %v", AMD_GPU_DEVICE_MODE, val, err)
+			return 0, false
+		}
+		return os.FileMode(m), true
+	}
+	return 0, false
+}
+
 // addGPUDevice adds the requested GPU device to the OCI spec
 func (oci *oci_t) addGPUDevice(gpu amdgpu.AMDGPU) error {
+	fileMode := &gpu.FileMode
+	if oci.spec != nil && oci.spec.Process != nil {
+		if override, ok := oci.getGPUDeviceModeOverride(oci.spec.Process.Env); ok {
+			m := new(os.FileMode)
+			*m = override
+			fileMode = m
+			logger.Log.Printf("Using GPU device mode override %#o for %s", override, gpu.Path)
+		}
+	}
 	dev := specs.LinuxDevice{
 		Path:     gpu.Path,
 		Type:     gpu.DevType,
 		Major:    gpu.Major,
 		Minor:    gpu.Minor,
-		FileMode: &gpu.FileMode,
+		FileMode: fileMode,
 		GID:      &gpu.Gid,
 		UID:      &gpu.Uid,
 	}
