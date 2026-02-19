@@ -22,7 +22,6 @@ import (
 	"os/exec"
 	"syscall"
 
-	"github.com/ROCm/container-toolkit/internal/cdi"
 	"github.com/ROCm/container-toolkit/internal/logger"
 	"github.com/ROCm/container-toolkit/internal/oci"
 )
@@ -45,8 +44,6 @@ type runtm struct {
 	args []string
 	// oci is the handle for oci operations
 	oci oci.Interface
-	// cdi is the handle for cdi operations
-	cdi cdi.Interface
 }
 
 // New creates a runtime instance
@@ -60,12 +57,6 @@ func New(args []string) (Interface, error) {
 	rt.oci, err = oci.New(rt.args[1:])
 	if err != nil {
 		logger.Log.Printf("Failed to create OCI handler, Error: %v", err)
-		return nil, err
-	}
-
-	rt.cdi, err = cdi.New("")
-	if err != nil {
-		logger.Log.Printf("Failed to create CDI handler, Error: %v", err)
 		return nil, err
 	}
 
