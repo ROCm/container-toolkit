@@ -177,6 +177,7 @@ func (cdi *cdi_t) WriteSpec() error {
 	defer file.Close()
 
 	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(cdi.spec); err != nil {
 		fmt.Printf("Error encoding JSON: %s\n", err)
 		return err
