@@ -168,6 +168,14 @@ func (cdi *cdi_t) GetSpec() specs.Spec {
 }
 
 func (cdi *cdi_t) WriteSpec() error {
+	dir := filepath.Dir(cdi.specPath)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			logger.Log.Printf("Failed to create %v, Err: %v", dir, err)
+			return err
+		}
+	}
+
 	file, err := os.Create(cdi.specPath)
 	if err != nil {
 		logger.Log.Printf("Error creating file, Error: %v", err)
@@ -228,15 +236,6 @@ func (cdi *cdi_t) ValidateSpec() (bool, error) {
 func New(sp string) (Interface, error) {
 	if sp == "" {
 		sp = CDI_SPEC_PATH
-	}
-
-	dir := filepath.Dir(sp)
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		err := os.MkdirAll(dir, 0755)
-		if err != nil {
-			logger.Log.Printf("Failed to create %v, Err: %v", dir, err)
-			return nil, err
-		}
 	}
 
 	spec := specs.Spec{
