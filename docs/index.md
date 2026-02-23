@@ -12,6 +12,7 @@ This documentation site provides information about the AMD Container Toolkit, wh
 - [Overview](container-runtime/overview.rst)
 - [Requirements](container-runtime/requirements.rst)
 - [Quick Start Guide](container-runtime/quick-start-guide.rst)
+- [Running Workloads](container-runtime/running-workloads.rst)
 - [Framework Integration](container-runtime/framework-integration.rst)
 - [Troubleshooting](container-runtime/troubleshooting.rst)
 - [Migration Guide](container-runtime/migration-guide.rst)

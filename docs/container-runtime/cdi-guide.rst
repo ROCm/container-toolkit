@@ -81,6 +81,11 @@ To validate a specification at a different location, use the ``--path`` flag:
     * Add or remove GPU devices
     * Modify GPU partitioning or configuration
 
+Running Workloads with CDI
+==========================
+
+Once your CDI specification is generated and validated, you can run containers with GPU access using the ``--device amd.com/gpu=<entry>`` pattern. For examples, see the :doc:`Running Workloads <running-workloads>` guide.
+
 Troubleshooting
 ===============
 
