@@ -62,44 +62,12 @@ Visual Flow:
                                                                        |      GPU DRIVER      +
                                                                        +----------------------+
 
-Docker Runtime Integration
+Docker integration with amd-container-runtime
+--------------------------------------------
+
+For installation, configuration, and running GPU workloads with Docker using the amd-container-runtime, see the :doc:`Quick Start Guide <quick-start-guide>`.
+
+Using CDI for GPU injection
 ---------------------------
 
-To use AMD GPUs with Docker:
-
-1. Configure Docker runtime:
-
-.. code-block:: bash
-
-   sudo amd-ctk configure runtime
-
-2. Restart Docker:
-
-.. code-block:: bash
-
-   sudo systemctl restart docker
-
-3. Usage:
-
-- Environment variable ``AMD_VISIBLE_DEVICES``:
-
-  .. code-block:: bash
-
-     sudo docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/rocm-terminal rocm-smi
-
-- CDI style:
-
-  .. code-block:: bash
-
-     amd-ctk cdi generate --output=/etc/cdi/amd.json
-     sudo docker run --rm --device amd.com/gpu=all rocm/rocm-terminal rocm-smi
-
-Device Discovery
-----------------
-
-Enumerate GPUs:
-Outputs a list of available GPUs in CDI-compliant format.
-
-.. code-block:: bash
-
-   amd-ctk cdi list
+The toolkit also supports the Container Device Interface (CDI) for GPU injection. To set up and use CDI to run workloads, see the :doc:`CDI guide <cdi-guide>` and :doc:`Running Workloads <running-workloads>`.

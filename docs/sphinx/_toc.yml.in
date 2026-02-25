@@ -8,6 +8,8 @@ subtrees:
         title: Requirements
       - file: container-runtime/quick-start-guide.rst
         title: Quick Start Guide
+      - file: container-runtime/running-workloads.rst
+        title: Running Workloads
       - file: container-runtime/framework-integration.rst
         title: Framework Integration
       - file: container-runtime/troubleshooting.rst

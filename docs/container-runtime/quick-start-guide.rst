@@ -1,15 +1,18 @@
 Quick Start Guide
 =================
 
-This section provides a step-by-step guide to install the AMD Container Toolkit and configure your system for Docker-based GPU container workloads. The steps below are tailored for ease of use, production-readiness, and ensuring compatibility across AMD Instinct GPU-enabled systems.
+This guide walks you through installing the AMD Container Toolkit, configuring Docker for AMD GPUs, and running GPU workloads with the AMD container runtime. The steps are tailored for ease of use, production-readiness, and compatibility across AMD Instinct GPU-enabled systems.
+
+Installing the Container Toolkit
+=================================
 
 Prerequisites
 -------------
 
 Before installing the AMD Container Toolkit, ensure the following dependencies are installed.
 
-- **Docker:**  
-   - The toolkit is designed to work with Docker, so ensure you have Docker installed on your system.
+- **Docker or a CDI-compatible runtime:**
+   - The toolkit is designed to work with Docker or any CDI-compatible container runtime. Ensure you have Docker (or your chosen runtime) installed on your system.
    - Docker version 25.0 or newer is required for all features.
 
 .. note::
@@ -36,6 +39,8 @@ If you are on an earlier Docker version, please upgrade to at least Docker 25 be
 - **ROCm:**
 
   - ROCm 6.4.1 or newer is required to view and verify partitioned GPUs inside containers.
+
+- **Other container runtimes:** If you plan to use a container runtime other than Docker, ensure your runtime version supports device injection through CDI.
 
 **jq** - Required during uninstallation to parse configuration settings cleanly.
 
@@ -130,8 +135,8 @@ RHEL 9.5:
    gpgkey=https://repo.radeon.com/rocm/rocm.gpg.key
    EOF
 
-Step 4: Install Toolkit and Docker
-----------------------------------
+Step 4: Install the AMD Container Toolkit
+-----------------------------------------
 
 Ubuntu:
 
@@ -147,6 +152,8 @@ RHEL 9.5:
 
    dnf clean all
    dnf install -y amd-container-toolkit
+
+You have successfully installed the AMD Container Toolkit. The next steps cover configuring Docker and running GPU workloads. If you prefer to use CDI for GPU injection, see the :doc:`CDI guide <cdi-guide>`.
 
 Step 5: Configure Docker Runtime for AMD GPUs
 ---------------------------------------------
@@ -270,31 +277,7 @@ With the AMD Container Toolkit, you can apply various partitioning schemes to yo
 Regenerating and Validating CDI Specifications
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Whenever you modify the GPU partitioning on your system, it is must to regenerate the Container Device Interface (CDI) specification. This ensures that the container runtime is aware of the current GPU topology and can accurately expose the correct devices to your containers.
-
-You can regenerate and validate the CDI spec either by specifying an explicit output path or by using the default location.
-
-**To regenerate the CDI spec with an explicit output path after a partitioning change, run:**
-
-.. code-block:: bash
-
-   amd-ctk cdi generate --output=/etc/cdi/amd.json
-
-To validate that the existing CDI spec accurately reflects the available GPUs and partitions, use:
-
-.. code-block:: bash
-
-   amd-ctk cdi validate --path=/etc/cdi/amd.json
-
-**Alternatively, you may omit the path to use the default CDI spec location:**
-
-.. code-block:: bash
-
-   amd-ctk cdi generate
-   amd-ctk cdi validate
-
-.. note::
-   If you do not specify an output or path, the commands will operate on the default CDI spec location as defined by the toolkit. This is suitable for most standard installations.
+Whenever you modify GPU partitioning on your system, regenerate and validate the CDI specification so the container runtime sees the current GPU topology. See the **Generating CDI Specifications** and **Validating CDI Specifications** sections in the :doc:`CDI guide <cdi-guide>`.
 
 Inspecting GPU Partition Status
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -323,13 +306,6 @@ This command grants the container access to GPUs 0 through 3, 8, 17 through 20, 
 
 .. note::
    To view and verify partitioned GPUs inside containers, ensure you are using ROCm version 6.4.1 or newer.
-
-Best Practices and Documentation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-- **Always regenerate the CDI spec** after any GPU partitioning change to ensure containers have access to the correct devices.
-- **Validate the CDI spec** to confirm it matches the current system state before launching new workloads.
-- **Consult the latest documentation** for detailed partitioning workflows and troubleshooting guidance.
 
 By leveraging GPU partitioning, you can achieve fine-grained resource allocation, improved workload isolation, and greater flexibility in deploying GPU-accelerated containers across your infrastructure.
 
