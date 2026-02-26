@@ -39,10 +39,8 @@ srun --ntasks=2 --ntasks-per-node=1 bash -c "
 # Export environment variables
 export HSA_NO_SCRATCH_RECLAIM=1
 export NCCL_SOCKET_IFNAME=ens50f0
-export NCCL_IB_DISABLE=0
 export PMIX_MCA_gds=hash
 export OMPI_MCA_btl_tcp_if_exclude=lo,docker0
-export IONIC_LOCKFREE=all
 export NCCL_GDRCOPY_ENABLE=0
 export NCCL_GDR_FLUSH_DISABLE=1
 export NCCL_GRAPH_DUMP_FILE=/tmp/graph_all.txt
