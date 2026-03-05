@@ -11,4 +11,27 @@ on:
 jobs:
   docs-lint:
     name: Documentation
-    uses: ROCm/rocm-docs-core/.github/workflows/linting.yml@develop
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install markdownlint-cli2
+        run: npm install -g markdownlint-cli2
+
+      - name: Set up Python and pyspelling
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install spelling dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y aspell aspell-en
+          pip install pyspelling
+
+      - name: Run docs lint (markdown + spelling)
+        run: make docs-lint
