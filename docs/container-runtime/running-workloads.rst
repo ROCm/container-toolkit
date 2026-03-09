@@ -23,6 +23,14 @@ Use ``--device amd.com/gpu=<entry>``. You do **not** need ``--runtime=amd`` when
 
    docker run --rm --device amd.com/gpu=all rocm/rocm-terminal rocm-smi
 
+.. tip::
+
+   Starting with Docker **29.3.0**, you can also use ``--gpus <entry>`` directly with CDI, without ``--runtime=amd``. ``<entry>`` can be ``all``, a count (e.g. ``2``), or specific devices (e.g. ``'"device=0,1,2"'``).
+
+   .. code-block:: bash
+
+      docker run --rm --gpus all rocm/rocm-terminal rocm-smi
+
 Podman
 ~~~~~~
 
