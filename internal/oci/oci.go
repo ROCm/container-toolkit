@@ -1,14 +1,14 @@
 /**
 # Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0 (the \"License\");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an \"AS IS\" BASIS,
+# distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
@@ -416,6 +416,35 @@ func (oci *oci_t) PrintSpec() error {
 
 	fmt.Printf(string(prettyJSON))
 	fmt.Printf("\n")
+
+	return nil
+}
+
+// addLegacySymlinkHooks adds hooks to create symlinks for legacy ROCm paths
+func (oci *oci_t) addLegacySymlinkHooks(links []string) error {
+	if oci.spec == nil {
+		logger.Log.Printf("Failed to get spec")
+		return fmt.Errorf("Failed to get spec")
+	}
+
+	if oci.spec.Hooks == nil {
+		oci.spec.Hooks = &specs.Hooks{}
+	}
+
+	for _, link := range links {
+		hook := specs.Hook{
+			Path: "/usr/local/bin/amd-ctk",
+			Args: []string{
+				"amd-ctk",
+				"hook",
+				"create-symlinks",
+				"--link",
+				link,
+			},
+		}
+		oci.spec.Hooks.CreateRuntime = append(oci.spec.Hooks.CreateRuntime, hook)
+		logger.Log.Printf("Added legacy symlink hook for: %v", link)
+	}
 
 	return nil
 }
