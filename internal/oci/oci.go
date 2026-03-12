@@ -1,14 +1,14 @@
 /**
 # Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0 (the \"License\");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an \"AS IS\" BASIS,
+# distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
@@ -115,6 +115,7 @@ type SpecUpdateOp int
 const (
 	AddHook SpecUpdateOp = iota
 	AddGPUDevices
+	AddPrestartHook
 )
 
 // parseArgs parses the arguments passed to runtime
@@ -223,6 +224,46 @@ func (oci *oci_t) addHook() error {
 
 	oci.spec.Hooks.CreateRuntime = append(oci.spec.Hooks.CreateRuntime, hook)
 	logger.Log.Printf("Added OCI runtime hook, %v", oci.hookPath)
+
+	return nil
+}
+
+// addPrestartHook adds the AMD runtime prestart hook to the OCI spec
+// This enables --gpus flag support via Docker's hook mechanism
+func (oci *oci_t) addPrestartHook() error {
+	if oci.spec == nil {
+		logger.Log.Printf("Failed to get spec")
+		return fmt.Errorf("failed to get spec")
+	}
+
+	if oci.spec.Hooks == nil {
+		oci.spec.Hooks = &specs.Hooks{}
+	}
+
+	// Check if AMD_VISIBLE_DEVICES or DOCKER_RESOURCE_* is set
+	hasGPUEnv := false
+	if oci.spec.Process != nil {
+		for _, env := range oci.spec.Process.Env {
+			pts := strings.SplitN(env, "=", 2)
+			if len(pts) == 2 && (pts[0] == "AMD_VISIBLE_DEVICES" || strings.HasPrefix(pts[0], "DOCKER_RESOURCE_")) {
+				hasGPUEnv = true
+				break
+			}
+		}
+	}
+
+	// Only add hook if GPU environment is present
+	if !hasGPUEnv {
+		return nil
+	}
+
+	hook := specs.Hook{
+		Path: "/usr/bin/amd-container-runtime-hook",
+		Args: []string{"amd-container-runtime-hook", "prestart"},
+	}
+
+	oci.spec.Hooks.Prestart = append(oci.spec.Hooks.Prestart, hook)
+	logger.Log.Printf("Added AMD prestart hook for --gpus support")
 
 	return nil
 }
@@ -401,6 +442,8 @@ func (oci *oci_t) UpdateSpec(op SpecUpdateOp) error {
 		return oci.addHook()
 	case AddGPUDevices:
 		return oci.addGPUDevices()
+	case AddPrestartHook:
+		return oci.addPrestartHook()
 	}
 
 	return nil
