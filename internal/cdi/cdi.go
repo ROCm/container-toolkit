@@ -1,14 +1,14 @@
 /**
 # Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0 (the \"License\");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an \"AS IS\" BASIS,
+# distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
@@ -155,6 +155,19 @@ func (cdi *cdi_t) GenerateSpec() error {
 		Name: "all",
 		ContainerEdits: specs.ContainerEdits{
 			DeviceNodes: allDNs,
+			Hooks: []*specs.Hook{
+				{
+					HookName: "createContainer",
+					Path:     "/usr/local/bin/amd-ctk",
+					Args: []string{
+						"amd-ctk",
+						"hook",
+						"create-symlinks",
+						"--link", "/opt/rocm/lib::/opt/rocm-5.7.0/lib",
+						"--link", "/opt/rocm/lib::/opt/rocm-5.6.0/lib",
+					},
+				},
+			},
 		},
 	}
 	cdiDevs = append(cdiDevs, allCdiDev)
