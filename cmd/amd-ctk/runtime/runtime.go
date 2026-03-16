@@ -17,6 +17,9 @@
 package runtime
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/ROCm/container-toolkit/cmd/amd-ctk/runtime/configure"
 	"github.com/urfave/cli/v2"
 )
@@ -31,7 +34,24 @@ func AddNewCommand() *cli.Command {
 
 	runtimeCmd.Subcommands = []*cli.Command{
 		configure.AddNewCommand(),
+		addConfigureHookCommand(),
 	}
 
 	return &runtimeCmd
+}
+
+func addConfigureHookCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "configure-hook",
+		Usage: "Install amd-container-runtime-hook as OCI hook",
+		Action: func(c *cli.Context) error {
+			hookPath := "/usr/bin/amd-container-runtime-hook"
+			if _, err := os.Stat(hookPath); os.IsNotExist(err) {
+				return fmt.Errorf("hook binary not found at %s", hookPath)
+			}
+			fmt.Printf("AMD Container Runtime Hook is available at: %s\n", hookPath)
+			fmt.Println("Add this hook to your runtime configuration to enable --gpus flag support")
+			return nil
+		},
+	}
 }

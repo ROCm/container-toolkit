@@ -50,6 +50,12 @@ type Interface interface {
 
 	// PrintSpec prints the current spec on the console
 	PrintSpec() error
+
+	// GetSpec returns the loaded OCI spec
+	GetSpec() *specs.Spec
+
+	// GetContainerId returns the container ID
+	GetContainerId() string
 }
 
 // GetGPUs is the type for functions that return the lists of all the GPU devices on the system
@@ -362,6 +368,48 @@ func New(argv []string) (Interface, error) {
 	return oci, nil
 }
 
+// NewFromStdin creates OCI interface from hook state read from stdin (for hook usage)
+func NewFromStdin() (Interface, error) {
+	gpuTracker, err := gpuTracker.New()
+	if err != nil {
+		return nil, err
+	}
+
+	oci := &oci_t{
+		hookPath:                    DEFAULT_HOOK_PATH,
+		getGPUs:                     amdgpu.GetAMDGPUs,
+		getGPU:                      amdgpu.GetAMDGPU,
+		getUniqueIdToDeviceIndexMap: amdgpu.GetUniqueIdToDeviceIndexMap,
+		reserveGPUs:                 gpuTracker.ReserveGPUs,
+	}
+
+	return oci, nil
+}
+
+// LoadSpecFromHookState reads OCI spec from hook state provided on stdin
+func (oci *oci_t) LoadSpecFromHookState(hookState []byte) error {
+	var state struct {
+		Pid        int    `json:"pid,omitempty"`
+		Bundle     string `json:"bundle"`
+		BundlePath string `json:"bundlePath"`
+		ID         string `json:"id"`
+	}
+
+	if err := json.Unmarshal(hookState, &state); err != nil {
+		return fmt.Errorf("failed to decode hook state: %v", err)
+	}
+
+	oci.containerId = state.ID
+	bundlePath := state.Bundle
+	if bundlePath == "" {
+		bundlePath = state.BundlePath
+	}
+	oci.origSpecPath = bundlePath
+	oci.updatedSpecPath = bundlePath
+
+	return oci.getSpec()
+}
+
 // HasHelpOption returns true if the arguments passed include the help option
 func (oci *oci_t) HasHelpOption() bool {
 	return oci.hasHelpOption
@@ -418,4 +466,14 @@ func (oci *oci_t) PrintSpec() error {
 	fmt.Printf("\n")
 
 	return nil
+}
+
+// GetSpec returns the loaded OCI spec
+func (oci *oci_t) GetSpec() *specs.Spec {
+	return oci.spec
+}
+
+// GetContainerId returns the container ID
+func (oci *oci_t) GetContainerId() string {
+	return oci.containerId
 }
