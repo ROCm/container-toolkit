@@ -18,12 +18,12 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/ROCm/container-toolkit/cmd/amd-ctk/cdi"
-	"github.com/ROCm/container-toolkit/cmd/amd-ctk/gpu-tracker"
+	gpuTracker "github.com/ROCm/container-toolkit/cmd/amd-ctk/gpu-tracker"
 	"github.com/ROCm/container-toolkit/cmd/amd-ctk/runtime"
-	"github.com/ROCm/container-toolkit/internal/logger"
 	"github.com/urfave/cli/v2"
 )
 
@@ -32,6 +32,10 @@ var (
 	BuildDate = "unknown"
 	GitCommit = "none"
 )
+
+type options struct {
+	debug bool
+}
 
 func showVersion() *cli.Command {
 	showVersionCmd := cli.Command{
@@ -48,7 +52,7 @@ func showVersion() *cli.Command {
 }
 
 func main() {
-	logger.Init(false)
+	opts := options{}
 
 	// Create the top-level CLI tree
 	amdCtkCli := &cli.App{
@@ -56,6 +60,25 @@ func main() {
 		EnableBashCompletion: true,
 		Usage:                "Tool to configure AMD Container Toolkit",
 		UsageText:            "amd-ctk [command] [options]",
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:        "debug",
+				Aliases:     []string{"d"},
+				Usage:       "Enable debug output",
+				Destination: &opts.debug,
+			},
+		},
+		Before: func(c *cli.Context) error {
+			level := slog.LevelInfo
+			if opts.debug {
+				level = slog.LevelDebug
+			}
+			handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+				Level: level,
+			})
+			slog.SetDefault(slog.New(handler))
+			return nil
+		},
 	}
 
 	// Add subcommands

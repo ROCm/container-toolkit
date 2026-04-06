@@ -1,14 +1,14 @@
 /**
 # Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0 (the \"License\");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an \"AS IS\" BASIS,
+# distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
@@ -20,6 +20,7 @@ import (
 	"bufio"
 	"fmt"
 	"io/ioutil"
+	"log/slog"
 	"math"
 	"os"
 	"os/exec"
@@ -28,8 +29,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-
-	"github.com/ROCm/container-toolkit/internal/logger"
 )
 
 type DeviceInfo struct {
@@ -215,6 +214,7 @@ func GetAMDGPUWithFS(fs FileSystem, dev string) (AMDGPU, error) {
 			ret, err = strconv.ParseInt(out, base, width)
 		}
 		if err != nil {
+			slog.Debug("Failed to parse device stat", "device", dev, "value", out, "base", base, "error", err)
 			return 0
 		}
 
@@ -253,15 +253,15 @@ func GetDevIdsFromTopology(fs FileSystem, topoRootParam ...string) map[int]strin
 	renderDevIds := make(map[int]string)
 	nodeFiles, err := fs.Glob(topoRoot + "/topology/nodes/*/properties")
 	if err != nil {
-		logger.Log.Printf("glob error: %s", err)
+		slog.Warn("Failed to glob topology nodes", "error", err)
 		return renderDevIds
 	}
 
 	for _, nodeFile := range nodeFiles {
-		logger.Log.Printf("Parsing %s", nodeFile)
+		slog.Debug("Parsing topology node file", "file", nodeFile)
 		renderMinor, err := ParseTopologyProperties(fs, nodeFile, renderMinorRe)
 		if err != nil {
-			logger.Log.Printf("Error parsing render minor: %v", err)
+			slog.Debug("Error parsing render minor", "file", nodeFile, "error", err)
 			continue
 		}
 
@@ -271,7 +271,7 @@ func GetDevIdsFromTopology(fs FileSystem, topoRootParam ...string) map[int]strin
 
 		devID, err := ParseTopologyPropertiesString(fs, nodeFile, topoUniqueIdRe)
 		if err != nil {
-			logger.Log.Printf("Error parsing unique_id: %v", err)
+			slog.Debug("Error parsing unique_id", "file", nodeFile, "error", err)
 			continue
 		}
 
