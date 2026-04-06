@@ -286,7 +286,7 @@ func GetDevIdsFromTopology(fs FileSystem, topoRootParam ...string) map[int]strin
 func ParseTopologyProperties(fs FileSystem, path string, re *regexp.Regexp) (int64, error) {
 	content, err := fs.ReadFile(path)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("reading topology properties from %s: %w", path, err)
 	}
 
 	scanner := bufio.NewScanner(strings.NewReader(string(content)))
@@ -305,7 +305,7 @@ func ParseTopologyProperties(fs FileSystem, path string, re *regexp.Regexp) (int
 func ParseTopologyPropertiesString(fs FileSystem, path string, re *regexp.Regexp) (string, error) {
 	content, err := fs.ReadFile(path)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("reading topology properties from %s: %w", path, err)
 	}
 
 	scanner := bufio.NewScanner(strings.NewReader(string(content)))
@@ -328,7 +328,7 @@ func GetUniqueIdToDeviceIndexMap() (map[string][]int, error) {
 func GetUniqueIdToDeviceIndexMapWithFS(fs FileSystem) (map[string][]int, error) {
 	devs, err := GetAMDGPUsWithFS(fs)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting AMD GPUs: %w", err)
 	}
 
 	renderDevIds := GetDevIdsFromTopology(fs)
