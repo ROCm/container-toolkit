@@ -94,6 +94,15 @@ func performAction(c *cli.Context) error {
 		return fmt.Errorf("Failed to create GPU tracker, Error: %v", err)
 	}
 
+	enabled, err := gpuTracker.IsEnabled()
+	if err != nil {
+		return fmt.Errorf("Failed to check GPU Tracker status, Error: %v", err)
+	}
+	if !enabled {
+		fmt.Println("GPU Tracker is disabled")
+		return nil
+	}
+
 	switch operation {
 	case "exclusive":
 		gpuTracker.MakeGPUsExclusive(gpuIDs)

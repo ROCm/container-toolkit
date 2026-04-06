@@ -56,10 +56,20 @@ func performAction(c *cli.Context) error {
 		return fmt.Errorf("Failed to create GPU tracker, Error: %v", err)
 	}
 
-	err = gpuTracker.Enable()
+	enabled, err := gpuTracker.IsEnabled()
 	if err != nil {
-		return fmt.Errorf("Failed to Reset GPU Tracker, Error: %v", err)
+		return fmt.Errorf("Failed to check GPU Tracker status, Error: %v", err)
+	}
+	if enabled {
+		fmt.Println("GPU Tracker is already enabled")
+		return nil
 	}
 
+	err = gpuTracker.Enable()
+	if err != nil {
+		return fmt.Errorf("Failed to enable GPU Tracker, Error: %v", err)
+	}
+
+	fmt.Println("GPU Tracker has been enabled")
 	return nil
 }
