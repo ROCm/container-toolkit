@@ -267,14 +267,18 @@ func (oci *oci_t) addGPUDevices() error {
 	}
 
 	for _, idx := range oci.amdDevices {
-		addGpus(devs[idx].DrmDevices)
+		if err := addGpus(devs[idx].DrmDevices); err != nil {
+			return err
+		}
 	}
 
 	kfd, err := oci.getGPU("/dev/kfd")
 	if err != nil {
 		return err
 	}
-	oci.addGPUDevice(kfd)
+	if err := oci.addGPUDevice(kfd); err != nil {
+		return err
+	}
 
 	if oci.spec.Hooks == nil {
 		oci.spec.Hooks = &specs.Hooks{}
