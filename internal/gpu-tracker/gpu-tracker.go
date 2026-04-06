@@ -590,7 +590,7 @@ func (gpuTracker *gpu_tracker_t) ShowStatus() ([]GPUStatusEntry, error) {
 		return nil, fmt.Errorf("validate GPU info: %w", err)
 	}
 	if !result {
-		return nil, fmt.Errorf("validate GPU info: GPU info mismatch")
+		return nil, fmt.Errorf("GPU info mismatch: please reset GPU Tracker")
 	}
 
 	var entries []GPUStatusEntry
@@ -638,7 +638,7 @@ func (gpuTracker *gpu_tracker_t) MakeGPUsExclusive(gpus string) (*AccessibilityR
 		return nil, fmt.Errorf("validate GPU info: %w", err)
 	}
 	if !result {
-		return nil, fmt.Errorf("validate GPU info: GPU info mismatch")
+		return nil, fmt.Errorf("GPU info mismatch: please reset GPU Tracker")
 	}
 
 	validGPUs, invalidGPUs, invalidGPUsRange, err := gpuTracker.parseGPUsList(gpus)
@@ -700,7 +700,7 @@ func (gpuTracker *gpu_tracker_t) MakeGPUsShared(gpus string) (*AccessibilityResu
 		return nil, fmt.Errorf("validate GPU info: %w", err)
 	}
 	if !result {
-		return nil, fmt.Errorf("validate GPU info: GPU info mismatch")
+		return nil, fmt.Errorf("GPU info mismatch: please reset GPU Tracker")
 	}
 
 	validGPUs, invalidGPUs, invalidGPUsRange, err := gpuTracker.parseGPUsList(gpus)
