@@ -53,17 +53,17 @@ func validateGenOptions(c *cli.Context) error {
 func performAction(c *cli.Context) error {
 	gpuTracker, err := gpuTracker.New()
 	if err != nil {
-		return fmt.Errorf("Failed to create GPU tracker, Error: %v", err)
+		return fmt.Errorf("creating GPU tracker: %w", err)
 	}
 
 	wasEnabled, err := gpuTracker.IsEnabled()
 	if err != nil {
-		return fmt.Errorf("Failed to check GPU Tracker status, Error: %v", err)
+		return fmt.Errorf("checking GPU Tracker status: %w", err)
 	}
 
 	err = gpuTracker.Reset()
 	if err != nil {
-		return fmt.Errorf("Failed to Reset GPU Tracker, Error: %v", err)
+		return fmt.Errorf("resetting GPU Tracker: %w", err)
 	}
 
 	fmt.Println("GPU Tracker has been reset")

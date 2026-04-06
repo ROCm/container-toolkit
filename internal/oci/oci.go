@@ -1,14 +1,14 @@
 /**
 # Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0 (the \"License\");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an \"AS IS\" BASIS,
+# distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
@@ -188,8 +188,7 @@ func (oci *oci_t) getSpec() error {
 
 	file, err := os.Open(f)
 	if err != nil {
-		logger.Log.Printf("Error opening file, Error: %v", err)
-		return err
+		return fmt.Errorf("opening OCI spec %s: %w", f, err)
 	}
 
 	defer file.Close()
@@ -197,8 +196,7 @@ func (oci *oci_t) getSpec() error {
 	var spec specs.Spec
 	decoder := json.NewDecoder(file)
 	if err := decoder.Decode(&spec); err != nil {
-		logger.Log.Printf("Failed to decode JSON, Error: %v", err)
-		return err
+		return fmt.Errorf("decoding OCI spec %s: %w", f, err)
 	}
 
 	oci.spec = &spec
@@ -209,8 +207,7 @@ func (oci *oci_t) getSpec() error {
 // addHook adds the AMD runtime OCI hook into the spec
 func (oci *oci_t) addHook() error {
 	if oci.spec == nil {
-		logger.Log.Printf("Failed to get spec")
-		return fmt.Errorf("Failed to get spec")
+		return fmt.Errorf("OCI spec is nil")
 	}
 
 	if oci.spec.Hooks == nil {
@@ -309,8 +306,7 @@ func (oci *oci_t) addGPUDevice(gpu amdgpu.AMDGPU) error {
 	}
 
 	if oci.spec == nil {
-		logger.Log.Printf("Failed to get spec")
-		return fmt.Errorf("Failed to get spec")
+		return fmt.Errorf("OCI spec is nil")
 	}
 
 	if oci.spec.Linux == nil {
@@ -378,15 +374,14 @@ func (oci *oci_t) WriteSpec() error {
 
 	file, err := os.Create(f)
 	if err != nil {
-		logger.Log.Printf("Error creating file, Error: %v", err)
-		return err
+		return fmt.Errorf("creating OCI spec file %s: %w", f, err)
 	}
 
 	defer file.Close()
 
 	encoder := json.NewEncoder(file)
 	if err := encoder.Encode(oci.spec); err != nil {
-		return err
+		return fmt.Errorf("encoding OCI spec to %s: %w", f, err)
 	}
 
 	logger.Log.Printf("Wrote spec to %v", f)
@@ -409,8 +404,7 @@ func (oci *oci_t) UpdateSpec(op SpecUpdateOp) error {
 func (oci *oci_t) PrintSpec() error {
 	prettyJSON, err := json.MarshalIndent(oci.spec, "", "  ")
 	if err != nil {
-		logger.Log.Printf("Failed to marshal JSON, Error: %v", err)
-		return err
+		return fmt.Errorf("marshaling OCI spec to JSON: %w", err)
 	}
 
 	fmt.Printf(string(prettyJSON))
