@@ -17,15 +17,15 @@
 package gpuTracker
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
-	"os/signal"
 	"reflect"
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/ROCm/container-toolkit/internal/amdgpu"
@@ -149,43 +149,26 @@ const (
 	gpuTrackerLockFile = "/var/log/gpu-tracker.lock"
 )
 
-func setupSignalHandler(lock *flock.Flock) {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+const defaultLockTimeout = 10 * time.Second
 
-	go func() {
-		sig := <-c
-		logger.Log.Printf("Received signal: %v. Cleaning up...", sig)
-		fmt.Printf("Received signal: %v. Cleaning up...\n", sig)
-		if lock != nil {
-			_ = lock.Unlock()
-		}
-		os.Exit(1)
-	}()
-}
-
-func acquireLock(lockFile string) (*flock.Flock, error) {
+func acquireLock(lockFile string, timeout time.Duration) (*flock.Flock, error) {
 	lock := flock.New(lockFile)
 
-	timeout := time.After(10 * time.Second)
-	tick := time.Tick(100 * time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
 
-	for {
-		select {
-		case <-timeout:
-			logger.Log.Printf("Acquiring lock timeout exceeded")
-			return nil, fmt.Errorf("Acquiring lock timeout exceeded")
-		case <-tick:
-			locked, err := lock.TryLock()
-			if err != nil {
-				logger.Log.Printf("Failed to acquire lock, Error: %v", err)
-				return nil, fmt.Errorf("Failed to acquire lock, Error: %v", err)
-			}
-			if locked {
-				return lock, nil
-			}
+	locked, err := lock.TryLockContext(ctx, 100*time.Millisecond)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			return nil, fmt.Errorf("acquiring lock: timeout exceeded")
 		}
+		return nil, fmt.Errorf("acquiring lock: %w", err)
 	}
+	if !locked {
+		return nil, fmt.Errorf("acquiring lock: timeout exceeded")
+	}
+
+	return lock, nil
 }
 
 func parseGPUsList(gpus string) ([]int, []string, []string, error) {
@@ -402,25 +385,12 @@ func validateGPUsInfo(savedGPUsInfo map[int]amdgpu.DeviceInfo) (bool, error) {
 	return true, nil
 }
 
-func (gpuTracker *gpu_tracker_t) Init() (err error) {
-	lock, err := acquireLock(gpuTracker.gpuTrackerLockFile)
+func (gpuTracker *gpu_tracker_t) Init() error {
+	lock, err := acquireLock(gpuTracker.gpuTrackerLockFile, defaultLockTimeout)
 	if err != nil {
-		return fmt.Errorf("Init lock failed: %v", err)
+		return err
 	}
-
-	defer func() {
-		if lock != nil {
-			_ = lock.Unlock()
-		}
-	}()
-	setupSignalHandler(lock)
-
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Log.Printf("Recovered in Init: %v", r)
-			err = fmt.Errorf("Panic in Init: %v", r)
-		}
-	}()
+	defer lock.Unlock()
 
 	err = gpuTracker.initializeGPUTracker()
 	if err != nil {
@@ -432,25 +402,12 @@ func (gpuTracker *gpu_tracker_t) Init() (err error) {
 	return nil
 }
 
-func (gpuTracker *gpu_tracker_t) Enable() (err error) {
-	lock, err := acquireLock(gpuTracker.gpuTrackerLockFile)
+func (gpuTracker *gpu_tracker_t) Enable() error {
+	lock, err := acquireLock(gpuTracker.gpuTrackerLockFile, defaultLockTimeout)
 	if err != nil {
-		return fmt.Errorf("Enable lock failed: %v", err)
+		return err
 	}
-
-	defer func() {
-		if lock != nil {
-			_ = lock.Unlock()
-		}
-	}()
-	setupSignalHandler(lock)
-
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Log.Printf("Recovered in Enable: %v", r)
-			err = fmt.Errorf("Panic in Enable: %v", r)
-		}
-	}()
+	defer lock.Unlock()
 
 	gpuTrackerInitialized, err := gpuTracker.isGPUTrackerInitialized()
 	if err != nil {
@@ -507,25 +464,12 @@ func (gpuTracker *gpu_tracker_t) Enable() (err error) {
 	return nil
 }
 
-func (gpuTracker *gpu_tracker_t) Disable() (err error) {
-	lock, err := acquireLock(gpuTracker.gpuTrackerLockFile)
+func (gpuTracker *gpu_tracker_t) Disable() error {
+	lock, err := acquireLock(gpuTracker.gpuTrackerLockFile, defaultLockTimeout)
 	if err != nil {
-		return fmt.Errorf("Disable lock failed: %v", err)
+		return err
 	}
-
-	defer func() {
-		if lock != nil {
-			_ = lock.Unlock()
-		}
-	}()
-	setupSignalHandler(lock)
-
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Log.Printf("Recovered in Disable: %v", r)
-			err = fmt.Errorf("Panic in Disable: %v", r)
-		}
-	}()
+	defer lock.Unlock()
 
 	gpuTrackerInitialized, err := gpuTracker.isGPUTrackerInitialized()
 	if err != nil {
@@ -564,25 +508,12 @@ func (gpuTracker *gpu_tracker_t) Disable() (err error) {
 	return nil
 }
 
-func (gpuTracker *gpu_tracker_t) Reset() (err error) {
-	lock, err := acquireLock(gpuTracker.gpuTrackerLockFile)
+func (gpuTracker *gpu_tracker_t) Reset() error {
+	lock, err := acquireLock(gpuTracker.gpuTrackerLockFile, defaultLockTimeout)
 	if err != nil {
-		return fmt.Errorf("Reset lock failed: %v", err)
+		return err
 	}
-
-	defer func() {
-		if lock != nil {
-			_ = lock.Unlock()
-		}
-	}()
-	setupSignalHandler(lock)
-
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Log.Printf("Recovered in Reset: %v", r)
-			err = fmt.Errorf("Panic in Reset: %v", r)
-		}
-	}()
+	defer lock.Unlock()
 
 	gpuTrackerInitialized, err := gpuTracker.isGPUTrackerInitialized()
 	if err != nil {
@@ -643,25 +574,12 @@ func (gpuTracker *gpu_tracker_t) Reset() (err error) {
 	return nil
 }
 
-func (gpuTracker *gpu_tracker_t) ShowStatus() (err error) {
-	lock, err := acquireLock(gpuTracker.gpuTrackerLockFile)
+func (gpuTracker *gpu_tracker_t) ShowStatus() error {
+	lock, err := acquireLock(gpuTracker.gpuTrackerLockFile, defaultLockTimeout)
 	if err != nil {
-		return fmt.Errorf("ShowStatus lock failed: %v", err)
+		return err
 	}
-
-	defer func() {
-		if lock != nil {
-			_ = lock.Unlock()
-		}
-	}()
-	setupSignalHandler(lock)
-
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Log.Printf("Recovered in ShowStatus: %v", r)
-			err = fmt.Errorf("Panic in ShowStatus: %v", r)
-		}
-	}()
+	defer lock.Unlock()
 
 	gpuTrackerInitialized, err := gpuTracker.isGPUTrackerInitialized()
 	if err != nil {
@@ -726,25 +644,12 @@ func (gpuTracker *gpu_tracker_t) ShowStatus() (err error) {
 	return nil
 }
 
-func (gpuTracker *gpu_tracker_t) MakeGPUsExclusive(gpus string) (err error) {
-	lock, err := acquireLock(gpuTracker.gpuTrackerLockFile)
+func (gpuTracker *gpu_tracker_t) MakeGPUsExclusive(gpus string) error {
+	lock, err := acquireLock(gpuTracker.gpuTrackerLockFile, defaultLockTimeout)
 	if err != nil {
-		return fmt.Errorf("MakeGPUsExclusive lock failed: %v", err)
+		return err
 	}
-
-	defer func() {
-		if lock != nil {
-			_ = lock.Unlock()
-		}
-	}()
-	setupSignalHandler(lock)
-
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Log.Printf("Recovered in MakeGPUsExclusive: %v", r)
-			err = fmt.Errorf("Panic in MakeGPUsExclusive: %v", r)
-		}
-	}()
+	defer lock.Unlock()
 
 	gpuTrackerInitialized, err := gpuTracker.isGPUTrackerInitialized()
 	if err != nil {
@@ -829,25 +734,12 @@ func (gpuTracker *gpu_tracker_t) MakeGPUsExclusive(gpus string) (err error) {
 	return nil
 }
 
-func (gpuTracker *gpu_tracker_t) MakeGPUsShared(gpus string) (err error) {
-	lock, err := acquireLock(gpuTracker.gpuTrackerLockFile)
+func (gpuTracker *gpu_tracker_t) MakeGPUsShared(gpus string) error {
+	lock, err := acquireLock(gpuTracker.gpuTrackerLockFile, defaultLockTimeout)
 	if err != nil {
-		return fmt.Errorf("MakeGPUsShared lock failed: %v", err)
+		return err
 	}
-
-	defer func() {
-		if lock != nil {
-			_ = lock.Unlock()
-		}
-	}()
-	setupSignalHandler(lock)
-
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Log.Printf("Recovered in MakeGPUsShared: %v", r)
-			err = fmt.Errorf("Panic in MakeGPUsShared: %v", r)
-		}
-	}()
+	defer lock.Unlock()
 
 	gpuTrackerInitialized, err := gpuTracker.isGPUTrackerInitialized()
 	if err != nil {
@@ -920,26 +812,12 @@ func (gpuTracker *gpu_tracker_t) MakeGPUsShared(gpus string) (err error) {
 	return nil
 }
 
-func (gpuTracker *gpu_tracker_t) ReserveGPUs(gpus string, containerId string) (allocatedGPUs []int, err error) {
-	lock, err := acquireLock(gpuTracker.gpuTrackerLockFile)
+func (gpuTracker *gpu_tracker_t) ReserveGPUs(gpus string, containerId string) ([]int, error) {
+	lock, err := acquireLock(gpuTracker.gpuTrackerLockFile, defaultLockTimeout)
 	if err != nil {
-		return nil, fmt.Errorf("ReserveGPUs lock failed: %v", err)
+		return nil, err
 	}
-
-	defer func() {
-		if lock != nil {
-			_ = lock.Unlock()
-		}
-	}()
-	setupSignalHandler(lock)
-
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Log.Printf("Recovered in ReserveGPUs: %v", r)
-			err = fmt.Errorf("Panic in ReserveGPUs: %v", r)
-			allocatedGPUs = []int{}
-		}
-	}()
+	defer lock.Unlock()
 
 	gpuTrackerInitialized, err := gpuTracker.isGPUTrackerInitialized()
 	if err != nil {
@@ -987,6 +865,7 @@ func (gpuTracker *gpu_tracker_t) ReserveGPUs(gpus string, containerId string) (a
 		return []int{}, fmt.Errorf("GPUs info is invalid. Please reset GPU Tracker.\n")
 	}
 
+	var allocatedGPUs []int
 	var unavailableGPUs []int
 	for _, gpuId := range validGPUs {
 		if gpusTrackerData.GPUsStatus[gpuId].Accessibility == SHARED_ACCESS ||
@@ -1024,7 +903,7 @@ func (gpuTracker *gpu_tracker_t) ReserveGPUs(gpus string, containerId string) (a
 	return allocatedGPUs, nil
 }
 
-func (gpuTracker *gpu_tracker_t) ReleaseGPUs(containerId string) (err error) {
+func (gpuTracker *gpu_tracker_t) ReleaseGPUs(containerId string) error {
 	removeContainerId := func(containerId string, containerIds []string) ([]string, bool) {
 		for idx, id := range containerIds {
 			if id == containerId {
@@ -1034,24 +913,12 @@ func (gpuTracker *gpu_tracker_t) ReleaseGPUs(containerId string) (err error) {
 		return containerIds, false
 	}
 
-	lock, err := acquireLock(gpuTracker.gpuTrackerLockFile)
+	lock, err := acquireLock(gpuTracker.gpuTrackerLockFile, defaultLockTimeout)
 	if err != nil {
-		return fmt.Errorf("ReleaseGPUs lock failed: %v", err)
+		return err
 	}
 
-	defer func() {
-		if lock != nil {
-			_ = lock.Unlock()
-		}
-	}()
-	setupSignalHandler(lock)
-
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Log.Printf("Recovered in ReleaseGPUs: %v", r)
-			err = fmt.Errorf("Panic in ReleaseGPUs: %v", r)
-		}
-	}()
+	defer lock.Unlock()
 
 	gpuTrackerInitialized, err := gpuTracker.isGPUTrackerInitialized()
 	if err != nil {
