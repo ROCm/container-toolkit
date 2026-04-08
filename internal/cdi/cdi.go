@@ -152,6 +152,19 @@ func (cdi *cdi_t) GenerateSpec() error {
 		Name: "all",
 		ContainerEdits: specs.ContainerEdits{
 			DeviceNodes: allDNs,
+			Hooks: []*specs.Hook{
+				{
+					HookName: "createContainer",
+					Path:     "/usr/local/bin/amd-ctk",
+					Args: []string{
+						"amd-ctk",
+						"hook",
+						"create-symlinks",
+						"--link", "/opt/rocm/lib::/opt/rocm-5.7.0/lib",
+						"--link", "/opt/rocm/lib::/opt/rocm-5.6.0/lib",
+					},
+				},
+			},
 		},
 	}
 	cdiDevs = append(cdiDevs, allCdiDev)
