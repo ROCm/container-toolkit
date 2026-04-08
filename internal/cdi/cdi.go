@@ -1,14 +1,14 @@
 /**
 # Copyright (c) Advanced Micro Devices, Inc. All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0 (the \"License\");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an \"AS IS\" BASIS,
+# distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
@@ -25,7 +25,6 @@ import (
 	"strconv"
 
 	"github.com/ROCm/container-toolkit/internal/amdgpu"
-	"github.com/ROCm/container-toolkit/internal/logger"
 	"tags.cncf.io/container-device-interface/specs-go"
 )
 
@@ -77,14 +76,14 @@ type cdi_t struct {
 func readSpecFromFile(f string) (*specs.Spec, error) {
 	file, err := os.Open(f)
 	if err != nil {
-		return &specs.Spec{}, err
+		return &specs.Spec{}, fmt.Errorf("opening CDI spec file %s: %w", f, err)
 	}
 	defer file.Close()
 
 	var spec specs.Spec
 	err = json.NewDecoder(file).Decode(&spec)
 	if err != nil {
-		return &specs.Spec{}, err
+		return &specs.Spec{}, fmt.Errorf("decoding CDI spec file %s: %w", f, err)
 	}
 
 	return &spec, nil
@@ -93,15 +92,13 @@ func readSpecFromFile(f string) (*specs.Spec, error) {
 func (cdi *cdi_t) GenerateSpec() error {
 	gpus, err := cdi.getGPUs()
 	if err != nil {
-		logger.Log.Printf("Failed to get GPUs, Err: %v", err)
-		return err
+		return fmt.Errorf("getting GPUs: %w", err)
 	}
 
 	getCDIDevNode := func(gpu string) (specs.DeviceNode, error) {
 		d, err := cdi.getGPU(gpu)
 		if err != nil {
-			logger.Log.Printf("Failed to get details of %v GPU, Err: %v", gpu, err)
-			return specs.DeviceNode{}, err
+			return specs.DeviceNode{}, fmt.Errorf("getting GPU details for %s: %w", gpu, err)
 		}
 
 		dn := specs.DeviceNode{
@@ -171,15 +168,13 @@ func (cdi *cdi_t) WriteSpec() error {
 	dir := filepath.Dir(cdi.specPath)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		if err := os.MkdirAll(dir, 0755); err != nil {
-			logger.Log.Printf("Failed to create %v, Err: %v", dir, err)
-			return err
+			return fmt.Errorf("creating directory %s: %w", dir, err)
 		}
 	}
 
 	file, err := os.Create(cdi.specPath)
 	if err != nil {
-		logger.Log.Printf("Error creating file, Error: %v", err)
-		return err
+		return fmt.Errorf("creating CDI spec file %s: %w", cdi.specPath, err)
 	}
 
 	defer file.Close()
@@ -196,7 +191,7 @@ func (cdi *cdi_t) WriteSpec() error {
 func (cdi *cdi_t) FormatSpec() (string, error) {
 	prettyJSON, err := json.MarshalIndent(cdi.spec, "", "  ")
 	if err != nil {
-		return "", fmt.Errorf("marshaling CDI spec to JSON: %v", err)
+		return "", fmt.Errorf("marshaling CDI spec to JSON: %w", err)
 	}
 
 	return string(prettyJSON), nil
