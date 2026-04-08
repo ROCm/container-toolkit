@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/ROCm/container-toolkit/internal/amdgpu"
-	"github.com/ROCm/container-toolkit/internal/gpu-tracker"
+	gpuTracker "github.com/ROCm/container-toolkit/internal/gpu-tracker"
 	"github.com/ROCm/container-toolkit/internal/logger"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -386,7 +386,6 @@ func (oci *oci_t) WriteSpec() error {
 
 	encoder := json.NewEncoder(file)
 	if err := encoder.Encode(oci.spec); err != nil {
-		fmt.Printf("Error encoding JSON: %s\n", err)
 		return err
 	}
 

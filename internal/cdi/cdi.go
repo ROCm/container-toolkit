@@ -52,8 +52,8 @@ type Interface interface {
 	// WriteSpec writes the generated spec to disk
 	WriteSpec() error
 
-	// PrintSpec prints the generated CDI spec on the console
-	PrintSpec() error
+	// FormatSpec returns the generated CDI spec as a formatted JSON string
+	FormatSpec() (string, error)
 
 	// ValidateSpec validated the existing CDI spec on the disk
 	ValidateSpec() (bool, error)
@@ -187,51 +187,33 @@ func (cdi *cdi_t) WriteSpec() error {
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(cdi.spec); err != nil {
-		fmt.Printf("Error encoding JSON: %s\n", err)
-		return err
+		return fmt.Errorf("encoding CDI spec to %s: %w", cdi.specPath, err)
 	}
 
-	logger.Log.Printf("Wrote spec to %v", cdi.specPath)
-	fmt.Printf("Generated CDI spec: %v\n", cdi.specPath)
 	return nil
 }
 
-func (cdi *cdi_t) PrintSpec() error {
+func (cdi *cdi_t) FormatSpec() (string, error) {
 	prettyJSON, err := json.MarshalIndent(cdi.spec, "", "  ")
 	if err != nil {
-		logger.Log.Printf("Failed to marshal JSON, Error: %v", err)
-		return err
+		return "", fmt.Errorf("marshaling CDI spec to JSON: %v", err)
 	}
 
-	fmt.Printf(string(prettyJSON))
-	fmt.Printf("\n")
-
-	return nil
+	return string(prettyJSON), nil
 }
 
 func (cdi *cdi_t) ValidateSpec() (bool, error) {
-	fmt.Printf("Validating CDI spec: %v\n", cdi.specPath)
-
 	savedCDISpec, err := readSpecFromFile(cdi.specPath)
 	if err != nil {
-		fmt.Printf("Failed to parse %v, Err: %v\n", cdi.specPath, err)
 		return false, err
 	}
 
 	err = cdi.GenerateSpec()
 	if err != nil {
-		fmt.Printf("Failed to generate current CDI spec, Err: %v", err)
 		return false, err
 	}
 
-	equal := reflect.DeepEqual(*savedCDISpec, cdi.spec)
-	if equal != true {
-		logger.Log.Printf("CDI spec: %v is invalid. Please regenerate CDI spec", cdi.specPath)
-		fmt.Printf("CDI spec is invalid\nPlease regenerate CDI spec\n")
-		return false, nil
-	}
-
-	return true, nil
+	return reflect.DeepEqual(*savedCDISpec, cdi.spec), nil
 }
 
 func New(sp string) (Interface, error) {

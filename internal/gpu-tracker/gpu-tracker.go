@@ -33,17 +33,57 @@ import (
 	"github.com/gofrs/flock"
 )
 
+// Accessibility represents the access mode of a GPU
+type Accessibility string
+
+const (
+	SHARED_ACCESS    Accessibility = "Shared"
+	EXCLUSIVE_ACCESS Accessibility = "Exclusive"
+)
+
+// accessibility is the internal int representation used for JSON serialization
+// of the tracker file, kept for backward compatibility with existing tracker files.
 type accessibility int
 
 const (
-	SHARED_ACCESS accessibility = iota
-	EXCLUSIVE_ACCESS
+	sharedAccessInt accessibility = iota
+	exclusiveAccessInt
 )
+
+func (a accessibility) toAccessibility() (Accessibility, error) {
+	switch a {
+	case sharedAccessInt:
+		return SHARED_ACCESS, nil
+	case exclusiveAccessInt:
+		return EXCLUSIVE_ACCESS, nil
+	default:
+		return "", fmt.Errorf("invalid accessibility value: %d", int(a))
+	}
+}
+
+// GPUStatusEntry represents the status of a single GPU
+type GPUStatusEntry struct {
+	GPUId         int
+	UUID          string
+	Accessibility Accessibility
+	ContainerIds  []string
+}
+
+// AccessibilityResult contains the outcome of a MakeGPUsExclusive or MakeGPUsShared operation
+type AccessibilityResult struct {
+	Changed       []int
+	NotChanged    []int
+	InvalidGPUs   []string
+	InvalidRanges []string
+}
 
 // Interface for GPU Tracker package
 type Interface interface {
 	// Initialize GPU Tracker
 	Init() error
+
+	// Check if GPU Tracker is enabled
+	IsEnabled() (bool, error)
 
 	// Enable GPU Tracker
 	Enable() error
@@ -55,15 +95,15 @@ type Interface interface {
 	Reset() error
 
 	// Show GPUs Status
-	ShowStatus() error
+	ShowStatus() ([]GPUStatusEntry, error)
 
 	// Make specified GPUs exclusive such that they can be used
 	// by at most one container at any instance
-	MakeGPUsExclusive(gpus string) error
+	MakeGPUsExclusive(gpus string) (*AccessibilityResult, error)
 
 	// Make specified GPUs shared such that they can be used
 	// by any number of containers at any instance
-	MakeGPUsShared(gpus string) error
+	MakeGPUsShared(gpus string) (*AccessibilityResult, error)
 
 	// Reserve GPUs for a container
 	ReserveGPUs(gpus string, containerId string) ([]int, error)
@@ -79,7 +119,7 @@ type gpu_status_t struct {
 	// Partition Type of the GPU
 	PartitionType string `json:"partitionType"`
 
-	// GPU accessibility
+	// GPU accessibility (int for backward-compatible JSON serialization)
 	Accessibility accessibility `json:"accessibility"`
 
 	// Container Ids of the containers to which the GPU is assigned
@@ -356,7 +396,7 @@ func initializeGPUTracker() error {
 		gpuTrackerData.GPUsStatus[gpuId] = gpu_status_t{
 			UUID:          gpuIdToUUIDMap[gpuId],
 			PartitionType: gpusInfo[gpuId].PartitionType,
-			Accessibility: SHARED_ACCESS,
+			Accessibility: sharedAccessInt,
 			ContainerIds:  []string{},
 		}
 	}
@@ -375,14 +415,28 @@ func validateGPUsInfo(savedGPUsInfo map[int]amdgpu.DeviceInfo) (bool, error) {
 		currentGPUsInfo[gpuId] = gpuInfo
 	}
 
-	equal := reflect.DeepEqual(savedGPUsInfo, currentGPUsInfo)
-	if equal != true {
-		logger.Log.Printf("GPUs info is invalid. Please reset GPU Tracker.")
-		fmt.Printf("GPUs info is invalid. Please reset GPU Tracker.\n")
-		return false, nil
+	if !reflect.DeepEqual(savedGPUsInfo, currentGPUsInfo) {
+		return false, fmt.Errorf("GPU info mismatch: please reset GPU Tracker")
 	}
 
 	return true, nil
+}
+
+func (gpuTracker *gpu_tracker_t) IsEnabled() (bool, error) {
+	initialized, err := gpuTracker.isGPUTrackerInitialized()
+	if err != nil {
+		return false, fmt.Errorf("check if GPU tracker initialized: %w", err)
+	}
+	if !initialized {
+		return false, nil
+	}
+
+	gpuTrackerData, err := gpuTracker.readGPUTrackerFile()
+	if err != nil {
+		return false, fmt.Errorf("read GPU tracker file: %w", err)
+	}
+
+	return gpuTrackerData.Enabled, nil
 }
 
 func (gpuTracker *gpu_tracker_t) Init() error {
@@ -411,57 +465,36 @@ func (gpuTracker *gpu_tracker_t) Enable() error {
 
 	gpuTrackerInitialized, err := gpuTracker.isGPUTrackerInitialized()
 	if err != nil {
-		logger.Log.Printf("Failed to check if GPU Tracker is initialized, Error:%v", err)
-		fmt.Printf("Failed to check if GPU Tracker is initialized, Error:%v\n", err)
 		return err
 	}
 
 	if !gpuTrackerInitialized {
-		err := gpuTracker.initializeGPUTracker()
-		if err != nil {
+		if err := gpuTracker.initializeGPUTracker(); err != nil {
 			return err
 		}
 	}
 
 	gpusTrackerData, err := gpuTracker.readGPUTrackerFile()
 	if err != nil {
-		logger.Log.Printf("Failed to show GPU Tracker status, Error: %v", err)
-		fmt.Printf("Failed to show GPU Tracker status, Error: %v\n", err)
 		return err
 	}
 
 	if gpusTrackerData.Enabled {
-		logger.Log.Printf("GPU Tracker is already enabled")
-		fmt.Printf("GPU Tracker is already enabled\n")
 		return nil
 	}
 
-	err = gpuTracker.initializeGPUTracker()
-	if err != nil {
-		logger.Log.Printf("Failed to enable GPU Tracker, Error: %v", err)
-		fmt.Printf("Failed to enable GPU Tracker, Error: %v\n", err)
+	if err := gpuTracker.initializeGPUTracker(); err != nil {
 		return err
 	}
 
 	gpusTrackerData, err = gpuTracker.readGPUTrackerFile()
 	if err != nil {
-		logger.Log.Printf("Failed to enable GPU Tracker, Error: %v", err)
-		fmt.Printf("Failed to enable GPU Tracker, Error: %v\n", err)
 		return err
 	}
 
 	gpusTrackerData.Enabled = true
 
-	err = gpuTracker.writeGPUTrackerFile(gpusTrackerData)
-	if err != nil {
-		logger.Log.Printf("Failed to enable GPU Tracker, Error: %v", err)
-		fmt.Printf("Failed to enable GPU Tracker, Error: %v\n", err)
-		return err
-	}
-
-	logger.Log.Printf("GPU Tracker has been enabled")
-	fmt.Printf("GPU Tracker has been enabled\n")
-	return nil
+	return gpuTracker.writeGPUTrackerFile(gpusTrackerData)
 }
 
 func (gpuTracker *gpu_tracker_t) Disable() error {
@@ -473,38 +506,26 @@ func (gpuTracker *gpu_tracker_t) Disable() error {
 
 	gpuTrackerInitialized, err := gpuTracker.isGPUTrackerInitialized()
 	if err != nil {
-		logger.Log.Printf("Failed to check if GPU Tracker is initialized, Error:%v", err)
-		fmt.Printf("Failed to check if GPU Tracker is initialized, Error:%v\n", err)
 		return err
 	}
 
 	if !gpuTrackerInitialized {
-		err := gpuTracker.initializeGPUTracker()
-		if err != nil {
-			logger.Log.Printf("Failed to disable GPU Tracker, Error: %v", err)
-			fmt.Printf("Failed to disable GPU Tracker, Error: %v\n", err)
+		if err := gpuTracker.initializeGPUTracker(); err != nil {
 			return err
 		}
 	} else {
 		gpusTrackerData, err := gpuTracker.readGPUTrackerFile()
 		if err != nil {
-			logger.Log.Printf("Failed to disable GPU Tracker, Error: %v", err)
-			fmt.Printf("Failed to disable GPU Tracker, Error: %v\n", err)
 			return err
 		}
 
 		gpusTrackerData.Enabled = false
 
-		err = gpuTracker.writeGPUTrackerFile(gpusTrackerData)
-		if err != nil {
-			logger.Log.Printf("Failed to disable GPU Tracker, Error: %v", err)
-			fmt.Printf("Failed to disable GPU Tracker, Error: %v\n", err)
+		if err := gpuTracker.writeGPUTrackerFile(gpusTrackerData); err != nil {
 			return err
 		}
 	}
 
-	logger.Log.Printf("GPU Tracker has been disabled")
-	fmt.Printf("GPU Tracker has been disabled\n")
 	return nil
 }
 
@@ -517,299 +538,198 @@ func (gpuTracker *gpu_tracker_t) Reset() error {
 
 	gpuTrackerInitialized, err := gpuTracker.isGPUTrackerInitialized()
 	if err != nil {
-		logger.Log.Printf("Failed to check if GPU Tracker is initialized, Error:%v", err)
-		fmt.Printf("Failed to check if GPU Tracker is initialized, Error:%v\n", err)
 		return err
 	}
 
 	gpuTrackerEnabled := false
 
 	if !gpuTrackerInitialized {
-		err := gpuTracker.initializeGPUTracker()
-		if err != nil {
-			logger.Log.Printf("Failed to reset GPU Tracker, Error: %v", err)
-			fmt.Printf("Failed to reset GPU Tracker, Error: %v\n", err)
+		if err := gpuTracker.initializeGPUTracker(); err != nil {
 			return err
 		}
 	} else {
 		gpusTrackerData, err := gpuTracker.readGPUTrackerFile()
 		if err != nil {
-			logger.Log.Printf("Failed to reset GPU Tracker, Error: %v", err)
-			fmt.Printf("Failed to reset GPU Tracker, Error: %v\n", err)
 			return err
 		}
 
 		gpuTrackerEnabled = gpusTrackerData.Enabled
 
-		err = gpuTracker.initializeGPUTracker()
-		if err != nil {
-			logger.Log.Printf("Failed to reset GPU Tracker, Error: %v", err)
-			fmt.Printf("Failed to reset GPU Tracker, Error: %v\n", err)
+		if err := gpuTracker.initializeGPUTracker(); err != nil {
 			return err
 		}
 
 		gpusTrackerData, err = gpuTracker.readGPUTrackerFile()
 		if err != nil {
-			logger.Log.Printf("Failed to reset GPU Tracker, Error: %v", err)
-			fmt.Printf("Failed to reset GPU Tracker, Error: %v\n", err)
 			return err
 		}
 
-		if gpuTrackerEnabled == true {
+		if gpuTrackerEnabled {
 			gpusTrackerData.Enabled = true
-			err = gpuTracker.writeGPUTrackerFile(gpusTrackerData)
-			if err != nil {
-				logger.Log.Printf("Failed to reset GPU Tracker, Error: %v", err)
-				fmt.Printf("Failed to reset GPU Tracker, Error: %v\n", err)
+			if err := gpuTracker.writeGPUTrackerFile(gpusTrackerData); err != nil {
 				return err
 			}
 		}
 	}
 
-	logger.Log.Printf("GPU Tracker has been reset")
-	fmt.Printf("GPU Tracker has been reset\n")
-	if gpuTrackerEnabled {
-		fmt.Printf("Since GPU Tracker was enabled, it is recommended to stop and restart running containers to get the most accurate GPU Tracker status\n")
-	}
 	return nil
 }
 
-func (gpuTracker *gpu_tracker_t) ShowStatus() error {
+func (gpuTracker *gpu_tracker_t) ShowStatus() ([]GPUStatusEntry, error) {
 	lock, err := acquireLock(gpuTracker.gpuTrackerLockFile, defaultLockTimeout)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer lock.Unlock()
 
 	gpuTrackerInitialized, err := gpuTracker.isGPUTrackerInitialized()
 	if err != nil {
-		logger.Log.Printf("Failed to check if GPU Tracker is initialized, Error:%v", err)
-		fmt.Printf("Failed to check if GPU Tracker is initialized, Error:%v\n", err)
-		return err
+		return nil, err
 	}
 
 	if !gpuTrackerInitialized {
-		err := gpuTracker.initializeGPUTracker()
-		if err != nil {
-			return err
+		if err := gpuTracker.initializeGPUTracker(); err != nil {
+			return nil, err
 		}
 	}
 
 	gpusTrackerData, err := gpuTracker.readGPUTrackerFile()
 	if err != nil {
-		logger.Log.Printf("Failed to show GPU Tracker status, Error: %v", err)
-		fmt.Printf("Failed to show GPU Tracker status, Error: %v\n", err)
-		return err
-	}
-
-	if gpusTrackerData.Enabled == false {
-		logger.Log.Printf("GPU Tracker is disabled")
-		fmt.Printf("GPU Tracker is disabled\n")
-		return nil
+		return nil, err
 	}
 
 	result, err := gpuTracker.validateGPUsInfo(gpusTrackerData.GPUsInfo)
 	if err != nil || result != true {
-		return err
+		return nil, err
 	}
 
-	fmt.Println(strings.Repeat("-", 120))
-	fmt.Printf("%-10s%-25s%-20s%-65s\n", "GPU Id", "UUID", "Accessibility", "Container Ids")
-	fmt.Println(strings.Repeat("-", 120))
+	var entries []GPUStatusEntry
 	for gpuId := 0; gpuId < len(gpusTrackerData.GPUsStatus); gpuId++ {
-		var accessibility string
-		switch gpusTrackerData.GPUsStatus[gpuId].Accessibility {
-		case SHARED_ACCESS:
-			accessibility = "Shared"
-		case EXCLUSIVE_ACCESS:
-			accessibility = "Exclusive"
-		default:
-			fmt.Printf("Invalid accessibility value %v\n", gpusTrackerData.GPUsStatus[gpuId].Accessibility)
-			break
+		acc, err := gpusTrackerData.GPUsStatus[gpuId].Accessibility.toAccessibility()
+		if err != nil {
+			return nil, fmt.Errorf("GPU %d: %w", gpuId, err)
 		}
-
-		if len(gpusTrackerData.GPUsStatus[gpuId].ContainerIds) > 0 {
-			for idx, id := range gpusTrackerData.GPUsStatus[gpuId].ContainerIds {
-				if idx == 0 {
-					fmt.Printf("%-10v%-25v%-20v%-65v\n", gpuId, gpusTrackerData.GPUsStatus[gpuId].UUID, accessibility, id)
-				} else {
-					fmt.Printf("%-10v%-25v%-20v%-65v\n", "", "", "", id)
-				}
-			}
-		} else {
-			fmt.Printf("%-10v%-25v%-20v%-65v\n", gpuId, gpusTrackerData.GPUsStatus[gpuId].UUID, accessibility, "-")
-		}
+		entries = append(entries, GPUStatusEntry{
+			GPUId:         gpuId,
+			UUID:          gpusTrackerData.GPUsStatus[gpuId].UUID,
+			Accessibility: acc,
+			ContainerIds:  gpusTrackerData.GPUsStatus[gpuId].ContainerIds,
+		})
 	}
 
-	return nil
+	return entries, nil
 }
 
-func (gpuTracker *gpu_tracker_t) MakeGPUsExclusive(gpus string) error {
+func (gpuTracker *gpu_tracker_t) MakeGPUsExclusive(gpus string) (*AccessibilityResult, error) {
 	lock, err := acquireLock(gpuTracker.gpuTrackerLockFile, defaultLockTimeout)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer lock.Unlock()
 
 	gpuTrackerInitialized, err := gpuTracker.isGPUTrackerInitialized()
 	if err != nil {
-		logger.Log.Printf("Failed to check if GPU Tracker is initialized, Error:%v", err)
-		fmt.Printf("Failed to check if GPU Tracker is initialized, Error:%v\n", err)
-		return err
+		return nil, err
 	}
 
 	if !gpuTrackerInitialized {
-		err = gpuTracker.initializeGPUTracker()
-		if err != nil {
-			return err
+		if err := gpuTracker.initializeGPUTracker(); err != nil {
+			return nil, err
 		}
 	}
 
 	gpusTrackerData, err := gpuTracker.readGPUTrackerFile()
 	if err != nil {
-		logger.Log.Printf("Failed to make GPUs %v exclusive, Error: %v", gpus, err)
-		fmt.Printf("Failed to make GPUs %v exclusive, Error: %v\n", gpus, err)
-		return err
-	}
-
-	if gpusTrackerData.Enabled == false {
-		logger.Log.Printf("GPU Tracker is disabled")
-		fmt.Printf("GPU Tracker is disabled\n")
-		return nil
+		return nil, err
 	}
 
 	result, err := gpuTracker.validateGPUsInfo(gpusTrackerData.GPUsInfo)
 	if err != nil || result != true {
-		return err
+		return nil, err
 	}
 
 	validGPUs, invalidGPUs, invalidGPUsRange, err := gpuTracker.parseGPUsList(gpus)
 	if err != nil {
-		logger.Log.Printf("Failed to parse GPUs list %v, Error: %v", gpus, err)
-		fmt.Printf("Failed to parse GPUs list %v, Error: %v\n", gpus, err)
-		return err
+		return nil, err
 	}
 
-	gpusMadeExclusive := []int{}
-	gpusNotMadeExclusive := []int{}
+	res := &AccessibilityResult{
+		InvalidGPUs:   invalidGPUs,
+		InvalidRanges: invalidGPUsRange,
+	}
 
 	for _, gpuId := range validGPUs {
 		if len(gpusTrackerData.GPUsStatus[gpuId].ContainerIds) < 2 {
 			gpusTrackerData.GPUsStatus[gpuId] = gpu_status_t{
 				UUID:          gpusTrackerData.GPUsStatus[gpuId].UUID,
 				PartitionType: gpusTrackerData.GPUsStatus[gpuId].PartitionType,
-				Accessibility: EXCLUSIVE_ACCESS,
+				Accessibility: exclusiveAccessInt,
 				ContainerIds:  gpusTrackerData.GPUsStatus[gpuId].ContainerIds,
 			}
-			gpusMadeExclusive = append(gpusMadeExclusive, gpuId)
+			res.Changed = append(res.Changed, gpuId)
 		} else {
-			gpusNotMadeExclusive = append(gpusNotMadeExclusive, gpuId)
+			res.NotChanged = append(res.NotChanged, gpuId)
 		}
 	}
 
-	err = gpuTracker.writeGPUTrackerFile(gpusTrackerData)
-	if err != nil {
-		logger.Log.Printf("Failed to make GPUs exclusive, Error: %v", err)
-		fmt.Printf("Failed to make GPUs exclusive, Error: %v\n", err)
-		return err
+	if err := gpuTracker.writeGPUTrackerFile(gpusTrackerData); err != nil {
+		return nil, err
 	}
 
-	if len(gpusMadeExclusive) > 0 {
-		logger.Log.Printf("GPUs %v have been made exclusive", gpusMadeExclusive)
-		fmt.Printf("GPUs %v have been made exclusive\n", gpusMadeExclusive)
-	}
-	if len(gpusNotMadeExclusive) > 0 {
-		logger.Log.Printf("GPUs %v have not been made exclusive because more than one container is currently using it", gpusNotMadeExclusive)
-		fmt.Printf("GPUs %v have not been made exclusive because more than one container is currently using it\n", gpusNotMadeExclusive)
-	}
-	if len(invalidGPUsRange) > 0 {
-		logger.Log.Printf("Ignoring %v GPUs Ranges as they are invalid", invalidGPUsRange)
-		fmt.Printf("Ignoring %v GPUs Ranges as they are invalid\n", invalidGPUsRange)
-	}
-	if len(invalidGPUs) > 0 {
-		logger.Log.Printf("Ignoring %v GPUs as they are invalid", invalidGPUs)
-		fmt.Printf("Ignoring %v GPUs as they are invalid\n", invalidGPUs)
-	}
-
-	return nil
+	return res, nil
 }
 
-func (gpuTracker *gpu_tracker_t) MakeGPUsShared(gpus string) error {
+func (gpuTracker *gpu_tracker_t) MakeGPUsShared(gpus string) (*AccessibilityResult, error) {
 	lock, err := acquireLock(gpuTracker.gpuTrackerLockFile, defaultLockTimeout)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer lock.Unlock()
 
 	gpuTrackerInitialized, err := gpuTracker.isGPUTrackerInitialized()
 	if err != nil {
-		logger.Log.Printf("Failed to check if GPU Tracker is initialized, Error:%v", err)
-		fmt.Printf("Failed to check if GPU Tracker is initialized, Error:%v\n", err)
-		return err
+		return nil, err
 	}
 
 	if !gpuTrackerInitialized {
-		err = gpuTracker.initializeGPUTracker()
-		if err != nil {
-			return err
+		if err := gpuTracker.initializeGPUTracker(); err != nil {
+			return nil, err
 		}
 	}
 
 	gpusTrackerData, err := gpuTracker.readGPUTrackerFile()
 	if err != nil {
-		logger.Log.Printf("Failed to make GPUs %v shared, Error: %v", gpus, err)
-		fmt.Printf("Failed to make GPUs %v shared, Error: %v\n", gpus, err)
-		return err
-	}
-
-	if gpusTrackerData.Enabled == false {
-		logger.Log.Printf("GPU Tracker is disabled")
-		fmt.Printf("GPU Tracker is disabled\n")
-		return nil
+		return nil, err
 	}
 
 	result, err := gpuTracker.validateGPUsInfo(gpusTrackerData.GPUsInfo)
 	if err != nil || result != true {
-		return err
+		return nil, err
 	}
 
 	validGPUs, invalidGPUs, invalidGPUsRange, err := gpuTracker.parseGPUsList(gpus)
 	if err != nil {
-		logger.Log.Printf("Failed to parse GPUs list %v, Error: %v", gpus, err)
-		fmt.Printf("Failed to parse GPUs list %v, Error: %v\n", gpus, err)
-		return err
+		return nil, err
 	}
 
 	for _, gpuId := range validGPUs {
 		gpusTrackerData.GPUsStatus[gpuId] = gpu_status_t{
 			UUID:          gpusTrackerData.GPUsStatus[gpuId].UUID,
 			PartitionType: gpusTrackerData.GPUsStatus[gpuId].PartitionType,
-			Accessibility: SHARED_ACCESS,
+			Accessibility: sharedAccessInt,
 			ContainerIds:  gpusTrackerData.GPUsStatus[gpuId].ContainerIds,
 		}
 	}
 
-	err = gpuTracker.writeGPUTrackerFile(gpusTrackerData)
-	if err != nil {
-		logger.Log.Printf("Failed to make GPUs shared, Error: %v", err)
-		fmt.Printf("Failed to make GPUs shared, Error: %v\n", err)
-		return err
+	if err := gpuTracker.writeGPUTrackerFile(gpusTrackerData); err != nil {
+		return nil, err
 	}
 
-	if len(validGPUs) > 0 {
-		logger.Log.Printf("GPUs %v have been made shared", validGPUs)
-		fmt.Printf("GPUs %v have been made shared\n", validGPUs)
-	}
-	if len(invalidGPUsRange) > 0 {
-		logger.Log.Printf("Ignoring %v GPUs Ranges as they are invalid", invalidGPUsRange)
-		fmt.Printf("Ignoring %v GPUs Ranges as they are invalid\n", invalidGPUsRange)
-	}
-	if len(invalidGPUs) > 0 {
-		logger.Log.Printf("Ignoring %v GPUs as they are invalid", invalidGPUs)
-		fmt.Printf("Ignoring %v GPUs as they are invalid\n", invalidGPUs)
-	}
-
-	return nil
+	return &AccessibilityResult{
+		Changed:       validGPUs,
+		InvalidGPUs:   invalidGPUs,
+		InvalidRanges: invalidGPUsRange,
+	}, nil
 }
 
 func (gpuTracker *gpu_tracker_t) ReserveGPUs(gpus string, containerId string) ([]int, error) {
@@ -821,55 +741,46 @@ func (gpuTracker *gpu_tracker_t) ReserveGPUs(gpus string, containerId string) ([
 
 	gpuTrackerInitialized, err := gpuTracker.isGPUTrackerInitialized()
 	if err != nil {
-		logger.Log.Printf("Failed to check if GPU Tracker is initialized, Error:%v", err)
-		fmt.Printf("Failed to check if GPU Tracker is initialized, Error:%v\n", err)
 		return []int{}, err
 	}
 
 	if !gpuTrackerInitialized {
-		err = gpuTracker.initializeGPUTracker()
-		if err != nil {
+		if err := gpuTracker.initializeGPUTracker(); err != nil {
 			return []int{}, err
 		}
 	}
 
 	gpusTrackerData, err := gpuTracker.readGPUTrackerFile()
 	if err != nil {
-		logger.Log.Printf("Failed to reserve GPUs %v, Error: %v", gpus, err)
-		fmt.Printf("Failed to reserve GPUs %v, Error: %v\n", gpus, err)
 		return []int{}, err
 	}
 
 	validGPUs, invalidGPUs, invalidGPUsRange, err := gpuTracker.parseGPUsList(gpus)
 	if err != nil {
-		logger.Log.Printf("Failed to parse GPUs list %v, Error: %v", gpus, err)
-		fmt.Printf("Failed to parse GPUs list %v, Error: %v\n", gpus, err)
 		return []int{}, err
 	}
 	if len(invalidGPUsRange) > 0 {
 		logger.Log.Printf("Ignoring %v GPUs Ranges as they are invalid", invalidGPUsRange)
-		fmt.Printf("Ignoring %v GPUs Ranges as they are invalid\n", invalidGPUsRange)
 	}
 	if len(invalidGPUs) > 0 {
 		logger.Log.Printf("Ignoring %v GPUs as they are invalid", invalidGPUs)
-		fmt.Printf("Ignoring %v GPUs as they are invalid\n", invalidGPUs)
 	}
 
-	if gpusTrackerData.Enabled == false {
+	if !gpusTrackerData.Enabled {
 		logger.Log.Printf("GPU Tracker is disabled")
 		return validGPUs, nil
 	}
 
 	result, err := gpuTracker.validateGPUsInfo(gpusTrackerData.GPUsInfo)
 	if err != nil || result != true {
-		return []int{}, fmt.Errorf("GPUs info is invalid. Please reset GPU Tracker.\n")
+		return []int{}, fmt.Errorf("GPU info mismatch: please reset GPU Tracker")
 	}
 
 	var allocatedGPUs []int
 	var unavailableGPUs []int
 	for _, gpuId := range validGPUs {
-		if gpusTrackerData.GPUsStatus[gpuId].Accessibility == SHARED_ACCESS ||
-			(gpusTrackerData.GPUsStatus[gpuId].Accessibility == EXCLUSIVE_ACCESS &&
+		if gpusTrackerData.GPUsStatus[gpuId].Accessibility == sharedAccessInt ||
+			(gpusTrackerData.GPUsStatus[gpuId].Accessibility == exclusiveAccessInt &&
 				len(gpusTrackerData.GPUsStatus[gpuId].ContainerIds) == 0) {
 			gpusTrackerData.GPUsStatus[gpuId] = gpu_status_t{
 				UUID:          gpusTrackerData.GPUsStatus[gpuId].UUID,
@@ -883,21 +794,15 @@ func (gpuTracker *gpu_tracker_t) ReserveGPUs(gpus string, containerId string) ([
 		}
 	}
 
-	err = gpuTracker.writeGPUTrackerFile(gpusTrackerData)
-	if err != nil {
-		logger.Log.Printf("Failed to reserve GPUs %v, Error: %v", validGPUs, err)
-		fmt.Printf("Failed to reserve GPUs %v, Error: %v\n", validGPUs, err)
+	if err := gpuTracker.writeGPUTrackerFile(gpusTrackerData); err != nil {
 		return []int{}, err
 	}
 
 	if len(allocatedGPUs) > 0 {
 		logger.Log.Printf("GPUs %v allocated", allocatedGPUs)
-		fmt.Printf("GPUs %v allocated\n", allocatedGPUs)
 	}
 	if len(unavailableGPUs) > 0 {
-		logger.Log.Printf("GPUs %v are exlusive and already in use", unavailableGPUs)
-		fmt.Printf("GPUs %v are exclusive and already in use\n", unavailableGPUs)
-		return []int{}, fmt.Errorf("GPUs %v are exclusive and already in use\n", unavailableGPUs)
+		return []int{}, fmt.Errorf("GPUs %v are exclusive and already in use", unavailableGPUs)
 	}
 
 	return allocatedGPUs, nil
@@ -917,21 +822,16 @@ func (gpuTracker *gpu_tracker_t) ReleaseGPUs(containerId string) error {
 	if err != nil {
 		return err
 	}
-
 	defer lock.Unlock()
 
 	gpuTrackerInitialized, err := gpuTracker.isGPUTrackerInitialized()
 	if err != nil {
-		logger.Log.Printf("Failed to check if GPU Tracker is initialized, Error:%v", err)
-		fmt.Printf("Failed to check if GPU Tracker is initialized, Error:%v\n", err)
 		return err
 	}
 
 	if gpuTrackerInitialized {
 		gpusTrackerData, err := gpuTracker.readGPUTrackerFile()
 		if err != nil {
-			logger.Log.Printf("Failed to release GPUs used by container %v, Error: %v", containerId, err)
-			fmt.Printf("Failed to release GPUs used by container %v, Error: %v\n", containerId, err)
 			return err
 		}
 
@@ -949,15 +849,11 @@ func (gpuTracker *gpu_tracker_t) ReleaseGPUs(containerId string) error {
 			}
 		}
 
-		err = gpuTracker.writeGPUTrackerFile(gpusTrackerData)
-		if err != nil {
-			logger.Log.Printf("Failed to release GPUs used by container %v, Error: %v", containerId, err)
-			fmt.Printf("Failed to release GPUs used by container %v, Error: %v\n", containerId, err)
+		if err := gpuTracker.writeGPUTrackerFile(gpusTrackerData); err != nil {
 			return err
 		}
 
 		logger.Log.Printf("Released GPUs %v used by container %v", releasedGPUs, containerId)
-		fmt.Printf("Released GPUs %v used by container %v\n", releasedGPUs, containerId)
 	}
 
 	return nil

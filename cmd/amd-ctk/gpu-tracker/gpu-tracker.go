@@ -26,7 +26,7 @@ import (
 	"github.com/ROCm/container-toolkit/cmd/amd-ctk/gpu-tracker/release"
 	"github.com/ROCm/container-toolkit/cmd/amd-ctk/gpu-tracker/reset"
 	"github.com/ROCm/container-toolkit/cmd/amd-ctk/gpu-tracker/status"
-	"github.com/ROCm/container-toolkit/internal/gpu-tracker"
+	gpuTrackerLib "github.com/ROCm/container-toolkit/internal/gpu-tracker"
 	"github.com/urfave/cli/v2"
 )
 
@@ -89,18 +89,50 @@ func performAction(c *cli.Context) error {
 	gpuIDs := c.Args().Get(0)
 	operation := c.Args().Get(1)
 
-	gpuTracker, err := gpuTracker.New()
+	gpuTracker, err := gpuTrackerLib.New()
 	if err != nil {
 		return fmt.Errorf("Failed to create GPU tracker, Error: %v", err)
 	}
 
+	enabled, err := gpuTracker.IsEnabled()
+	if err != nil {
+		return fmt.Errorf("Failed to check GPU Tracker status, Error: %v", err)
+	}
+	if !enabled {
+		fmt.Println("GPU Tracker is disabled")
+		return nil
+	}
+
+	var res *gpuTrackerLib.AccessibilityResult
 	switch operation {
 	case "exclusive":
-		gpuTracker.MakeGPUsExclusive(gpuIDs)
+		res, err = gpuTracker.MakeGPUsExclusive(gpuIDs)
+		if err != nil {
+			return fmt.Errorf("making GPUs %s exclusive: %v", gpuIDs, err)
+		}
+		if len(res.Changed) > 0 {
+			fmt.Printf("GPUs %v have been made exclusive\n", res.Changed)
+		}
+		if len(res.NotChanged) > 0 {
+			fmt.Printf("GPUs %v have not been made exclusive because more than one container is currently using it\n", res.NotChanged)
+		}
 	case "shared":
-		gpuTracker.MakeGPUsShared(gpuIDs)
+		res, err = gpuTracker.MakeGPUsShared(gpuIDs)
+		if err != nil {
+			return fmt.Errorf("making GPUs %s shared: %v", gpuIDs, err)
+		}
+		if len(res.Changed) > 0 {
+			fmt.Printf("GPUs %v have been made shared\n", res.Changed)
+		}
 	default:
 		return cli.Exit("Error: Invalid operation. Must be 'exclusive' or 'shared'", 1)
+	}
+
+	if len(res.InvalidRanges) > 0 {
+		fmt.Printf("Ignoring %v GPUs Ranges as they are invalid\n", res.InvalidRanges)
+	}
+	if len(res.InvalidGPUs) > 0 {
+		fmt.Printf("Ignoring %v GPUs as they are invalid\n", res.InvalidGPUs)
 	}
 
 	return nil

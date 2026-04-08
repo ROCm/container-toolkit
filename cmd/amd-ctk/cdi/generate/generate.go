@@ -87,5 +87,6 @@ func performAction(c *cli.Context, genOptions *generateOptions) error {
 		return fmt.Errorf("Failed to write generated runtime CDI spec, Error: %v", err)
 	}
 
+	fmt.Printf("Generated CDI spec: %v\n", genOptions.output)
 	return nil
 }

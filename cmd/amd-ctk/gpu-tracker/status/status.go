@@ -19,8 +19,9 @@ package status
 import (
 	"fmt"
 	"os/user"
+	"strings"
 
-	"github.com/ROCm/container-toolkit/internal/gpu-tracker"
+	gpuTracker "github.com/ROCm/container-toolkit/internal/gpu-tracker"
 	"github.com/urfave/cli/v2"
 )
 
@@ -51,14 +52,40 @@ func validateGenOptions(c *cli.Context) error {
 }
 
 func performAction(c *cli.Context) error {
-	gpuTracker, err := gpuTracker.New()
+	tracker, err := gpuTracker.New()
 	if err != nil {
 		return fmt.Errorf("Failed to create GPU tracker, Error: %v", err)
 	}
 
-	err = gpuTracker.ShowStatus()
+	enabled, err := tracker.IsEnabled()
+	if err != nil {
+		return fmt.Errorf("Failed to check GPU Tracker status, Error: %v", err)
+	}
+	if !enabled {
+		fmt.Println("GPU Tracker is disabled")
+		return nil
+	}
+
+	entries, err := tracker.ShowStatus()
 	if err != nil {
 		return fmt.Errorf("Failed to show GPUs status, Error: %v", err)
+	}
+
+	fmt.Println(strings.Repeat("-", 120))
+	fmt.Printf("%-10s%-25s%-20s%-65s\n", "GPU Id", "UUID", "Accessibility", "Container Ids")
+	fmt.Println(strings.Repeat("-", 120))
+	for _, entry := range entries {
+		if len(entry.ContainerIds) > 0 {
+			for idx, id := range entry.ContainerIds {
+				if idx == 0 {
+					fmt.Printf("%-10v%-25v%-20v%-65v\n", entry.GPUId, entry.UUID, entry.Accessibility, id)
+				} else {
+					fmt.Printf("%-10v%-25v%-20v%-65v\n", "", "", "", id)
+				}
+			}
+		} else {
+			fmt.Printf("%-10v%-25v%-20v%-65v\n", entry.GPUId, entry.UUID, entry.Accessibility, "-")
+		}
 	}
 
 	return nil
