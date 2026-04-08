@@ -134,3 +134,8 @@ If ``amd-ctk cdi validate`` reports errors:
 * Check that GPU devices are properly detected by the system (verify with ``rocm-smi``, ``amd-smi`` or similar tools)
 * Ensure GPU drivers are correctly installed
 * Regenerate the specification to reflect the current system state
+* Use the ``--debug`` flag for verbose output to help diagnose the issue:
+
+  .. code-block:: bash
+
+      amd-ctk --debug cdi validate
