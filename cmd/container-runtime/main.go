@@ -31,12 +31,7 @@ func main() {
 	rt, err := runtime.New(os.Args)
 	if err != nil {
 		logger.Log.Printf("Failed to create container runtime, err = %v", err)
-		gpuTracker, err := gpuTracker.New()
-		if err != nil {
-			logger.Log.Printf("Failed to create GPU tracker, err = %v", err)
-			os.Exit(1)
-		}
-		gpuTracker.ReleaseGPUs(os.Args[len(os.Args)-1])
+		releaseGPUsOnError(os.Args)
 		os.Exit(1)
 	}
 
@@ -44,12 +39,20 @@ func main() {
 	err = rt.Run()
 	if err != nil {
 		logger.Log.Printf("Failed to run container runtime, err = %v", err)
-		gpuTracker, err := gpuTracker.New()
-		if err != nil {
-			logger.Log.Printf("Failed to create GPU tracker, err = %v", err)
-			os.Exit(1)
-		}
-		gpuTracker.ReleaseGPUs(os.Args[len(os.Args)-1])
+		releaseGPUsOnError(os.Args)
 		os.Exit(1)
 	}
+}
+
+func releaseGPUsOnError(args []string) {
+	if len(args) == 0 {
+		return
+	}
+	containerId := args[len(args)-1]
+	gpuTracker, err := gpuTracker.New()
+	if err != nil {
+		logger.Log.Printf("Failed to create GPU tracker, err = %v", err)
+		return
+	}
+	gpuTracker.ReleaseGPUs(containerId)
 }
