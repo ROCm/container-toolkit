@@ -148,13 +148,13 @@ func mockReadGPUTrackerFile() (gpu_tracker_data_t, error) {
 			0: {
 				UUID:          "0xef2c1799a1f3e2ed",
 				PartitionType: "",
-				Accessibility: 0,
+				Accessibility: sharedAccessInt,
 				ContainerIds:  []string{"container_1", "container_2"},
 			},
 			1: {
 				UUID:          "0x1234567890abcdef",
 				PartitionType: "",
-				Accessibility: 1,
+				Accessibility: exclusiveAccessInt,
 				ContainerIds:  []string{"container_1"},
 			},
 		},
@@ -211,13 +211,13 @@ func TestInterface(t *testing.T) {
 	err = gpuTracker.Disable()
 	Assert(t, err == nil, fmt.Sprintf("Disable() returned error %v", err))
 
-	err = gpuTracker.ShowStatus()
+	_, err = gpuTracker.ShowStatus()
 	Assert(t, err == nil, fmt.Sprintf("ShowStatus() returned error %v", err))
 
-	err = gpuTracker.MakeGPUsExclusive("0,1")
+	_, err = gpuTracker.MakeGPUsExclusive("0,1")
 	Assert(t, err == nil, fmt.Sprintf("MakeGPUsExclusive() returned error %v", err))
 
-	err = gpuTracker.MakeGPUsShared("0-1")
+	_, err = gpuTracker.MakeGPUsShared("0-1")
 	Assert(t, err == nil, fmt.Sprintf("MakeGPUsShared() returned error %v", err))
 
 	// Reserve Shared GPU

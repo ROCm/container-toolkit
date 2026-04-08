@@ -77,7 +77,8 @@ func TestInterface(t *testing.T) {
 	_, err = cdi.ValidateSpec()
 	Assert(t, err == nil, fmt.Sprintf("ValidateSpec() returned error %v", err))
 
-	cdi.PrintSpec()
+	_, err = cdi.FormatSpec()
+	Assert(t, err == nil, fmt.Sprintf("FormatSpec() returned error %v", err))
 }
 
 // dummySpec is a minimal spec used by WriteSpec tests.
