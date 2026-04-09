@@ -21,6 +21,9 @@ Docker Compatibility
 .. note::
    **Docker Desktop on Linux:** Docker Desktop on Linux is not supported for GPU workloads. See the :doc:`troubleshooting` guide for details.
 
+.. important::
+   **Rootless mode is not supported.** The AMD Container Runtime must be run as root. Rootless container runtimes are not supported and will result in a runtime error.
+
 ROCm and Driver Compatibility
 -----------------------------
 - ROCm 6.4.1 or newer is required to view and verify partitioned GPUs inside containers.
@@ -55,6 +58,7 @@ GPU Partitioning Requirements
 Important Notes
 ----------------
 
+- **Rootless mode is not supported.** The AMD Container Runtime requires root privileges. Running the runtime as a non-root user will fail immediately with an error.
 - ROCm must be installed on the host system and must match the expected version compatibility with your container images.
 - Using mismatched amdgpu driver and runtime versions may result in runtime errors or undefined behavior.
 - Ensure CDI specs are kept up to date in environments where GPU topology can change frequently (e.g., partitioned systems or multi-GPU deployments).
