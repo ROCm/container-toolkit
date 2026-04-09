@@ -2,22 +2,15 @@ package amdgpu
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
 	"testing"
 	"time"
 
-	"github.com/ROCm/container-toolkit/internal/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
-
-func init() {
-	// Initialize logger for tests
-	logger.Log = log.New(os.Stderr, "", log.LstdFlags)
-}
 
 // Mock filesystem operations
 type mockFS struct {

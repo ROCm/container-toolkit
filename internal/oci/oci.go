@@ -19,12 +19,12 @@ package oci
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
 	"github.com/ROCm/container-toolkit/internal/amdgpu"
 	gpuTracker "github.com/ROCm/container-toolkit/internal/gpu-tracker"
-	"github.com/ROCm/container-toolkit/internal/logger"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -180,7 +180,7 @@ func (oci *oci_t) getAMDEnv() error {
 // getSpec reads the input OCI spec file into memory
 func (oci *oci_t) getSpec() error {
 	if len(oci.origSpecPath) == 0 {
-		logger.Log.Printf("Spec path is not set")
+		slog.Warn("Spec path is not set")
 		return nil
 	}
 
@@ -219,7 +219,7 @@ func (oci *oci_t) addHook() error {
 	}
 
 	oci.spec.Hooks.CreateRuntime = append(oci.spec.Hooks.CreateRuntime, hook)
-	logger.Log.Printf("Added OCI runtime hook, %v", oci.hookPath)
+	slog.Debug("Added OCI runtime hook", "path", oci.hookPath)
 
 	return nil
 }
@@ -257,7 +257,7 @@ func (oci *oci_t) addGPUDevices() error {
 	}
 
 	if oci.isAddNoGPUs() {
-		logger.Log.Printf("No GPUs to be added to OCI spec")
+		slog.Debug("No GPUs to be added to OCI spec")
 		return nil
 	}
 
@@ -265,6 +265,8 @@ func (oci *oci_t) addGPUDevices() error {
 	if err != nil {
 		return err
 	}
+
+	slog.Info("Requested GPUs for container", "gpu_indices", oci.amdDevices)
 
 	for _, idx := range oci.amdDevices {
 		if err := addGpus(devs[idx].DrmDevices); err != nil {
@@ -332,7 +334,7 @@ func (oci *oci_t) addGPUDevice(gpu amdgpu.AMDGPU) error {
 	}
 
 	oci.spec.Linux.Resources.Devices = append(oci.spec.Linux.Resources.Devices, rdev)
-	logger.Log.Printf("Added GPU device %v to OCI spec", gpu.Path)
+	slog.Debug("Added GPU device to OCI spec", "device", gpu.Path)
 
 	return nil
 }
@@ -388,7 +390,7 @@ func (oci *oci_t) WriteSpec() error {
 		return fmt.Errorf("encoding OCI spec to %s: %w", f, err)
 	}
 
-	logger.Log.Printf("Wrote spec to %v", f)
+	slog.Debug("Wrote spec", "file", f)
 	return nil
 }
 

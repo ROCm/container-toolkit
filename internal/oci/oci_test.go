@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/ROCm/container-toolkit/internal/amdgpu"
-	"github.com/ROCm/container-toolkit/internal/logger"
 )
 
 // Constants
@@ -87,8 +86,6 @@ func mockReserveGPUs(gpus string, containerId string) ([]int, error) {
 
 		gpusInfo, err := mockGetAMDGPUs()
 		if err != nil {
-			logger.Log.Printf("Failed to get AMD GPUs info, Error: %v", err)
-			fmt.Printf("Failed to get AMD GPUs info, Error: %v\n", err)
 			return []int{}, []string{}, []string{}, err
 		}
 
@@ -101,7 +98,6 @@ func mockReserveGPUs(gpus string, containerId string) ([]int, error) {
 
 		uuidToGPUIdMap, err := mockGetUniqueIdToDeviceIndexMap()
 		if err != nil {
-			logger.Log.Printf("Failed to get UUID to GPU Id mappings: %v", err)
 			uuidToGPUIdMap = make(map[string][]int) // Continue with empty map
 		}
 
@@ -161,12 +157,7 @@ func mockReserveGPUs(gpus string, containerId string) ([]int, error) {
 	return validGPUs, err
 }
 
-func setup(t *testing.T) {
-	logger.Init(true)
-}
-
 func TestParseArgs(t *testing.T) {
-	setup(t)
 	oci := &oci_t{}
 
 	// Empty args
@@ -200,7 +191,6 @@ func TestParseArgs(t *testing.T) {
 }
 
 func TestGetAMDEnv(t *testing.T) {
-	setup(t)
 	oci := &oci_t{
 		origSpecPath:                TEST_OCI_SPEC_PATH,
 		getGPUs:                     mockGetAMDGPUs,
@@ -223,7 +213,6 @@ func TestGetAMDEnv(t *testing.T) {
 }
 
 func TestAddGPUDevice(t *testing.T) {
-	setup(t)
 	oci := &oci_t{
 		origSpecPath:                TEST_OCI_SPEC_PATH,
 		getGPUs:                     mockGetAMDGPUs,
@@ -281,8 +270,6 @@ func TestNew(t *testing.T) {
 }
 
 func TestInterface(t *testing.T) {
-	setup(t)
-
 	oci := &oci_t{
 		origSpecPath:                TEST_OCI_SPEC_PATH,
 		getGPUs:                     mockGetAMDGPUs,
@@ -325,8 +312,6 @@ func mockGetUniqueIdToDeviceIndexMap() (map[string][]int, error) {
 }
 
 func TestGetAMDEnvWithUUID(t *testing.T) {
-	setup(t)
-
 	// Test with hex UUID in AMD_VISIBLE_DEVICES
 	testSpec := `{
 		"process": {
@@ -358,8 +343,6 @@ func TestGetAMDEnvWithUUID(t *testing.T) {
 }
 
 func TestGetAMDEnvWithDockerResource(t *testing.T) {
-	setup(t)
-
 	// Test with DOCKER_RESOURCE_GPU containing hex UUIDs
 	testSpec := `{
 		"process": {
@@ -391,8 +374,6 @@ func TestGetAMDEnvWithDockerResource(t *testing.T) {
 }
 
 func TestGetAMDEnvWithMixedDevices(t *testing.T) {
-	setup(t)
-
 	// Test with mixed device indices and UUIDs (different indices)
 	testSpec := `{
 		"process": {
@@ -424,8 +405,6 @@ func TestGetAMDEnvWithMixedDevices(t *testing.T) {
 }
 
 func TestGetAMDEnvWithInvalidUUID(t *testing.T) {
-	setup(t)
-
 	// Test with invalid UUID that doesn't exist in mapping
 	testSpec := `{
 		"process": {
@@ -457,8 +436,6 @@ func TestGetAMDEnvWithInvalidUUID(t *testing.T) {
 }
 
 func TestGetAMDEnvWithDuplicateDevices(t *testing.T) {
-	setup(t)
-
 	// Test with duplicate device specification (same device via index and UUID)
 	testSpec := `{
 		"process": {

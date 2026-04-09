@@ -18,11 +18,11 @@ package runtime
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"syscall"
 
-	"github.com/ROCm/container-toolkit/internal/logger"
 	"github.com/ROCm/container-toolkit/internal/oci"
 )
 
@@ -81,7 +81,6 @@ func (rt *runtm) Run() error {
 			// Print updated OCI spec
 			err = rt.oci.PrintSpec()
 			if err != nil {
-				logger.Log.Printf("Failed to print runtime OCI spec, Error: %v", err)
 				return err
 			}
 		*/
@@ -91,6 +90,7 @@ func (rt *runtm) Run() error {
 		if err != nil {
 			return fmt.Errorf("write OCI spec: %w", err)
 		}
+		slog.Info("Container configured for GPU access")
 	}
 
 	// Call runc with updated oci spec
@@ -99,7 +99,8 @@ func (rt *runtm) Run() error {
 		return fmt.Errorf("unable to find runc in PATH: %w", err)
 	}
 
-	logger.Log.Printf("Running runc with args: %v, environ: %v", rt.args, os.Environ())
+	slog.Info("Launching container")
+	slog.Debug("Running runc", "args", rt.args, "environ", os.Environ())
 	err = syscall.Exec(runc, rt.args, os.Environ())
 	if err != nil {
 		return fmt.Errorf("calling runc: %w", err)

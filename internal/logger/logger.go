@@ -17,7 +17,8 @@
 package logger
 
 import (
-	"log"
+	"io"
+	"log/slog"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -25,7 +26,6 @@ import (
 )
 
 var (
-	Log       *log.Logger
 	logdir    = "/var/log/"
 	logfile   = "amd-container-runtime.log"
 	logPrefix = "amd-container-runtime "
@@ -63,7 +63,8 @@ func SetLogDir() {
 
 		//check if the user has permission to write to this location
 		if !isWriteable(logdir) {
-			log.Fatalf("User doesn't have write permission for the specified directory: %v", logdir)
+			slog.Error("User doesn't have write permission for the specified directory", "dir", logdir)
+			os.Exit(1)
 		}
 
 		return
@@ -72,22 +73,25 @@ func SetLogDir() {
 	// Get the current user's information.
 	currentUser, err := user.Current()
 	if err != nil {
-		log.Fatalf("Failed to get current user: %v", err)
+		slog.Error("Failed to get current user", "error", err)
+		os.Exit(1)
 	}
 	// for root user, log dir is /var/log
 	if currentUser.Uid != "0" {
 		//Non-Root user, setting log directory to user's home directory
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			log.Fatalf("Failed to get user home directory: %v", err)
+			slog.Error("Failed to get user home directory", "error", err)
+			os.Exit(1)
 		}
 		logdir = homeDir
 	}
 }
 
 func initLogger(console bool) {
+	var out io.Writer
 	if console {
-		Log = log.New(os.Stdout, logPrefix, log.Lmsgprefix)
+		out = os.Stdout
 	} else {
 		SetLogDir()
 
@@ -96,11 +100,19 @@ func initLogger(console bool) {
 		if err != nil {
 			return
 		}
-
-		Log = log.New(outfile, "", 0)
+		out = outfile
 	}
 
-	Log.SetFlags(log.LstdFlags | log.Lshortfile)
+	opts := &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+		ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.MessageKey {
+				a.Value = slog.StringValue(logPrefix + a.Value.String())
+			}
+			return a
+		},
+	}
+	slog.SetDefault(slog.New(slog.NewTextHandler(out, opts)))
 }
 
 func Init(console bool) {

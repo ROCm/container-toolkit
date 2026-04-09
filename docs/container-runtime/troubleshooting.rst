@@ -144,7 +144,7 @@ This applies to any run that relies on host GPU devices (e.g. ``docker run --dev
 Log File Reference
 ------------------
 
-The AMD Container Toolkit logs runtime events and errors to the following location:
+The AMD container runtime (``amd-container-runtime``) logs events and errors to the following location:
 
    **/var/log/amd-container-runtime.log**
 
@@ -157,11 +157,22 @@ You can view logs in real-time using:
 This log captures detailed interactions between Docker and the AMD container runtime, including:
 
 - Runtime initialization
-- GPU device injection
+- GPU device injection and allocation
 - OCI specification modifications
-- CDI specification usage
+- Exclusive GPU enforcement errors
 
-If you experience issues that are not easily diagnosed, refer to this log file for real-time insights and deeper debugging.
+If a container fails to start with the AMD runtime, this log will contain the specific error (e.g. ``GPUs [0] are exclusive and already in use``), even when Docker only shows a generic runtime failure message.
+
+.. note::
+
+   The ``amd-ctk`` CLI tool prints errors directly to the terminal (not to a log file). For verbose debug output from ``amd-ctk``, use the ``--debug`` (or ``-d``) flag:
+
+   .. code-block:: bash
+
+      amd-ctk --debug gpu-tracker status
+      amd-ctk --debug cdi validate
+
+   This prints debug-level messages to stderr, which can help diagnose GPU enumeration, tracker state, or CDI specification issues.
 
 Diagnostic Commands
 -------------------

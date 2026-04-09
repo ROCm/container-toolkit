@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/ROCm/container-toolkit/internal/amdgpu"
-	"github.com/ROCm/container-toolkit/internal/logger"
 )
 
 func mockIsGPUTrackerInitialized() (bool, error) {
@@ -71,8 +70,6 @@ func mockParseGPUsList(gpus string) ([]int, []string, []string, error) {
 
 	gpusInfo, err := mockGetAMDGPUs()
 	if err != nil {
-		logger.Log.Printf("Failed to get AMD GPUs info, Error: %v", err)
-		fmt.Printf("Failed to get AMD GPUs info, Error: %v\n", err)
 		return []int{}, []string{}, []string{}, err
 	}
 
@@ -85,7 +82,6 @@ func mockParseGPUsList(gpus string) ([]int, []string, []string, error) {
 
 	uuidToGPUIdMap, err := mockGetUniqueIdToDeviceIndexMap()
 	if err != nil {
-		logger.Log.Printf("Failed to get UUID to GPU Id mappings: %v", err)
 		uuidToGPUIdMap = make(map[string][]int) // Continue with empty map
 	}
 
@@ -185,13 +181,7 @@ func mockValidateGPUsInfo(map[int]amdgpu.DeviceInfo) (bool, error) {
 	return true, nil
 }
 
-func setup(t *testing.T) {
-	logger.Init(true)
-}
-
 func TestInterface(t *testing.T) {
-	setup(t)
-
 	gpuTracker := &gpu_tracker_t{
 		gpuTrackerLockFile:      "/tmp/gpu-tracker.lock",
 		isGPUTrackerInitialized: mockIsGPUTrackerInitialized,

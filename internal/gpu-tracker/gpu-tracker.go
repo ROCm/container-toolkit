@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"reflect"
 	"sort"
@@ -29,7 +30,6 @@ import (
 	"time"
 
 	"github.com/ROCm/container-toolkit/internal/amdgpu"
-	"github.com/ROCm/container-toolkit/internal/logger"
 	"github.com/gofrs/flock"
 )
 
@@ -439,7 +439,6 @@ func (gpuTracker *gpu_tracker_t) Init() error {
 		return err
 	}
 
-	logger.Log.Printf("GPU Tracker has been initialized")
 	return nil
 }
 
@@ -756,14 +755,14 @@ func (gpuTracker *gpu_tracker_t) ReserveGPUs(gpus string, containerId string) ([
 		return []int{}, err
 	}
 	if len(invalidGPUsRange) > 0 {
-		logger.Log.Printf("Ignoring %v GPUs Ranges as they are invalid", invalidGPUsRange)
+		slog.Warn("Ignoring GPUs Ranges as they are invalid", "ranges", invalidGPUsRange)
 	}
 	if len(invalidGPUs) > 0 {
-		logger.Log.Printf("Ignoring %v GPUs as they are invalid", invalidGPUs)
+		slog.Warn("Ignoring GPUs as they are invalid", "gpus", invalidGPUs)
 	}
 
 	if !gpusTrackerData.Enabled {
-		logger.Log.Printf("GPU Tracker is disabled")
+		slog.Debug("GPU Tracker is disabled")
 		return validGPUs, nil
 	}
 
@@ -798,7 +797,7 @@ func (gpuTracker *gpu_tracker_t) ReserveGPUs(gpus string, containerId string) ([
 	}
 
 	if len(allocatedGPUs) > 0 {
-		logger.Log.Printf("GPUs %v allocated", allocatedGPUs)
+		slog.Info("GPUs allocated", "gpus", allocatedGPUs)
 	}
 	if len(unavailableGPUs) > 0 {
 		return []int{}, fmt.Errorf("GPUs %v are exclusive and already in use", unavailableGPUs)
@@ -852,7 +851,7 @@ func (gpuTracker *gpu_tracker_t) ReleaseGPUs(containerId string) error {
 			return err
 		}
 
-		logger.Log.Printf("Released GPUs %v used by container %v", releasedGPUs, containerId)
+		slog.Info("Released GPUs used by container", "gpus", releasedGPUs, "container", containerId)
 	}
 
 	return nil

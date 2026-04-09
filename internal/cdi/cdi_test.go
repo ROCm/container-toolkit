@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/ROCm/container-toolkit/internal/amdgpu"
-	"github.com/ROCm/container-toolkit/internal/logger"
 	"github.com/stretchr/testify/assert"
 	"tags.cncf.io/container-device-interface/specs-go"
 )
@@ -49,13 +48,7 @@ func mockGetAMDGPU(dev string) (amdgpu.AMDGPU, error) {
 	return gpu, nil
 }
 
-func setup(t *testing.T) {
-	logger.Init(true)
-}
-
 func TestInterface(t *testing.T) {
-	setup(t)
-
 	spec := specs.Spec{
 		Version: "0.6.0",
 		Kind:    "amd.com/gpu",
@@ -89,7 +82,6 @@ var dummySpec = specs.Spec{
 }
 
 func TestWriteSpec(t *testing.T) {
-	setup(t)
 
 	tests := []struct {
 		name    string
@@ -159,7 +151,6 @@ func TestWriteSpec(t *testing.T) {
 }
 
 func TestWriteSpec_OverwritesExisting(t *testing.T) {
-	setup(t)
 	dir := t.TempDir()
 	specPath := filepath.Join(dir, "amd.json")
 

@@ -166,10 +166,13 @@ Device  Node  IDs              Temp    Power  Partitions          SCLK    MCLK  
 
       > docker run --runtime=amd -itd -e AMD_VISIBLE_DEVICES=0-2 rocm/rocm-terminal bash
       d23ff3dce1839cbf8ce7ad362641ab85e80b315c319edf73b269c460e348053a
-      docker: Error response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: unable to retrieve OCI runtime error (open /run/containerd/io.containerd.runtime.v2.task/moby/d23ff3dce1839cbf8ce7ad362641ab85e80b315c319edf73b269c460e348053a/log.json: no such file or directory): amd-container-runtime did not terminate successfully: exit status 1: GPUs [0 2] allocated
-      GPUs [1] are exclusive and already in use
-      Released GPUs [2 0] used by container d23ff3dce1839cbf8ce7ad362641ab85e80b315c319edf73b269c460e348053a
-      : unknown.
+      docker: Error response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: unable to retrieve OCI runtime error: amd-container-runtime did not terminate successfully: exit status 1
+
+      The runtime log at /var/log/amd-container-runtime.log will contain details about the failure:
+
+      > grep -E "allocated|exclusive" /var/log/amd-container-runtime.log
+      time=... level=INFO msg="amd-container-runtime GPUs allocated" gpus=[0 2]
+      time=... level=ERROR msg="amd-container-runtime Failed to run container runtime" error="update OCI spec (add GPU devices): GPUs [1] are exclusive and already in use"
 
       > amd-ctk gpu-tracker status
       ------------------------------------------------------------------------------------------------------------------------
@@ -285,7 +288,7 @@ Device  Node  IDs              Temp    Power  Partitions          SCLK    MCLK  
 
       ```text
       > amd-ctk gpu-tracker status
-      GPUs info is invalid. Please reset GPU Tracker.
+      showing GPU status: GPU info mismatch: please reset GPU Tracker
 
       > amd-ctk gpu-tracker reset
       GPU Tracker has been reset
@@ -307,3 +310,18 @@ Device  Node  IDs              Temp    Power  Partitions          SCLK    MCLK  
       3         0x12FE4F7FDAF06B9        Shared              -
       ```
 
+## Debugging
+
+For verbose debug output when troubleshooting GPU Tracker issues, use the `--debug` (or `-d`) flag:
+
+```text
+> amd-ctk --debug gpu-tracker status
+```
+
+This prints debug-level log messages to stderr, which can help diagnose GPU enumeration or tracker state issues.
+
+For container runtime errors (e.g. exclusive GPU enforcement failures), check the runtime log:
+
+```text
+> sudo tail -f /var/log/amd-container-runtime.log
+```
