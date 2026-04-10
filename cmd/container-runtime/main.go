@@ -27,6 +27,12 @@ import (
 
 func main() {
 	logger.Init(false)
+
+	if os.Getuid() != 0 {
+		slog.Error("Rootless mode is not supported")
+		os.Exit(1)
+	}
+
 	slog.Info("Creating ROCm container runtime", "args", os.Args)
 
 	rt, err := runtime.New(os.Args)
