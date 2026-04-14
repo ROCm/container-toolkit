@@ -72,19 +72,19 @@ func validateGenOptions(c *cli.Context, genOptions *generateOptions) error {
 func performAction(c *cli.Context, genOptions *generateOptions) error {
 	cdi, err := cdi.New(genOptions.output)
 	if err != nil {
-		return fmt.Errorf("creating CDI handler: %w", err)
+		return fmt.Errorf("failed to create CDI handler: %w", err)
 	}
 
 	// Generate CDI spec
 	err = cdi.GenerateSpec()
 	if err != nil {
-		return fmt.Errorf("generating CDI spec: %w", err)
+		return fmt.Errorf("failed to generate CDI spec: %w", err)
 	}
 
 	// Write updated CDI spec
 	err = cdi.WriteSpec()
 	if err != nil {
-		return fmt.Errorf("writing CDI spec: %w", err)
+		return fmt.Errorf("failed to write CDI spec: %w", err)
 	}
 
 	fmt.Printf("Generated CDI spec: %v\n", genOptions.output)
