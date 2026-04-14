@@ -72,14 +72,14 @@ func validateValOptions(c *cli.Context, valOptions *validateOptions) error {
 func performAction(c *cli.Context, valOptions *validateOptions) error {
 	cdi, err := cdi.New(valOptions.cdiSpecPath)
 	if err != nil {
-		return fmt.Errorf("creating CDI handler: %w", err)
+		return fmt.Errorf("failed to create CDI handler: %w", err)
 	}
 
 	// Validate CDI spec
 	fmt.Printf("Validating CDI spec: %v\n", valOptions.cdiSpecPath)
 	result, err := cdi.ValidateSpec()
 	if err != nil {
-		return fmt.Errorf("validating CDI spec: %w", err)
+		return fmt.Errorf("failed to validate CDI spec: %w", err)
 	}
 	if result {
 		fmt.Println("CDI spec is valid")

@@ -91,12 +91,12 @@ func performAction(c *cli.Context) error {
 
 	gpuTracker, err := gpuTrackerLib.New()
 	if err != nil {
-		return fmt.Errorf("creating GPU tracker: %w", err)
+		return fmt.Errorf("failed to create GPU Tracker: %w", err)
 	}
 
 	enabled, err := gpuTracker.IsEnabled()
 	if err != nil {
-		return fmt.Errorf("checking GPU Tracker status: %w", err)
+		return fmt.Errorf("failed to check GPU Tracker status: %w", err)
 	}
 	if !enabled {
 		fmt.Println("GPU Tracker is disabled")
@@ -108,7 +108,7 @@ func performAction(c *cli.Context) error {
 	case "exclusive":
 		res, err = gpuTracker.MakeGPUsExclusive(gpuIDs)
 		if err != nil {
-			return fmt.Errorf("making GPUs %s exclusive: %w", gpuIDs, err)
+			return fmt.Errorf("failed to make GPUs %s exclusive: %w", gpuIDs, err)
 		}
 		if len(res.Changed) > 0 {
 			fmt.Printf("GPUs %v have been made exclusive\n", res.Changed)
@@ -119,7 +119,7 @@ func performAction(c *cli.Context) error {
 	case "shared":
 		res, err = gpuTracker.MakeGPUsShared(gpuIDs)
 		if err != nil {
-			return fmt.Errorf("making GPUs %s shared: %w", gpuIDs, err)
+			return fmt.Errorf("failed to make GPUs %s shared: %w", gpuIDs, err)
 		}
 		if len(res.Changed) > 0 {
 			fmt.Printf("GPUs %v have been made shared\n", res.Changed)

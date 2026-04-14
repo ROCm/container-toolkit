@@ -53,12 +53,12 @@ func validateGenOptions(c *cli.Context) error {
 func performAction(c *cli.Context) error {
 	gpuTracker, err := gpuTracker.New()
 	if err != nil {
-		return fmt.Errorf("creating GPU tracker: %w", err)
+		return fmt.Errorf("failed to create GPU Tracker: %w", err)
 	}
 
 	enabled, err := gpuTracker.IsEnabled()
 	if err != nil {
-		return fmt.Errorf("checking GPU Tracker status: %w", err)
+		return fmt.Errorf("failed to check GPU Tracker status: %w", err)
 	}
 	if enabled {
 		fmt.Println("GPU Tracker is already enabled")
@@ -67,7 +67,7 @@ func performAction(c *cli.Context) error {
 
 	err = gpuTracker.Enable()
 	if err != nil {
-		return fmt.Errorf("enabling GPU Tracker: %w", err)
+		return fmt.Errorf("failed to enable GPU Tracker: %w", err)
 	}
 
 	fmt.Println("GPU Tracker has been enabled")

@@ -64,13 +64,13 @@ func performAction(c *cli.Context) error {
 
 	gpuTracker, err := gpuTracker.New()
 	if err != nil {
-		return fmt.Errorf("creating GPU tracker: %w", err)
+		return fmt.Errorf("failed to create GPU Tracker: %w", err)
 	}
 
 	containerId := c.Args().Get(0)
 	err = gpuTracker.ReleaseGPUs(containerId)
 	if err != nil {
-		return fmt.Errorf("releasing GPUs for container %s: %w", containerId, err)
+		return fmt.Errorf("failed to release GPUs for container %s: %w", containerId, err)
 	}
 
 	return nil
