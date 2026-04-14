@@ -7,7 +7,7 @@ if os.environ.get("READTHEDOCS", "") == "True":
     html_context["READTHEDOCS"] = True
 project = "AMD Container Runtime Toolkit"
 
-version = "1.2.0"
+version = "1.3.0"
 rocm_version = '6.4'
 rocm_directory_version = '6.4.0' # in 6.0 rocm was located in /opt/rocm-6.0.0
 amdgpu_version = '6.4' # directory in https://repo.radeon.com/rocm/apt/ and https://repo.radeon.com/amdgpu-install/
