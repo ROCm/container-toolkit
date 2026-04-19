@@ -1,7 +1,7 @@
 # Overview
 AMD Container Toolkit offers tools to streamline the use of AMD GPUs with containers. The toolkit includes the following packages.
 - ```amd-container-runtime``` - The AMD Container Runtime
--  ```amd-ctk``` - The AMD Container Toolkit CLI
+- ```amd-ctk``` - The AMD Container Toolkit CLI
 
 # Requirements
 - Ubuntu 22.04 or 24.04, or RHEL/CentOS 9

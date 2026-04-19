@@ -1,0 +1,54 @@
+# Match rocm-docs-core linting rules
+# Relaxed for existing docs; tighten over time if desired.
+default: true
+
+# Line length (often too strict for prose/tables)
+MD013: false
+
+# First heading h1, first line (conflicts with multi-section READMEs)
+MD041: false
+
+# Inline HTML / bare URLs (allow in docs)
+MD033: false
+MD034: false
+
+# Duplicate headings (only warn across siblings)
+MD024:
+  siblings_only: true
+
+# Heading punctuation
+MD026:
+  punctuation: ".,;:!"
+
+# --- Relaxed for open-source docs (high churn, many contributors) ---
+
+# Multiple top-level headings (READMEs/docs often use several # sections)
+MD025: false
+
+# Heading level increment (allow ## then #### without ###)
+MD001: false
+
+# Blank lines around headings and code blocks (readability; skip for legacy)
+MD022: false
+MD031: false
+
+# Blank lines around lists
+MD032: false
+
+# Ordered list prefix style (1/2/3 vs 1/1/1)
+MD029: false
+
+# Fenced code block language (syntax highlighting; optional)
+MD040: false
+
+# Table column alignment (cosmetic)
+MD060: false
+
+# Unordered list style (dash vs asterisk)
+MD004: false
+
+# Multiple consecutive blank lines
+MD012: false
+
+# Trailing spaces (noisy in legacy docs; enable later for new edits)
+MD009: false

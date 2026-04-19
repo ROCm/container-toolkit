@@ -200,6 +200,39 @@ vet: ## Run go vet against code.
 test: ## Run go test against code.
 	AMD_CTK_PATH=$(CURDIR)/bin/$(BIN_DIRECTORY_SUFFIX)/amd-ctk go test -v ./...
 
+# Docs lint (Markdown + spelling; matches CI linting checks)
+DOCS_MARKDOWNLINTCONFIG ?= .markdownlint.yaml
+DOCS_MD_GLOB ?= "**/*.md"
+DOCS_SPELLCHECK_CONFIG ?= .spellcheck.yaml
+
+.PHONY: docs-lint-markdown
+docs-lint-markdown: ## Run markdownlint on all Markdown files.
+	markdownlint-cli2 $(DOCS_MD_GLOB) --config $(DOCS_MARKDOWNLINTCONFIG)
+
+.PHONY: docs-lint-spelling
+docs-lint-spelling: ## Run pyspelling (spellcheck) using .spellcheck.yaml.
+	pyspelling -c $(DOCS_SPELLCHECK_CONFIG)
+
+.PHONY: docs-lint
+docs-lint: ## Run docs Markdown lint + spelling (full docs lint, same as CI).
+	$(MAKE) docs-lint-markdown
+	$(MAKE) docs-lint-spelling
+
+# Run docs lint inside a container (no local Node/Python/aspell needed)
+DOCS_LINT_IMAGE ?= $(DOCKER_REGISTRY)/container-toolkit-docs-lint:latest
+.PHONY: docs-lint-docker docs-lint-docker-build docs-lint-docker-push
+docs-lint-docker: ## Run docs lint in Docker (markdown + spelling). Image must exist locally or use docs-lint-docker-pull.
+	docker run --rm -v $(CURDIR):/repo -w /repo $(DOCS_LINT_IMAGE) docs-lint
+
+docs-lint-docker-pull: ## Pull the docs-lint image from the registry (run once or to update).
+	docker pull $(DOCS_LINT_IMAGE)
+
+docs-lint-docker-build: ## Build the docs-lint image locally (for Dockerfile changes or first-time setup).
+	docker build -t $(DOCS_LINT_IMAGE) -f $(CURDIR)/tools/docs-lint/Dockerfile $(CURDIR)/tools/docs-lint
+
+docs-lint-docker-push: docs-lint-docker-build ## Build and push the docs-lint image to the registry (for maintainers/CI).
+	docker push $(DOCS_LINT_IMAGE)
+
 GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
 .PHONY: golangci-lint
 golangci-lint: ## Download golangci-lint locally if necessary.
