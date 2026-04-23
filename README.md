@@ -182,50 +182,27 @@ The AMD Container Toolkit supports GPU selection using unique identifiers (UUIDs
 
 ## Getting GPU UUIDs
 
-GPU UUIDs can be obtained using different tools:
+GPU UUIDs can be obtained using the `amd-ctk gpu list` command:
 
-### Using ROCm SMI
 ```bash
-rocm-smi --showuniqueid
+amd-ctk gpu list
 ```
 
 This will display output similar to:
 ```
-GPU[0]          : Unique ID: 0xef2c1799a1f3e2ed
-GPU[1]          : Unique ID: 0x1234567890abcdef
+Found 2 AMD GPU devices
+---------------------------------------------------------------------------
+GPU Id    UUID                     DRM Devices
+---------------------------------------------------------------------------
+0         0xEF2C1799A1F3E2ED       /dev/dri/renderD128
+1         0x1234567890ABCDEF       /dev/dri/renderD129
 ```
 
-### Using AMD-SMI
-The `amd-smi` tool can also be used to get the ASIC_SERIAL, which serves as the GPU UUID:
+Use the `UUID` value (e.g., `0xEF2C1799A1F3E2ED`) as the GPU UUID in container configurations.
 
-```bash
-amd-smi static -aB
-```
+If GPU Tracker is enabled, `amd-ctk gpu-tracker status` also displays UUIDs alongside container allocation and accessibility information.
 
-This will display output similar to:
-```
-GPU: 0
-    ASIC:
-        MARKET_NAME: AMD Instinct MI210
-        VENDOR_ID: 0x1002
-        VENDOR_NAME: Advanced Micro Devices Inc. [AMD/ATI]
-        SUBVENDOR_ID: 0x1002
-        DEVICE_ID: 0x740f
-        SUBSYSTEM_ID: 0x0c34
-        REV_ID: 0x02
-        ASIC_SERIAL: 0xD1CC3F11CFDD5112
-        OAM_ID: N/A
-        NUM_COMPUTE_UNITS: 104
-        TARGET_GRAPHICS_VERSION: gfx90a
-    BOARD:
-        MODEL_NUMBER: 102-D67302-00
-        PRODUCT_SERIAL: 692231000131
-        FRU_ID: 113-HPED67302000B.009
-        PRODUCT_NAME: Instinct MI210
-        MANUFACTURER_NAME: AMD
-```
-
-Use the `ASIC_SERIAL` value (e.g., `0xD1CC3F11CFDD5112`) as the GPU UUID in container configurations.
+**Note:** The UUID used by the AMD Container Toolkit is sourced from the KFD topology (`/sys/class/kfd/kfd/topology/nodes/*/properties`). This may differ from the `ASIC_SERIAL` reported by `amd-smi` or the Unique ID reported by `rocm-smi`. Always use the UUID shown by `amd-ctk gpu list` for container configurations.
 
 ## Using UUIDs with Environment Variables
 
