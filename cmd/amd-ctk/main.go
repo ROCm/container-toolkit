@@ -22,6 +22,7 @@ import (
 	"os"
 
 	"github.com/ROCm/container-toolkit/cmd/amd-ctk/cdi"
+	"github.com/ROCm/container-toolkit/cmd/amd-ctk/gpu"
 	gpuTracker "github.com/ROCm/container-toolkit/cmd/amd-ctk/gpu-tracker"
 	"github.com/ROCm/container-toolkit/cmd/amd-ctk/runtime"
 	"github.com/urfave/cli/v2"
@@ -86,6 +87,7 @@ func main() {
 		showVersion(),
 		runtime.AddNewCommand(),
 		cdi.AddNewCommand(),
+		gpu.AddNewCommand(),
 		gpuTracker.AddNewCommand(),
 	}
 
