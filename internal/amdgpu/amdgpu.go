@@ -101,7 +101,7 @@ func GetAMDGPUsWithFS(fs FileSystem) ([]DeviceInfo, error) {
 	renderDevIds := GetDevIdsFromTopology(fs)
 
 	// Map to store devices by unique_id to maintain grouping
-	uniqueIdDevices := make(map[string][]DeviceInfo)
+	uniqueDevIdDevices := make(map[string][]DeviceInfo)
 	var uniqueIds []string // To maintain order
 
 	// Process PCI devices
@@ -156,17 +156,17 @@ func GetAMDGPUsWithFS(fs FileSystem) ([]DeviceInfo, error) {
 
 		if len(drmDevs) > 0 && renderMinor > 0 {
 			if devID, exists := renderDevIds[renderMinor]; exists {
-				if _, exists := uniqueIdDevices[devID]; !exists {
+				if _, exists := uniqueDevIdDevices[devID]; !exists {
 					uniqueIds = append(uniqueIds, devID)
 				}
-				uniqueIdDevices[devID] = append(uniqueIdDevices[devID], DeviceInfo{DrmDevices: drmDevs, PartitionType: combinedPartitionType})
+				uniqueDevIdDevices[devID] = append(uniqueDevIdDevices[devID], DeviceInfo{DrmDevices: drmDevs, PartitionType: combinedPartitionType})
 			}
 		}
 	}
 
 	// Sort devices within each unique_id group by render minor number
 	for _, devID := range uniqueIds {
-		sort.Slice(uniqueIdDevices[devID], func(i, j int) bool {
+		sort.Slice(uniqueDevIdDevices[devID], func(i, j int) bool {
 			getRenderID := func(devInfo DeviceInfo) int {
 				devs := devInfo.DrmDevices
 				for _, dev := range devs {
@@ -178,14 +178,14 @@ func GetAMDGPUsWithFS(fs FileSystem) ([]DeviceInfo, error) {
 				}
 				return 0
 			}
-			return getRenderID(uniqueIdDevices[devID][i]) < getRenderID(uniqueIdDevices[devID][j])
+			return getRenderID(uniqueDevIdDevices[devID][i]) < getRenderID(uniqueDevIdDevices[devID][j])
 		})
 	}
 
 	// Combine all devices maintaining the unique_id order
 	var devs []DeviceInfo
 	for _, devID := range uniqueIds {
-		devs = append(devs, uniqueIdDevices[devID]...)
+		devs = append(devs, uniqueDevIdDevices[devID]...)
 	}
 
 	return devs, nil
@@ -242,9 +242,59 @@ func GetAMDGPUWithFS(fs FileSystem, dev string) (AMDGPU, error) {
 
 var topoUniqueIdRe = regexp.MustCompile(`unique_id\s(\d+)`)
 var renderMinorRe = regexp.MustCompile(`drm_render_minor\s(\d+)`)
+var locationIdRe = regexp.MustCompile(`location_id\s(\d+)`)
+var domainRe = regexp.MustCompile(`domain\s(\d+)`)
 
-// GetDevIdsFromTopology returns a map of render minor numbers to unique_ids
+// GetDevIdsFromTopology returns a map of render minor numbers to parent devID
 func GetDevIdsFromTopology(fs FileSystem, topoRootParam ...string) map[int]string {
+	topoRoot := "/sys/class/kfd/kfd"
+	if len(topoRootParam) == 1 {
+		topoRoot = topoRootParam[0]
+	}
+
+	renderDevIds := make(map[int]string)
+	nodeFiles, err := fs.Glob(topoRoot + "/topology/nodes/*/properties")
+	if err != nil {
+		slog.Warn("Failed to glob topology nodes", "error", err)
+		return renderDevIds
+	}
+
+	for _, nodeFile := range nodeFiles {
+		slog.Debug("Parsing topology node file", "file", nodeFile)
+		renderMinor, err := ParseTopologyProperties(fs, nodeFile, renderMinorRe)
+		if err != nil {
+			slog.Debug("Error parsing render minor", "file", nodeFile, "error", err)
+			continue
+		}
+
+		if renderMinor <= 0 || renderMinor > math.MaxInt32 {
+			continue
+		}
+
+		locationId, e := ParseTopologyProperties(fs, nodeFile, locationIdRe)
+		if e != nil {
+			slog.Debug("Error parsing location_id", "file", nodeFile, "error", e)
+			continue
+		}
+
+		domain, e := ParseTopologyProperties(fs, nodeFile, domainRe)
+		if e != nil {
+			slog.Debug("Error parsing domain", "file", nodeFile, "error", e)
+			continue
+		}
+
+		dev := (locationId >> 3) & 0x1f
+		bus := (locationId >> 8) & 0xff
+		devID := fmt.Sprintf("%04x:%02x:%02x:0", domain, bus, dev)
+
+		renderDevIds[int(renderMinor)] = devID
+	}
+
+	return renderDevIds
+}
+
+// GetUniqueIdsFromTopology returns a map of render minor numbers to unique_ids
+func GetUniqueIdsFromTopology(fs FileSystem, topoRootParam ...string) map[int]string {
 	topoRoot := "/sys/class/kfd/kfd"
 	if len(topoRootParam) == 1 {
 		topoRoot = topoRootParam[0]
@@ -331,7 +381,7 @@ func GetUniqueIdToDeviceIndexMapWithFS(fs FileSystem) (map[string][]int, error) 
 		return nil, fmt.Errorf("getting AMD GPUs: %w", err)
 	}
 
-	renderDevIds := GetDevIdsFromTopology(fs)
+	renderDevIds := GetUniqueIdsFromTopology(fs)
 	uniqueIdToIndex := make(map[string][]int)
 
 	// Process each device group and assign index
