@@ -527,32 +527,32 @@ func TestGetDevIdsFromTopology(t *testing.T) {
 			name:     "single GPU topology",
 			testCase: "single_gpu",
 			expectedResult: map[int]string{
-				128: "1",
+				128: "0000:05:00:0",
 			},
 		},
 		{
 			name:     "GPU with partition topology",
 			testCase: "gpu_with_partition",
 			expectedResult: map[int]string{
-				128: "1",
-				129: "1",
+				128: "0000:05:00:0",
+				129: "0000:28:00:0",
 			},
 		},
 		{
 			name:     "multiple GPUs topology",
 			testCase: "multiple_gpus",
 			expectedResult: map[int]string{
-				128: "1",
-				130: "2",
+				128: "0000:05:00:0",
+				130: "0000:48:00:0",
 			},
 		},
 		{
 			name:     "unordered partitions topology",
 			testCase: "unordered_partitions",
 			expectedResult: map[int]string{
-				128: "1",
-				129: "1",
-				130: "2",
+				128: "0000:05:00:0",
+				129: "0000:28:00:0",
+				130: "0000:48:00:0",
 			},
 		},
 	}
