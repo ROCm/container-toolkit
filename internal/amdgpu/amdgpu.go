@@ -100,8 +100,8 @@ func GetAMDGPUsWithFS(fs FileSystem) ([]DeviceInfo, error) {
 
 	renderDevIds := GetDevIdsFromTopology(fs)
 
-	// Map to store devices by unique_id to maintain grouping
-	uniqueDevIdDevices := make(map[string][]DeviceInfo)
+	// Map to store devices by parent dev ID to maintain grouping
+	devIdToDevices := make(map[string][]DeviceInfo)
 	var uniqueIds []string // To maintain order
 
 	// Process PCI devices
@@ -156,17 +156,17 @@ func GetAMDGPUsWithFS(fs FileSystem) ([]DeviceInfo, error) {
 
 		if len(drmDevs) > 0 && renderMinor > 0 {
 			if devID, exists := renderDevIds[renderMinor]; exists {
-				if _, exists := uniqueDevIdDevices[devID]; !exists {
+				if _, exists := devIdToDevices[devID]; !exists {
 					uniqueIds = append(uniqueIds, devID)
 				}
-				uniqueDevIdDevices[devID] = append(uniqueDevIdDevices[devID], DeviceInfo{DrmDevices: drmDevs, PartitionType: combinedPartitionType})
+				devIdToDevices[devID] = append(devIdToDevices[devID], DeviceInfo{DrmDevices: drmDevs, PartitionType: combinedPartitionType})
 			}
 		}
 	}
 
-	// Sort devices within each unique_id group by render minor number
+	// Sort devices within each parent dev ID group by render minor number
 	for _, devID := range uniqueIds {
-		sort.Slice(uniqueDevIdDevices[devID], func(i, j int) bool {
+		sort.Slice(devIdToDevices[devID], func(i, j int) bool {
 			getRenderID := func(devInfo DeviceInfo) int {
 				devs := devInfo.DrmDevices
 				for _, dev := range devs {
@@ -178,14 +178,14 @@ func GetAMDGPUsWithFS(fs FileSystem) ([]DeviceInfo, error) {
 				}
 				return 0
 			}
-			return getRenderID(uniqueDevIdDevices[devID][i]) < getRenderID(uniqueDevIdDevices[devID][j])
+			return getRenderID(devIdToDevices[devID][i]) < getRenderID(devIdToDevices[devID][j])
 		})
 	}
 
 	// Combine all devices maintaining the unique_id order
 	var devs []DeviceInfo
 	for _, devID := range uniqueIds {
-		devs = append(devs, uniqueDevIdDevices[devID]...)
+		devs = append(devs, devIdToDevices[devID]...)
 	}
 
 	return devs, nil
