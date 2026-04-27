@@ -12,6 +12,9 @@ Compatibility Matrix
    * - AMD Container Toolkit
      - Docker Version
      - Supported OS
+   * - 1.3.0
+     - 25.0+
+     - Ubuntu 22.04, Ubuntu 24.04
    * - 1.2.0
      - 25.0+ 
      - Ubuntu 22.04, Ubuntu 24.04
@@ -31,6 +34,9 @@ Versioning Information
    * - Version
      - Release Date
      - Highlights
+   * - v1.3.0
+     - May 2026
+     - ``amd-ctk gpu list``, GPU partition grouping, CDI and runtime improvements
    * - v1.2.0
      - November 2025
      - GPU Tracker feature support, Docker Swarm Support
@@ -40,6 +46,47 @@ Versioning Information
    * - v1.0.0
      - June 2025
      - Initial Release with `amd-ctk`, CDI, Docker Integration, Ubuntu 22.04/24.04 Support
+
+-------------------
+v1.3.0 (May 2026)
+-------------------
+
+Overview
+--------
+
+This release extends the command-line tool with GPU discovery and tightens CDI and runtime behavior.
+
+- **``amd-ctk gpu list``:** A dedicated command to display GPU information from the host.
+- **CDI hardening and usability:** Human-readable CDI spec formatting, support for custom CDI spec file names, and the ability for non-root users to generate and validate CDI specifications where appropriate.
+- **GPU partition grouping:** Partitions of the same physical GPU are now grouped by PCI device topology (``location_id`` and ``domain``) instead of ``unique_id``, improving reliability on multi-GPU and partitioned systems.
+- **Runtime and GPU Tracker:** Rootful-Docker checks and more consistent behavior and messaging where GPU Tracker and the CLI interact.
+
+New Features
+~~~~~~~~~~~~
+
+- **``amd-ctk gpu list``**
+
+  - Lists GPU details for AMD devices on the system, complementing existing ``amd-ctk cdi`` workflows.
+
+- **CDI and runtime**
+
+  - CDI spec output is formatted for easier reading and review.
+  - Non-root users can run CDI spec generation and validation in supported configurations.
+  - Custom CDI spec file names (not limited to ``amd.json``) are supported when loading specs.
+
+Improvements
+------------
+
+- **GPU partition grouping:** GPU partitions are now grouped by parent PCI device address derived from topology ``location_id`` and ``domain`` fields, rather than by ``unique_id``. This produces correct grouping on systems where partitions of the same GPU have distinct ``unique_id`` values.
+- **Container runtime in rootless / non-rootful Docker:** The runtime exits early when the Docker setup is not rootful, matching supported deployment models.
+- **Docker and CDI:** Using ``--gpus`` together with CDI-backed AMD devices requires Docker **29.3.0** or newer.
+
+Upgrade Notes
+-------------
+
+- Regenerate or validate CDI specifications after upgrading; manage specs explicitly with ``amd-ctk cdi``.
+- If you want to use ``--gpus`` with CDI-backed AMD GPUs, upgrade Docker to **29.3.0** or newer.
+- Rootless or non-rootful Docker configurations are not supported for the same runtime paths; ensure a rootful Docker engine where the toolkit expects it.
 
 -------------------
 v1.2.0 (November 2025)
