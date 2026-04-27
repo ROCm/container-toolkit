@@ -1,5 +1,5 @@
 drm_render_minor 130
-unique_id 2
+unique_id 3
 gfx_target_version 90402
 cpu_cores_count 20
 simd_count 0
@@ -8,3 +8,5 @@ caches_count 0
 io_links_count 1
 cpu_core_id_base 0
 simd_id_base 0
+location_id 18432
+domain 0
