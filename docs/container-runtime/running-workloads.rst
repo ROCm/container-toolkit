@@ -97,7 +97,30 @@ The **amd-container-runtime** is a custom OCI runtime that injects AMD GPUs into
 
    docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/rocm-terminal rocm-smi
 
-For particular GPUs, use exact GPU indices with ``AMD_VISIBLE_DEVICES`` (e.g. ``0`` or ``0,1``).
+For particular GPUs, use exact GPU indices, ranges, or UUIDs with ``AMD_VISIBLE_DEVICES``:
+
+.. code-block:: bash
+
+   docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0,1 rocm/rocm-terminal rocm-smi
+   docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0-3,5 rocm/rocm-terminal rocm-smi
+   docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0xEF2C1799A1F3E2ED rocm/rocm-terminal rocm-smi
+
+Use ``amd-ctk gpu list`` to discover available GPUs and their UUIDs:
+
+.. code-block:: bash
+
+   amd-ctk gpu list
+
+Example output:
+
+.. code-block:: text
+
+   Found 2 AMD GPU devices
+   ---------------------------------------------------------------------------
+   GPU Id    UUID                     DRM Devices
+   ---------------------------------------------------------------------------
+   0         0xEF2C1799A1F3E2ED       /dev/dri/renderD128
+   1         0x1234567890ABCDEF       /dev/dri/renderD129
 
 .. note::
 
