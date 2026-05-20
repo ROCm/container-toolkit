@@ -59,6 +59,8 @@ external_toc_path = "./sphinx/_toc.yml"
 
 exclude_patterns = ['.venv']
 
+html_extra_path = ["llms.txt"]
+
 # Add the following replacements to every RST file.
 rst_prolog = f"""
 .. |rocm_version| replace:: {rocm_version}
@@ -148,7 +150,7 @@ def generate_combined_markdown(app, exception):
         return
 
     docs_root = Path(app.srcdir)
-    output_file = Path(app.outdir) / "llms.txt"
+    output_file = Path(app.outdir) / "llms-full.txt"
     base_file = docs_root / "llms.txt"
 
     combined = []
