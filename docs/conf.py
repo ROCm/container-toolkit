@@ -106,6 +106,9 @@ _BARE_DIRECTIVE_RE = re.compile(r"^[a-z][a-z_-]*:\s*\S*$")
 # Matches MyST/RST anchor labels like "(some-label)="
 _ANCHOR_LABEL_RE = re.compile(r"^\(\w[\w-]*\)=$")
 
+# Matches RST section underlines (e.g. "====", "----", "~~~~")
+_RST_UNDERLINE_RE = re.compile(r"^[=\-~^\"\'#*+]{3,}$")
+
 MIN_PROSE_LINES = 10
 
 
@@ -128,6 +131,15 @@ def is_prose_line(line: str) -> bool:
     # Drop lines that contain an HTML tag anywhere (e.g. ".</p>")
     if re.search(r"</?[a-zA-Z]", stripped):
         return False
+    # Drop RST directives, comments, hyperlink targets, and substitution definitions
+    if stripped.startswith(".."):
+        return False
+    # Drop RST field list items (e.g. ":type: int") and MyST directive options not in MARKUP_PREFIXES
+    if re.match(r"^:[A-Za-z]", stripped):
+        return False
+    # Drop RST section underlines (e.g. "====", "----", "~~~~")
+    if _RST_UNDERLINE_RE.match(stripped):
+        return False
     return True
 
 
@@ -147,7 +159,9 @@ def generate_combined_markdown(app, exception):
     else:
         combined.append("# AMD Container Toolkit")
 
-    all_files = sorted(docs_root.rglob("*.md"))
+    all_files = sorted(
+        list(docs_root.rglob("*.md")) + list(docs_root.rglob("*.rst"))
+    )
 
     for doc_file in all_files:
         if should_skip(doc_file):
