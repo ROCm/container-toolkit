@@ -25,7 +25,7 @@ Use ``--device amd.com/gpu=<entry>``. You do **not** need ``--runtime=amd`` when
 
 .. tip::
 
-   Starting with Docker **29.3.0**, you can also use ``--gpus <entry>`` directly with CDI, without ``--runtime=amd``. ``<entry>`` can be ``all``, a count (e.g. ``2``), or specific devices (e.g. ``'"device=0,1,2"'``).
+   Starting with Docker **29.3.0**, you can also use ``--gpus <entry>`` for AMD GPUs with CDI, without ``--runtime=amd``. ``<entry>`` can be ``all``, a count (e.g. ``2``), or specific devices (e.g. ``'"device=0,1,2"'``).
 
    .. code-block:: bash
 
@@ -51,6 +51,14 @@ nerdctl works with containerd and supports CDI via ``--device``.
 
    nerdctl run --rm --device amd.com/gpu=all rocm/rocm-terminal rocm-smi
 
+.. tip::
+
+   Starting with nerdctl **2.3.0**, you can also use ``--gpus <entry>`` for AMD GPUs with CDI. ``<entry>`` can be ``all`` or a count (e.g. ``2``).
+
+   .. code-block:: bash
+
+      nerdctl run --rm --gpus all rocm/rocm-terminal rocm-smi
+
 ctr
 ~~~
 
@@ -59,6 +67,14 @@ ctr is containerd's native CLI and supports CDI via ``--device``.
 .. code-block:: bash
 
    ctr run --rm --device amd.com/gpu=all docker.io/rocm/rocm-terminal:latest mycontainer rocm-smi
+
+.. tip::
+
+   Starting with containerd **2.3.0**, ``ctr`` also supports the ``--gpus`` flag for AMD GPUs with CDI. GPUs are requested by index (e.g. ``--gpus 0``).
+
+   .. code-block:: bash
+
+      ctr run --rm --gpus 0 docker.io/rocm/rocm-terminal:latest mycontainer rocm-smi
 
 Requesting specific GPUs
 ~~~~~~~~~~~~~~~~~~~~~~~~
