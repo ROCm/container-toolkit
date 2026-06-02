@@ -9,36 +9,44 @@ The AMD Container Toolkit is framework-agnostic but works seamlessly with popula
 - OpenMPI + ROCm
 - Custom AI/ML workflows
 
-Typical Example:
-----------------
+The examples below use :doc:`CDI <cdi-guide>` device notation (``--device amd.com/gpu=<entry>``). Ensure a CDI specification has been generated before running these commands.
 
-- Enabling easy container-based development and deployment across AMD GPU systems.
+TensorFlow
+----------
 
-1. TensorFlow
---------------
-
-Run ROCm-enabled TensorFlow:
+Run ROCm-enabled TensorFlow with a single GPU:
 
 .. code-block:: bash
 
-   sudo docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0 tensorflow/tensorflow:rocm-latest
+   docker run --rm --device amd.com/gpu=0 tensorflow/tensorflow:rocm-latest
 
-2. PyTorch
------------
+Or with all available GPUs:
+
+.. code-block:: bash
+
+   docker run --rm --device amd.com/gpu=all tensorflow/tensorflow:rocm-latest
+
+PyTorch
+-------
 
 Use ROCm-enabled PyTorch containers:
 
 .. code-block:: bash
 
-   sudo docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/pytorch:latest
+   docker run --rm --device amd.com/gpu=all rocm/pytorch:latest
 
-3.Triton Inference Server
--------------------------
+Triton Inference Server
+-----------------------
 
-Serving models with Triton using AMD GPUs is supported by adapting container images for ROCm.
+Serving models with Triton using AMD GPUs is supported by adapting container images for ROCm:
+
+.. code-block:: bash
+
+   docker run --rm --device amd.com/gpu=all <triton-rocm-image>
 
 Best Practices
 --------------
 
 - Always use container images tested against the matching ROCm version.
-- Use environment variables or CDI device selection carefully in multi-GPU setups.
+- Prefer CDI device notation (``--device amd.com/gpu=<entry>``) for portability across container runtimes.
+- Use ``amd-ctk cdi list`` to discover available device entries for multi-GPU setups.

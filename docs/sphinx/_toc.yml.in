@@ -8,6 +8,8 @@ subtrees:
         title: Requirements
       - file: container-runtime/quick-start-guide.rst
         title: Quick Start Guide
+      - file: container-runtime/cdi-guide.rst
+        title: Container Device Interface
       - file: container-runtime/running-workloads.rst
         title: Running Workloads
       - file: container-runtime/framework-integration.rst
@@ -24,8 +26,6 @@ subtrees:
         title: Enroot Pyxis Installation
       - file: container-runtime/docker-swarm.md
         title: Support for Docker Swarm
-      - file: container-runtime/cdi-guide.rst
-        title: Support for Container Device Interface
       - file: container-runtime/gpu-tracker
         title: GPU Tracker
       - file: container-runtime/release-notes.rst
