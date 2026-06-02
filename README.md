@@ -43,17 +43,7 @@ Install the toolkit on Ubuntu (for RHEL/CentOS and full details, see the [Quick 
 
 3. Configure Runtime and run a GPU container:
 
-   **Option A — AMD container runtime:**
-   ```bash
-   sudo amd-ctk runtime configure
-   sudo systemctl restart docker
-   ```
-   Verify by running a container with all AMD GPUs:
-   ```bash
-   docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/rocm-terminal rocm-smi
-   ```
-
-   **Option B — CDI (runtime-agnostic, no runtime configure needed):**
+   **Option A — CDI (runtime-agnostic, no runtime configure needed):**
    ```bash
    sudo amd-ctk cdi generate --output=/etc/cdi/amd.json
    sudo amd-ctk cdi validate --path=/etc/cdi/amd.json
@@ -65,9 +55,36 @@ Install the toolkit on Ubuntu (for RHEL/CentOS and full details, see the [Quick 
 
    > **Note:** CDI is supported by many container runtimes including Docker, Podman, and containerd.
 
+   **Option B — AMD container runtime (Docker only):**
+   ```bash
+   sudo amd-ctk runtime configure
+   sudo systemctl restart docker
+   ```
+   Verify by running a container with all AMD GPUs:
+   ```bash
+   docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/rocm-terminal rocm-smi
+   ```
+
 ## Usage
 
-Select specific GPUs by index, range, or UUID:
+### Using CDI
+
+List available CDI device entries:
+
+```bash
+amd-ctk cdi list
+```
+
+Select GPUs by index using `--device amd.com/gpu=<entry>`:
+
+```bash
+docker run --rm --device amd.com/gpu=0 rocm/rocm-terminal rocm-smi
+docker run --rm --device amd.com/gpu=all rocm/rocm-terminal rocm-smi
+```
+
+### Using amd-container-runtime (Docker only)
+
+Select GPUs by index, range, or UUID with `AMD_VISIBLE_DEVICES`:
 
 ```bash
 docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0,1,2 rocm/rocm-terminal rocm-smi
@@ -75,7 +92,7 @@ docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0-3,5,8 rocm/rocm-terminal 
 docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0xEF2C1799A1F3E2ED rocm/rocm-terminal rocm-smi
 ```
 
-List available GPUs and their UUIDs for use with `AMD_VISIBLE_DEVICES`:
+List available GPUs and their UUIDs:
 
 ```bash
 amd-ctk gpu list
