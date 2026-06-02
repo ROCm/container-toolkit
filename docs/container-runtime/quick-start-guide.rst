@@ -16,7 +16,7 @@ Before installing the AMD Container Toolkit, ensure the following dependencies a
    - Docker version 25.0 or newer is required for all features.
 
 .. note::
-   Docker Desktop on Linux is not supported for GPU workloads; see [troubleshooting](docs/container-runtime/troubleshooting.rst) to know more.
+   Docker Desktop on Linux is not supported for GPU workloads; see :doc:`Troubleshooting <troubleshooting>` to know more.
 
 .. note::
       - The Container Device Interface (CDI) format, used by modern container runtimes to abstract and expose GPUs, is not supported in older Docker versions.
@@ -145,10 +145,17 @@ RHEL 9.5:
    dnf clean all
    dnf install -y amd-container-toolkit
 
-You have successfully installed the AMD Container Toolkit. The next steps cover configuring Docker and running GPU workloads. If you prefer to use CDI for GPU injection, see the :doc:`CDI guide <cdi-guide>`.
+You have successfully installed the AMD Container Toolkit.
 
-Step 5: Configure Docker Runtime for AMD GPUs
----------------------------------------------
+Configuring Docker Runtime
+==========================
+
+.. seealso::
+
+   For a runtime-agnostic approach to GPU injection that works with all CDI-compatible runtimes, see the :doc:`Container Device Interface <cdi-guide>` guide.
+
+Step 1: Configure Docker Runtime for AMD GPUs
+----------------------------------------------
 
 - Register the AMD container runtime and restart the Docker daemon:
 
@@ -159,8 +166,8 @@ Step 5: Configure Docker Runtime for AMD GPUs
 
 This configuration ensures that Docker is aware of the AMD container runtime and is able to support GPU-accelerated workloads using AMD Instinct devices.
 
-Step 6: Verify Container Runtime Installation
----------------------------------------------
+Step 2: Verify Container Runtime Installation
+----------------------------------------------
 
 To run Docker containers with access to AMD GPUs, you need to specify the AMD runtime and visible GPUs. Here are some examples you can use to verify the installation:
 
