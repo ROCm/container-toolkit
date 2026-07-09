@@ -38,6 +38,14 @@ Podman
 
    podman run --rm --device amd.com/gpu=all rocm/rocm-terminal rocm-smi
 
+.. tip::
+
+   Starting with Podman **6.0.0**, you can also use ``--gpus <entry>`` for AMD GPUs with CDI. ``<entry>`` can be ``all`` to request all GPUs.
+
+   .. code-block:: bash
+
+      podman run --rm --gpus all rocm/rocm-terminal rocm-smi
+
 .. note::
 
    To access the GPU inside the container, the process must run under the video and render groups. When running in rootless mode, ensure the user starting the Podman container is a member of these groups on the host, and use the ``--group-add keep-groups`` flag to pass these supplementary groups to the container process.
