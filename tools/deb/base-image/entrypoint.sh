@@ -22,7 +22,7 @@ sysctl -w vm.max_map_count=262144
 if [[ -n "${USER_NAME:-}" && -n "${USER_UID:-}" && -n "${USER_GID:-}" ]]; then
 	echo "Creating user ${USER_NAME} with UID=${USER_UID}, GID=${USER_GID}..."
 
-	existing_user="$(getent passwd "$USER_UID" | cut -d: -f1)"
+	existing_user="$(getent passwd "$USER_UID" | cut -d: -f1)" || true
 	if [[ -n "$existing_user" && "$existing_user" != "$USER_NAME" ]]; then
 		echo "Removing existing user $existing_user with UID=$USER_UID..."
 		userdel -r "$existing_user" || userdel "$existing_user"
