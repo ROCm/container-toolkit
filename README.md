@@ -19,7 +19,7 @@ For comprehensive documentation including installation, configuration, CDI, Swar
 
 ## Requirements
 
-- Ubuntu 22.04 or 24.04, or RHEL/CentOS 9
+- Ubuntu 22.04, 24.04, or 26.04, or RHEL/CentOS 9
 - Docker version 25 or later
 - All `amd-ctk runtime configure` commands should be run as root/sudo
 
