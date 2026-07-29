@@ -14,7 +14,7 @@ Compatibility Matrix
      - Supported OS
    * - 1.3.0
      - 25.0+
-     - Ubuntu 22.04, Ubuntu 24.04
+     - Ubuntu 22.04, Ubuntu 24.04, Ubuntu 26.04
    * - 1.2.0
      - 25.0+ 
      - Ubuntu 22.04, Ubuntu 24.04
