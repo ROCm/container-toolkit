@@ -40,10 +40,14 @@ export ${BUILD_VER_ENV}
 
 # 22.04 - jammy
 # 24.04 - noble
+# 26.04 - resolute
 UBUNTU_VERSION ?= jammy
 UBUNTU_VERSION_NUMBER = 22.04
 ifeq (${UBUNTU_VERSION}, noble)
 UBUNTU_VERSION_NUMBER = 24.04
+endif
+ifeq (${UBUNTU_VERSION}, resolute)
+UBUNTU_VERSION_NUMBER = 26.04
 endif
 
 DEBIAN_VERSION := "1.3.0"

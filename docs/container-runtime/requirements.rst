@@ -7,6 +7,7 @@ Supported Operating Systems
 ---------------------------
 - Ubuntu 22.04 LTS (Jammy Jellyfish)
 - Ubuntu 24.04 LTS (Noble Numbat)
+- Ubuntu 26.04 LTS (Resolute Raccoon)
 - RHEL 9.5
 
 .. note::
