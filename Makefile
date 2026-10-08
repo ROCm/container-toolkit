@@ -55,7 +55,9 @@ DEBIAN_VERSION := "1.3.0"
 DEBIAN_CONTROL = ${TOP_DIR}/build/debian/DEBIAN/control
 DEBIAN_PRERM = ${TOP_DIR}/build/debian/DEBIAN/prerm
 BUILD_VER_ENV = ${DEBIAN_VERSION}~$(UBUNTU_VERSION_NUMBER)
-PKG_PATH := ${TOP_DIR}/build/debian/usr/local/bin
+PKG_PATH := ${TOP_DIR}/build/debian/usr/bin
+# Compatibility symlinks keep /usr/local/bin working for existing installs and running containers
+PKG_COMPAT_PATH := ${TOP_DIR}/build/debian/usr/local/bin
 
 ##################
 # Makefile targets
@@ -141,12 +143,20 @@ deb-pkg-build: all
 	mkdir -p ${PKG_PATH}
 	cp -vf $(CURDIR)/bin/deb/amd-container-runtime ${PKG_PATH}/
 	cp -vf $(CURDIR)/bin/deb/amd-ctk ${PKG_PATH}/
+	chmod 0755 ${PKG_PATH} ${PKG_PATH}/amd-ctk ${PKG_PATH}/amd-container-runtime
+
+	# ship /usr/local/bin symlinks so existing installs and running containers keep resolving
+	rm -rf ${TOP_DIR}/build/debian/usr/local
+	install -d -m 0755 ${PKG_COMPAT_PATH}
+	ln -sf ../../bin/amd-ctk ${PKG_COMPAT_PATH}/amd-ctk
+	ln -sf ../../bin/amd-container-runtime ${PKG_COMPAT_PATH}/amd-container-runtime
+
 	cp -vf $(CURDIR)/build/cleanup.sh $(DEBIAN_PRERM)
 	chmod 0755 $(DEBIAN_PRERM)
 
 	cd ${TOP_DIR}
 	sed -i "s/BUILD_VER_ENV/$(BUILD_VER_ENV)/g" $(DEBIAN_CONTROL)
-	dpkg-deb -Zxz --build build/debian ${TOP_DIR}/bin
+	dpkg-deb --root-owner-group -Zxz --build build/debian ${TOP_DIR}/bin
 
 	# revert the dynamic version set file
 	git checkout $(DEBIAN_CONTROL)

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/ROCm/container-toolkit/internal/amdgpu"
@@ -32,6 +33,12 @@ import (
 const (
 	// Default path for AMD Container Runtime OCI hook
 	DEFAULT_HOOK_PATH = "/usr/bin/amd-container-runtime-hook"
+
+	// amdCtkBinary is the name of the AMD Container Toolkit CLI executable
+	amdCtkBinary = "amd-ctk"
+
+	// DEFAULT_AMD_CTK_PATH is used when amd-ctk cannot be located next to the running runtime
+	DEFAULT_AMD_CTK_PATH = "/usr/bin/amd-ctk"
 )
 
 // Interface for OCI package
@@ -85,6 +92,9 @@ type oci_t struct {
 
 	// hookPath is the where the OCI hook executable is on the disk
 	hookPath string
+
+	// ctkPath is where the amd-ctk executable is on the disk, used in the gpu-tracker release hook
+	ctkPath string
 
 	// origSpecPath is where the input OCI spec is on the disk
 	origSpecPath string
@@ -286,7 +296,7 @@ func (oci *oci_t) addGPUDevices() error {
 		oci.spec.Hooks = &specs.Hooks{}
 	}
 	hook1 := specs.Hook{
-		Path: "/usr/local/bin/amd-ctk",
+		Path: oci.ctkPath,
 		Args: []string{
 			"amd-ctk",
 			"gpu-tracker",
@@ -349,6 +359,7 @@ func New(argv []string) (Interface, error) {
 	oci := &oci_t{
 		args:                        argv,
 		hookPath:                    DEFAULT_HOOK_PATH,
+		ctkPath:                     amdCtkPath(),
 		getGPUs:                     amdgpu.GetAMDGPUs,
 		getGPU:                      amdgpu.GetAMDGPU,
 		getUniqueIdToDeviceIndexMap: amdgpu.GetUniqueIdToDeviceIndexMap,
@@ -362,6 +373,31 @@ func New(argv []string) (Interface, error) {
 	}
 
 	return oci, nil
+}
+
+// amdCtkPath locates the amd-ctk executable next to the running runtime binary.
+// Both binaries always ship in the same directory, so resolving amd-ctk relative
+// to amd-container-runtime avoids depending on where the package installs them or
+// on the PATH seen at container teardown. It falls back to DEFAULT_AMD_CTK_PATH
+// when the sibling cannot be determined or does not exist.
+func amdCtkPath() string {
+	return ctkPathFromExe(os.Executable)
+}
+
+// ctkPathFromExe is the testable core of amdCtkPath, taking the executable
+// resolver as an argument.
+func ctkPathFromExe(executable func() (string, error)) string {
+	exe, err := executable()
+	if err != nil {
+		return DEFAULT_AMD_CTK_PATH
+	}
+
+	candidate := filepath.Join(filepath.Dir(exe), amdCtkBinary)
+	if _, err := os.Stat(candidate); err != nil {
+		return DEFAULT_AMD_CTK_PATH
+	}
+
+	return candidate
 }
 
 // HasHelpOption returns true if the arguments passed include the help option
