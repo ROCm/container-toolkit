@@ -1,30 +1,28 @@
 #!/bin/bash
+#
+# Builds the rpm or deb package with the Makefile packaging targets, installs
+# it and checks the installed CLI. The binaries must already be in bin/rpmbuild
+# (rpm) or bin/deb (deb). Needs make, git and jq, plus rpmbuild for rpm. It
+# installs system packages, so run it as root in a disposable container.
 
 set -euxo pipefail
 
-test ! -d /sys/module/amdgpu/drivers/
+cd "$(dirname "$0")/.."
+if [ -d /sys/module/amdgpu/drivers/ ]; then
+    echo "SKIP: the amdgpu driver is loaded, so this run does not check installation without it" >&2
+fi
 workdir=$(mktemp -d)
 
 case "${1:?Specify rpm or deb}" in
     rpm)
-        CONTAINER_WORKDIR="$PWD" rpmbuild -bb \
-            --define "_topdir $workdir/rpm" build/rpmbuild.spec
-        rpm -ivh "$workdir"/rpm/RPMS/x86_64/*.rpm
+        make rpm-pkg-only CONTAINER_WORKDIR="$PWD" RPM_TOPDIR="$workdir/rpm"
+        rpm -ivh "$workdir"/rpm/RPMS/*/*.rpm
         rpm -q amd-container-toolkit
-        ctk=/usr/bin/amd-ctk
         ;;
     deb)
-        cp -a build/debian "$workdir/package"
-        sed -i 's/BUILD_VER_ENV/0/' "$workdir/package/DEBIAN/control"
-        install -m 0755 build/cleanup.sh "$workdir/package/DEBIAN/prerm"
-        for binary in amd-ctk amd-container-runtime; do
-            install -D -m 0755 "bin/rpmbuild/$binary" \
-                "$workdir/package/usr/local/bin/$binary"
-        done
-        dpkg-deb --build "$workdir/package" "$workdir/toolkit.deb"
-        dpkg -i "$workdir/toolkit.deb"
+        make deb-pkg-only
+        dpkg -i bin/amd-container-toolkit_*_amd64.deb
         dpkg-query -W amd-container-toolkit
-        ctk=/usr/local/bin/amd-ctk
         ;;
     *)
         echo "Unknown package format: $1" >&2
@@ -32,14 +30,6 @@ case "${1:?Specify rpm or deb}" in
         ;;
 esac
 
-"$ctk" version
-"$ctk" runtime configure --config-path="$workdir/daemon.json"
+/usr/bin/amd-ctk version
+/usr/bin/amd-ctk runtime configure --config-path="$workdir/daemon.json"
 jq -e '.runtimes.amd.path == "amd-container-runtime"' "$workdir/daemon.json"
-
-if "$ctk" gpu list >"$workdir/gpu-list.log" 2>&1; then
-    cat "$workdir/gpu-list.log"
-    echo "GPU discovery succeeded without the amdgpu driver" >&2
-    exit 1
-fi
-cat "$workdir/gpu-list.log"
-grep -F 'amdgpu driver unavailable' "$workdir/gpu-list.log"

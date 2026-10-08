@@ -59,6 +59,8 @@ PKG_PATH := ${TOP_DIR}/build/debian/usr/bin
 # Compatibility symlinks keep /usr/local/bin working for existing installs and running containers
 PKG_COMPAT_PATH := ${TOP_DIR}/build/debian/usr/local/bin
 
+RPM_TOPDIR ?= $(HOME)/rpmbuild
+
 ##################
 # Makefile targets
 #
@@ -137,6 +139,11 @@ pkg-deb: pkg-deb-clean
 
 .PHONY: deb-pkg-build
 deb-pkg-build: all
+	$(MAKE) deb-pkg-only
+
+# package the binaries already in bin/deb without rebuilding them or starting a container
+.PHONY: deb-pkg-only
+deb-pkg-only:
 	@echo "Building debian for $(BUILD_VER_ENV)"
 
 	# copy and strip files
@@ -167,8 +174,13 @@ deb-pkg-build: all
 
 .PHONY: rpm-pkg-build
 rpm-pkg-build: all
-	CONTAINER_WORKDIR=$(CONTAINER_WORKDIR) rpmbuild -bb $(CURDIR)/build/rpmbuild.spec
-	cp $(HOME)/rpmbuild/RPMS/x86_64/*.rpm $(CURDIR)/bin/
+	$(MAKE) rpm-pkg-only
+
+# package the binaries already in bin/rpmbuild without rebuilding them or starting a container
+.PHONY: rpm-pkg-only
+rpm-pkg-only:
+	CONTAINER_WORKDIR=$(CONTAINER_WORKDIR) rpmbuild -bb --define "_topdir $(RPM_TOPDIR)" $(CURDIR)/build/rpmbuild.spec
+	cp $(RPM_TOPDIR)/RPMS/*/*.rpm $(CURDIR)/bin/
 
 .PHONY: pkg-rpm pkg-rpm-clean
 pkg-rpm-clean:
