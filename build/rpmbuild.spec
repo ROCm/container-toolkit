@@ -12,10 +12,6 @@ Requires: jq
 %description
 This package contains pre-built binaries for AMD containter toolkit
 
-%post
-# Initialize GPU tracker after install
-/usr/bin/amd-ctk gpu-tracker init || true
-
 %preun
 /bin/bash /usr/share/amd-container-toolkit/cleanup.sh
 
