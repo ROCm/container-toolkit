@@ -3,6 +3,7 @@ package oci
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"sort"
 	"strconv"
@@ -272,6 +273,7 @@ func TestNew(t *testing.T) {
 func TestInterface(t *testing.T) {
 	oci := &oci_t{
 		origSpecPath:                TEST_OCI_SPEC_PATH,
+		ctkPath:                     "/usr/bin/amd-ctk",
 		getGPUs:                     mockGetAMDGPUs,
 		getGPU:                      mockGetAMDGPU,
 		getUniqueIdToDeviceIndexMap: mockGetUniqueIdToDeviceIndexMap,
@@ -286,11 +288,40 @@ func TestInterface(t *testing.T) {
 	err = oci.UpdateSpec(AddHook)
 	Assert(t, err == nil, fmt.Sprintf("UpdateSpec(AddHook) returned error %v", err))
 
+	Assert(t, oci.spec.Hooks != nil && len(oci.spec.Hooks.Poststop) == 1,
+		fmt.Sprintf("expected one poststop hook, got %v", oci.spec.Hooks))
+	Assert(t, oci.spec.Hooks.Poststop[0].Path == oci.ctkPath,
+		fmt.Sprintf("poststop hook path %q, want %q", oci.spec.Hooks.Poststop[0].Path, oci.ctkPath))
+
 	oci.updatedSpecPath = "/tmp"
 	err = oci.WriteSpec()
 	Assert(t, err == nil, fmt.Sprintf("WriteSpec() returned error %v", err))
 
 	oci.PrintSpec()
+}
+
+func TestAmdCtkPath(t *testing.T) {
+	// A sibling amd-ctk next to the runtime binary is used.
+	dir := t.TempDir()
+	runtime := filepath.Join(dir, "amd-container-runtime")
+	ctk := filepath.Join(dir, amdCtkBinary)
+	for _, p := range []string{runtime, ctk} {
+		if err := os.WriteFile(p, []byte("#!/bin/sh\n"), 0o755); err != nil {
+			t.Fatalf("writing %s: %v", p, err)
+		}
+	}
+
+	got := ctkPathFromExe(func() (string, error) { return runtime, nil })
+	Assert(t, got == ctk, fmt.Sprintf("ctkPath = %q, want %q", got, ctk))
+
+	// No sibling amd-ctk: fall back to the default path.
+	bareDir := t.TempDir()
+	got = ctkPathFromExe(func() (string, error) { return filepath.Join(bareDir, "amd-container-runtime"), nil })
+	Assert(t, got == DEFAULT_AMD_CTK_PATH, fmt.Sprintf("ctkPath = %q, want %q", got, DEFAULT_AMD_CTK_PATH))
+
+	// os.Executable failure: fall back to the default path.
+	got = ctkPathFromExe(func() (string, error) { return "", fmt.Errorf("boom") })
+	Assert(t, got == DEFAULT_AMD_CTK_PATH, fmt.Sprintf("ctkPath = %q, want %q", got, DEFAULT_AMD_CTK_PATH))
 }
 
 func Assert(t *testing.T, b bool, errString string) {
