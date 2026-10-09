@@ -1,9 +1,6 @@
 name: Enroot Tests
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       run_single_node_pytorch:
@@ -47,11 +44,14 @@ on:
         type: string
         default: ''
 
+concurrency:
+  group: enroot-tests
+  cancel-in-progress: true
 
 jobs:
   # Single-node PyTorch test
   test-single-node-pytorch:
-    if: github.event_name == 'push' || inputs.run_single_node_pytorch == true
+    if: inputs.run_single_node_pytorch == true
     runs-on: enroot-runners
     timeout-minutes: 120
     
@@ -87,13 +87,8 @@ jobs:
         working-directory: tests/enroot
         run: |
           DOCKER_IMAGE="${{ inputs.docker_image_single_node }}"
-          if [ "${{ github.event_name }}" = "push" ]; then
-            NO_INSTALL="false"
-            NO_UNINSTALL="false"
-          else
-            NO_INSTALL="${{ inputs.no_install }}"
-            NO_UNINSTALL="${{ inputs.no_uninstall }}"
-          fi
+          NO_INSTALL="${{ inputs.no_install }}"
+          NO_UNINSTALL="${{ inputs.no_uninstall }}"
           
           echo "Running test: test_single_node_pytorch"
           echo "Docker image: ${DOCKER_IMAGE:-'(using default from batch script)'}"
@@ -114,7 +109,7 @@ jobs:
     needs: test-single-node-pytorch
     if: |
       always() && 
-      (github.event_name == 'push' || inputs.run_multi_node_pytorch == true) &&
+      inputs.run_multi_node_pytorch == true &&
       (needs.test-single-node-pytorch.result == 'success' || needs.test-single-node-pytorch.result == 'skipped')
     runs-on: enroot-runners
     timeout-minutes: 120
@@ -151,13 +146,8 @@ jobs:
         working-directory: tests/enroot
         run: |
           DOCKER_IMAGE="${{ inputs.docker_image_multi_node }}"
-          if [ "${{ github.event_name }}" = "push" ]; then
-            NO_INSTALL="false"
-            NO_UNINSTALL="false"
-          else
-            NO_INSTALL="${{ inputs.no_install }}"
-            NO_UNINSTALL="${{ inputs.no_uninstall }}"
-          fi
+          NO_INSTALL="${{ inputs.no_install }}"
+          NO_UNINSTALL="${{ inputs.no_uninstall }}"
           
           echo "Running test: test_multi_node_distributed_pytorch"
           echo "Docker image: ${DOCKER_IMAGE:-'(using default from batch script)'}"
@@ -178,7 +168,7 @@ jobs:
     needs: test-multi-node-pytorch
     if: |
       always() && 
-      (github.event_name == 'push' || inputs.run_multi_node_rccl == true) &&
+      inputs.run_multi_node_rccl == true &&
       (needs.test-multi-node-pytorch.result == 'success' || needs.test-multi-node-pytorch.result == 'skipped')
     runs-on: enroot-runners
     timeout-minutes: 120
@@ -215,13 +205,8 @@ jobs:
         working-directory: tests/enroot
         run: |
           DOCKER_IMAGE="${{ inputs.docker_image_rccl }}"
-          if [ "${{ github.event_name }}" = "push" ]; then
-            NO_INSTALL="false"
-            NO_UNINSTALL="false"
-          else
-            NO_INSTALL="${{ inputs.no_install }}"
-            NO_UNINSTALL="${{ inputs.no_uninstall }}"
-          fi
+          NO_INSTALL="${{ inputs.no_install }}"
+          NO_UNINSTALL="${{ inputs.no_uninstall }}"
           
           echo "Running test: test_multi_node_rccl"
           echo "Docker image: ${DOCKER_IMAGE:-'(using default from batch script)'}"
