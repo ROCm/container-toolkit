@@ -65,6 +65,11 @@ Step 1: Update System and Group Settings
 Step 2: Install the AMDGPU Driver
 ---------------------------------
 
+.. note::
+   Container and immutable OS images can install the toolkit packages without a
+   loaded AMDGPU driver. Load the driver on the target host before generating
+   CDI specifications or running GPU workloads.
+
 - Refer to the latest ROCm documentation for driver installation here, `ROCm Install Quick Start <https://rocm.docs.amd.com/projects/install-on-linux/en/latest/install/quick-start.html>`_.
 - Download the AMDGPU driver installer package from the `Radeon Repository <https://repo.radeon.com/amdgpu-install>`_.
 - Install the downloaded package.
