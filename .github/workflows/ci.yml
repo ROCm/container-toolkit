@@ -82,3 +82,43 @@ jobs:
     
     - name: Run tests
       run: make test
+
+  package-test:
+    runs-on: ubuntu-24.04
+    needs: build
+    strategy:
+      matrix:
+        include:
+          - package: rpm
+            image: almalinux:9
+            bin_dir: rpmbuild
+          - package: deb
+            image: ubuntu:24.04
+            bin_dir: deb
+    container: ${{ matrix.image }}
+
+    steps:
+    - name: Install RPM packaging dependencies
+      if: matrix.package == 'rpm'
+      run: dnf install -y git jq make rpm-build
+
+    - name: Install Debian packaging dependencies
+      if: matrix.package == 'deb'
+      run: apt-get update && apt-get install -y git jq make
+
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: binaries
+        path: bin/${{ matrix.bin_dir }}/
+
+    - name: Make binaries executable
+      run: chmod +x bin/${{ matrix.bin_dir }}/amd-ctk bin/${{ matrix.bin_dir }}/amd-container-runtime
+
+    - name: Install package without a GPU driver
+      run: |
+        git config --global --add safe.directory "$GITHUB_WORKSPACE"
+        bash tests/package-install.sh "${{ matrix.package }}"
