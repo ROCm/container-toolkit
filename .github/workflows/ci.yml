@@ -86,15 +86,38 @@ jobs:
   package-test:
     runs-on: ubuntu-24.04
     needs: build
+    name: package-test (${{ matrix.os }}, driver ${{ matrix.driver }})
     strategy:
+      fail-fast: false
       matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04, rhel-9, rhel-10]
+        driver: [none, installed]
         include:
-          - package: rpm
-            image: almalinux:9
-            bin_dir: rpmbuild
-          - package: deb
-            image: ubuntu:24.04
+          - os: ubuntu-22.04
+            image: ubuntu:22.04
+            package: deb
             bin_dir: deb
+            codename: jammy
+          - os: ubuntu-24.04
+            image: ubuntu:24.04
+            package: deb
+            bin_dir: deb
+            codename: noble
+          - os: ubuntu-26.04
+            image: ubuntu:26.04
+            package: deb
+            bin_dir: deb
+            codename: resolute
+          - os: rhel-9
+            image: registry.access.redhat.com/ubi9/ubi
+            package: rpm
+            bin_dir: rpmbuild
+            el: "9"
+          - os: rhel-10
+            image: registry.access.redhat.com/ubi10/ubi
+            package: rpm
+            bin_dir: rpmbuild
+            el: "10"
     container: ${{ matrix.image }}
 
     steps:
@@ -118,7 +141,17 @@ jobs:
     - name: Make binaries executable
       run: chmod +x bin/${{ matrix.bin_dir }}/amd-ctk bin/${{ matrix.bin_dir }}/amd-container-runtime
 
-    - name: Install package without a GPU driver
+    - name: Install amdgpu driver packages
+      if: matrix.driver == 'installed'
+      env:
+        UBUNTU_CODENAME: ${{ matrix.codename }}
+        EL_VERSION: ${{ matrix.el }}
+      run: bash tests/install-amdgpu-driver.sh "${{ matrix.package }}"
+
+    - name: Install package and check the CLI
+      env:
+        UBUNTU_VERSION: ${{ matrix.codename }}
+        EXPECT_DRIVER: ${{ matrix.driver }}
       run: |
         git config --global --add safe.directory "$GITHUB_WORKSPACE"
         bash tests/package-install.sh "${{ matrix.package }}"
