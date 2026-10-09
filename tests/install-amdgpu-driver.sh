@@ -65,14 +65,19 @@ gpgcheck=1
 gpgkey=${GPG_KEY_URL}
 EOF
 
-    # dkms lives in EPEL, not the UBI repos.
-    dnf install -y "https://dl.fedoraproject.org/pub/epel/epel-release-latest-${EL_VERSION}.noarch.rpm"
-
-    # The %post DKMS build fails without kernel headers. Retry without running
-    # scriptlets so the package still lands on disk.
+    # A normal install works on a real RHEL host with the base repos. In a UBI
+    # container it can't: amdgpu-dkms requires kernel-devel and mokutil, which
+    # UBI does not ship, and there are no kernel headers to build the module
+    # against anyway. Fall back to downloading just the package and installing
+    # it without dependency resolution or scriptlets, so it lands on disk the
+    # same way the deb does.
     if ! dnf install -y amdgpu-dkms; then
-        dnf install -y --setopt=tsflags=noscripts amdgpu-dkms
-        echo "amdgpu-dkms installed with scriptlets skipped (no kernel headers in container)" >&2
+        dnf install -y 'dnf-command(download)'
+        local tmp
+        tmp=$(mktemp -d)
+        dnf download --destdir "$tmp" amdgpu-dkms
+        rpm -Uvh --nodeps --noscripts "$tmp"/amdgpu-dkms-*.rpm
+        echo "amdgpu-dkms installed without deps or scriptlets (no kernel-devel/headers in container)" >&2
     fi
     rpm -q amdgpu-dkms
 }
