@@ -449,8 +449,7 @@ func (oci *oci_t) PrintSpec() error {
 		return fmt.Errorf("marshaling OCI spec to JSON: %w", err)
 	}
 
-	fmt.Printf(string(prettyJSON))
-	fmt.Printf("\n")
+	fmt.Println(string(prettyJSON))
 
 	return nil
 }

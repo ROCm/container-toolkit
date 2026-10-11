@@ -177,6 +177,6 @@ func TestWriteSpec_OverwritesExisting(t *testing.T) {
 
 func Assert(t *testing.T, b bool, errString string) {
 	if !b {
-		t.Errorf(errString)
+		t.Error(errString)
 	}
 }
