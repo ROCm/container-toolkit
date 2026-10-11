@@ -44,6 +44,9 @@ on:
         type: string
         default: ''
 
+permissions:
+  contents: read
+
 concurrency:
   group: enroot-tests
   cancel-in-progress: true
@@ -57,10 +60,12 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.8'
       
@@ -85,11 +90,11 @@ jobs:
       
       - name: Run test_single_node_pytorch
         working-directory: tests/enroot
+        env:
+          DOCKER_IMAGE: ${{ inputs.docker_image_single_node }}
+          NO_INSTALL: ${{ inputs.no_install }}
+          NO_UNINSTALL: ${{ inputs.no_uninstall }}
         run: |
-          DOCKER_IMAGE="${{ inputs.docker_image_single_node }}"
-          NO_INSTALL="${{ inputs.no_install }}"
-          NO_UNINSTALL="${{ inputs.no_uninstall }}"
-          
           echo "Running test: test_single_node_pytorch"
           echo "Docker image: ${DOCKER_IMAGE:-'(using default from batch script)'}"
           
@@ -97,7 +102,7 @@ jobs:
       
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: test-results-single-node-pytorch-${{ github.run_number }}
           path: tests/enroot/results/
@@ -116,10 +121,12 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.8'
       
@@ -144,11 +151,11 @@ jobs:
       
       - name: Run test_multi_node_distributed_pytorch
         working-directory: tests/enroot
+        env:
+          DOCKER_IMAGE: ${{ inputs.docker_image_multi_node }}
+          NO_INSTALL: ${{ inputs.no_install }}
+          NO_UNINSTALL: ${{ inputs.no_uninstall }}
         run: |
-          DOCKER_IMAGE="${{ inputs.docker_image_multi_node }}"
-          NO_INSTALL="${{ inputs.no_install }}"
-          NO_UNINSTALL="${{ inputs.no_uninstall }}"
-          
           echo "Running test: test_multi_node_distributed_pytorch"
           echo "Docker image: ${DOCKER_IMAGE:-'(using default from batch script)'}"
           
@@ -156,7 +163,7 @@ jobs:
       
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: test-results-multi-node-pytorch-${{ github.run_number }}
           path: tests/enroot/results/
@@ -175,10 +182,12 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.8'
       
@@ -203,11 +212,11 @@ jobs:
       
       - name: Run test_multi_node_rccl
         working-directory: tests/enroot
+        env:
+          DOCKER_IMAGE: ${{ inputs.docker_image_rccl }}
+          NO_INSTALL: ${{ inputs.no_install }}
+          NO_UNINSTALL: ${{ inputs.no_uninstall }}
         run: |
-          DOCKER_IMAGE="${{ inputs.docker_image_rccl }}"
-          NO_INSTALL="${{ inputs.no_install }}"
-          NO_UNINSTALL="${{ inputs.no_uninstall }}"
-          
           echo "Running test: test_multi_node_rccl"
           echo "Docker image: ${DOCKER_IMAGE:-'(using default from batch script)'}"
           
@@ -215,7 +224,7 @@ jobs:
       
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: test-results-multi-node-rccl-${{ github.run_number }}
           path: tests/enroot/results/
