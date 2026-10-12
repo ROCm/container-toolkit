@@ -17,3 +17,7 @@ scan:
     - dist
     - node_modules
     - __pycache__
+
+# Resolved from the runner workspace, where the shared workflow checks
+# this repository out into `.scan-target`.
+ignorefile: .scan-target/.trivyignore.yaml
