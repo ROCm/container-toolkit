@@ -10,8 +10,8 @@ ENV LC_ALL=en_US.UTF-8
 # Remove old version of go
 RUN rm -rf /usr/local/go
 
-RUN apt-get update && apt-get install -y wget protobuf-compiler \
-    curl locales ca-certificates build-essential git vim \
+RUN apt-get update && apt-get install -y --no-install-recommends wget protobuf-compiler \
+    curl locales ca-certificates build-essential git openssh-client vim \
     net-tools sudo cmake build-essential && \
     install -m 0755 -d /etc/apt/keyrings && \
     apt-get clean && rm -rf /var/lib/apt/lists/*

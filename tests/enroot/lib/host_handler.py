@@ -50,7 +50,8 @@ class RemoteHostHandler:
         self.key = key
         try:
             log.info(f"SSH to Node: {self.host_ip} using password")
-            self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            # Testbed hosts are provisioned ad hoc and ship no known_hosts entries.
+            self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # nosec B507
             if not password :
                 self.client.connect(hostname=self.host_ip, username=username, key_filename=key)
             else:
