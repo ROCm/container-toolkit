@@ -206,10 +206,13 @@ pkg-rpm: pkg-rpm-clean
 .PHONY: gen
 gen: gopkglist
 
+GOLANGCI_LINT_VERSION ?= v2.14.0
+GOIMPORTS_VERSION ?= v0.51.0
+
 .PHONY: gopkglist
 gopkglist:
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.1
-	go install golang.org/x/tools/cmd/goimports@latest
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	go install golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)
 
 .PHONY:checks
 checks: vet fmt
@@ -229,7 +232,7 @@ test: ## Run go test against code.
 GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
 .PHONY: golangci-lint
 golangci-lint: ## Download golangci-lint locally if necessary.
-	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.53.1)
+	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION))
 
 
 GOFILES_NO_VENDOR = $(shell find . -type f -name '*.go' -not -path "./vendor/*")

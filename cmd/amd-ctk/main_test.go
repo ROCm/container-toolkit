@@ -98,7 +98,7 @@ func verifyConfigFile(t *testing.T, isDefault bool, isEmpty bool) {
 
 func Assert(t *testing.T, b bool, errString string) {
 	if !b {
-		t.Errorf(errString)
+		t.Error(errString)
 	}
 }
 
