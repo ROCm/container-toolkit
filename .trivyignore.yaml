@@ -1,0 +1,6 @@
+misconfigurations:
+  - id: DS-0002
+    paths:
+      - tools/deb/base-image/Dockerfile
+      - tools/rpmbuild/base-image/Dockerfile
+    statement: Build containers run dockerd, sysctl and useradd in the entrypoint, so they must start as root.
