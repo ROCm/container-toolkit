@@ -1,0 +1,8 @@
+# Code owners must have write access to the repository, or GitHub ignores
+# them. The last matching pattern takes precedence.
+
+* @shiv-tyagi @priyankakinij @bhatturu
+
+# Workflows, scanner configs and Dependabot decide what CI runs and with
+# which permissions. Two owners, so neither one blocks the other's PRs.
+/.github/ @shiv-tyagi @bhatturu
