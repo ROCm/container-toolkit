@@ -7,5 +7,7 @@
 # what CI runs, with which permissions, and what it is allowed to ignore.
 # Three owners, so one can still approve when another pushed last.
 /.github/ @shiv-tyagi @bhatturu @sgopinath1
+/.gitleaksignore @shiv-tyagi @bhatturu @sgopinath1
+/.trivyignore @shiv-tyagi @bhatturu @sgopinath1
 /.trivyignore.yaml @shiv-tyagi @bhatturu @sgopinath1
 osv-scanner.toml @shiv-tyagi @bhatturu @sgopinath1
