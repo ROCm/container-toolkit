@@ -1,5 +1,5 @@
 # Copyright Advanced Micro Devices, Inc.
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 #
 # Nightly security scan: scans the whole repository every night and pushes
 # SARIF findings to the repository's code-scanning Security tab.

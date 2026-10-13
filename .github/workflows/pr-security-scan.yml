@@ -1,5 +1,5 @@
 # Copyright Advanced Micro Devices, Inc.
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 #
 # Pre-commit security gate: fast, PR-side security scanners that run on
 # every pull request. The security counterpart to `pre-commit.yml`. The
