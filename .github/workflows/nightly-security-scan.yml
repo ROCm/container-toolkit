@@ -1,22 +1,23 @@
 # Copyright Advanced Micro Devices, Inc.
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 #
-# Weekly security scan: runs on a fixed cadence and pushes SARIF findings
-# to the repository's code-scanning Security tab. Complements
-# `pr-security-scan.yml`, which scans only what changed in a PR and
-# uploads reviewer-readable artifacts for in-review browsing.
+# Nightly security scan: scans the whole repository every night and pushes
+# SARIF findings to the repository's code-scanning Security tab.
+# Complements `pr-security-scan.yml`, which scans only what changed in a
+# pull request.
 #
 # `security-events: write` is granted on the `uses:` job itself, not just
 # the top-level `permissions:` block above it, since a `permissions:`
 # block (wherever declared) implicitly zeroes out anything it doesn't
 # list.
 
-name: Security scan (Weekly)
+name: Security scan (Nightly)
 
 on:
-  # Run every Saturday at 10:00 UTC.
+  # Run every day at 02:17 UTC. Runs scheduled on the hour are more likely
+  # to be delayed or dropped.
   schedule:
-    - cron: "0 10 * * 6"
+    - cron: "17 2 * * *"
   workflow_dispatch:
 
 permissions:
