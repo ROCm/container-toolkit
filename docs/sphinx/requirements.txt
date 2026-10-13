@@ -237,7 +237,7 @@ sphinx-markdown-builder==0.6.10
     # via rocm-docs-core
 sphinx-notfound-page==1.1.0
     # via rocm-docs-core
-sphinx-reredirects==0.1.5
+sphinx-reredirects==0.1.6
     # via -r requirements.in
 sphinx-substitution-extensions==2025.1.2
     # via -r requirements.in
