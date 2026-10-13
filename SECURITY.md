@@ -2,13 +2,11 @@
 
 ## Supported Versions
 
-Security fixes are applied to `main` and backported to the latest release branch.
+Security fixes are applied to the `main` branch.
 
-| Version         | Supported |
-|-----------------|-----------|
-| `main`          | Yes       |
-| `release/1.3.x` | Yes       |
-| Older releases  | No        |
+| Version | Supported |
+|---------|-----------|
+| `main`  | Yes       |
 
 ## Reporting a Vulnerability
 
