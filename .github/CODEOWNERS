@@ -3,6 +3,9 @@
 
 * @shiv-tyagi @priyankakinij @bhatturu
 
-# Workflows, scanner configs and Dependabot decide what CI runs and with
-# which permissions. Two owners, so neither one blocks the other's PRs.
-/.github/ @shiv-tyagi @bhatturu
+# Workflows, scanner configs, scanner suppressions and Dependabot decide
+# what CI runs, with which permissions, and what it is allowed to ignore.
+# Three owners, so one can still approve when another pushed last.
+/.github/ @shiv-tyagi @bhatturu @sgopinath1
+/.trivyignore.yaml @shiv-tyagi @bhatturu @sgopinath1
+osv-scanner.toml @shiv-tyagi @bhatturu @sgopinath1
