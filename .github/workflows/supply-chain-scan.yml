@@ -1,0 +1,92 @@
+# Copyright Advanced Micro Devices, Inc.
+# SPDX-License-Identifier: MIT
+#
+# Supply chain scan: checks the Go module and the pip requirement files
+# against OSV, which includes OpenSSF malicious package reports (MAL-*)
+# alongside CVEs. Dependabot malware alerts cover npm only, so this is
+# what catches a compromised PyPI or Go dependency.
+#
+# Both scanners write SARIF to code scanning and keep findings out of the
+# job log. osv-scanner fails the job on any finding; suppress a finding
+# only through an osv-scanner.toml entry with a reason. govulncheck adds
+# call-path detail for Go and is informational, since osv-scanner already
+# covers every Go module and the standard library.
+
+name: Supply chain scan
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  # Daily at 02:15 UTC, so newly published advisories and malicious
+  # package reports surface without waiting for a commit.
+  schedule:
+    - cron: "15 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  osv-scanner:
+    name: osv-scanner
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write # upload SARIF to code scanning
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Scanning ./ keeps SARIF paths relative to the repository root.
+      - name: Run osv-scanner
+        uses: google/osv-scanner-action/osv-scanner-action@b1d267aea5211fa648d9d442fa64b90dbdcbdd36 # v2.7.0
+        with:
+          scan-args: |-
+            --format=sarif
+            --output-file=osv.sarif
+            --recursive
+            ./
+
+      - name: Upload SARIF report to code scanning
+        if: ${{ !cancelled() }}
+        uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        with:
+          sarif_file: osv.sarif
+          category: osv-scanner
+
+  govulncheck:
+    name: govulncheck
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write # upload SARIF to code scanning
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      # SARIF mode exits 0 even when vulnerable code is reachable.
+      - name: Run govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 -format sarif ./... > govulncheck.sarif
+
+      - name: Upload SARIF report to code scanning
+        if: ${{ !cancelled() }}
+        uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        with:
+          sarif_file: govulncheck.sarif
+          category: govulncheck
