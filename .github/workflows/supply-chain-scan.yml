@@ -68,7 +68,7 @@ jobs:
 
       - name: Upload SARIF report to code scanning
         if: ${{ !cancelled() && (steps.osv.outputs.rc == '0' || steps.osv.outputs.rc == '1') }}
-        uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
           sarif_file: osv.sarif
           category: osv-scanner
@@ -97,7 +97,7 @@ jobs:
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 -format sarif ./... > govulncheck.sarif
 
       - name: Upload SARIF report to code scanning
-        uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
           sarif_file: govulncheck.sarif
           category: govulncheck
