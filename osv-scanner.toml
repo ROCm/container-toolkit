@@ -1,0 +1,3 @@
+# osv-scanner skips the Go standard library by default. With a toolchain
+# directive in go.mod, it scans that toolchain version.
+ScanGoModVersion = true
