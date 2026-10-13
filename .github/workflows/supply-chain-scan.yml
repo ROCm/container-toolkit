@@ -10,8 +10,8 @@
 # Both scanners write SARIF to code scanning and keep findings out of the
 # job log. osv-scanner fails the job on any finding; suppress a finding
 # only through an osv-scanner.toml entry with a reason. govulncheck adds
-# call-path detail for Go. Its job always passes, but code scanning still
-# flags reachable vulnerabilities on the pull request.
+# call-path detail for Go. Its job passes regardless of findings, but code
+# scanning still flags reachable vulnerabilities on the pull request.
 
 name: Supply chain scan
 
@@ -50,16 +50,19 @@ jobs:
       # the action references its image by a mutable tag and its wrapper hides
       # the exit code. Exit code 1 means findings; anything else means the scan
       # did not complete, and its empty SARIF must not close open alerts.
-      # Scanning ./ keeps SARIF paths relative to the repository root.
+      # The workspace is mounted at its runner path because osv-scanner writes
+      # absolute paths, and upload-sarif only relativizes those under the
+      # workspace. Go call analysis is off so that vulnerabilities it deems
+      # unreachable still fail the job; govulncheck reports reachability.
       - name: Run osv-scanner
         id: osv
         env:
           OSV_IMAGE: ghcr.io/google/osv-scanner-action@sha256:d54770fe0b09493894e76a02aaed9f51a0513fa57c5186452a755d257b0068a6 # v2.7.0
         run: |
           rc=0
-          docker run --rm -v "${GITHUB_WORKSPACE}:/src" -w /src \
+          docker run --rm -v "${GITHUB_WORKSPACE}:${GITHUB_WORKSPACE}" -w "${GITHUB_WORKSPACE}" \
             --entrypoint /root/osv-scanner "${OSV_IMAGE}" \
-            scan source --format=sarif --output-file=osv.sarif --recursive ./ || rc=$?
+            scan source --no-call-analysis=go --format=sarif --output-file=osv.sarif --recursive ./ || rc=$?
           echo "rc=${rc}" >> "${GITHUB_OUTPUT}"
           exit "${rc}"
 
