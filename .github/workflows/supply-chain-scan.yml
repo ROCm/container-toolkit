@@ -1,5 +1,5 @@
 # Copyright Advanced Micro Devices, Inc.
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 #
 # Supply chain scan: checks the Go module and the pip requirement files
 # against OSV, which includes OpenSSF malicious package reports (MAL-*)
