@@ -1,0 +1,12 @@
+# Code owners must have write access to the repository, or GitHub ignores
+# them. The last matching pattern takes precedence.
+
+* @shiv-tyagi @sgopinath1
+
+# Workflows, scanner configs, scanner suppressions and Dependabot decide
+# what CI runs, with which permissions, and what it is allowed to ignore.
+/.github/ @shiv-tyagi
+/.gitleaksignore @shiv-tyagi
+/.trivyignore @shiv-tyagi
+/.trivyignore.yaml @shiv-tyagi
+osv-scanner.toml @shiv-tyagi
