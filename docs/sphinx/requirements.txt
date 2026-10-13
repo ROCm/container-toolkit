@@ -123,7 +123,9 @@ mdurl==0.1.2
 myst-nb==1.2.0
     # via rocm-docs-core
 myst-parser==4.0.1
-    # via myst-nb
+    # via
+    #   myst-nb
+    #   sphinx-substitution-extensions
 nbclient==0.10.2
     # via
     #   jupyter-cache
@@ -239,7 +241,7 @@ sphinx-notfound-page==1.1.0
     # via rocm-docs-core
 sphinx-reredirects==0.1.6
     # via -r requirements.in
-sphinx-substitution-extensions==2025.1.2
+sphinx-substitution-extensions==2025.11.17
     # via -r requirements.in
 sphinxcontrib-applehelp==2.0.0
     # via sphinx
