@@ -6,12 +6,13 @@
 # set of scanners lives in `security-baseline.yml`, so scanners coming
 # online are picked up here without touching this file.
 #
-# Requests SARIF reports only: findings go to code scanning and show up as
-# annotations on the pull request, while logs carry only per-severity
-# counts. GitHub accepts SARIF uploads from fork pull requests in public
-# repositories even though their token is read-only, so fork and same-repo
-# pull requests behave the same. See nightly-security-scan.yml for the
-# full-repository scan.
+# Requests SARIF reports: findings go to code scanning and show up as
+# annotations on the pull request. GitHub accepts SARIF uploads from fork
+# pull requests in public repositories even though their token is
+# read-only. On pull requests from branches of this repository, the
+# baseline also emits JSON reports for its findings comment; those reach
+# the job log, job summary and artifacts. See nightly-security-scan.yml for
+# the full-repository scan.
 
 name: Security scan (PR)
 
