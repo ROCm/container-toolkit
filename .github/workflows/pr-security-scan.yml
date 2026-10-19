@@ -1,18 +1,15 @@
 # Copyright Advanced Micro Devices, Inc.
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: MIT
 #
 # Pre-commit security gate: fast, PR-side security scanners that run on
-# every pull request. The security counterpart to `pre-commit.yml`. The
-# set of scanners lives in `security-baseline.yml`, so scanners coming
-# online are picked up here without touching this file.
+# every pull request. Scanner selection and policy are defined by the pinned
+# ROCm/rocm-security-gh `security-baseline.yml` reusable workflow.
 #
-# Requests SARIF reports: findings go to code scanning and show up as
-# annotations on the pull request. GitHub accepts SARIF uploads from fork
-# pull requests in public repositories even though their token is
-# read-only. On pull requests from branches of this repository, the
-# baseline also emits JSON reports for its findings comment; those reach
-# the job log, job summary and artifacts. See nightly-security-scan.yml for
-# the full-repository scan.
+# Requests human-readable reports only: findings are uploaded as a build
+# artifact and printed to the job summary, never to the Security tab, so
+# fork PRs (which never receive elevated tokens) behave identically to
+# same-repo PRs. See the scheduled counterpart (weekly-security-scan.yml)
+# for the SARIF / code-scanning upload.
 
 name: Security scan (PR)
 
@@ -31,17 +28,13 @@ concurrency:
 jobs:
   security:
     name: Security scan
-    # `security-events: write` uploads SARIF to code scanning. `actions: read`
-    # and `pull-requests: write` let the baseline post its findings comment
-    # on pull requests from branches of this repository.
     permissions:
-      contents: read
       actions: read
+      contents: read
       pull-requests: write
-      security-events: write
-    uses: ROCm/rocm-security-gh/.github/workflows/security-baseline.yml@86901f5856e12c7211bc04d012ce80ee9a02b4b5 # v1.0.5
+    uses: ROCm/rocm-security-gh/.github/workflows/security-baseline.yml@228e62369c5d8b677215f8a112ea0c8e8119c58f # v1.0.6
     with:
-      report_formats: sarif
+      report_formats: human
       bandit_config_path: .github/scan_tools_configs/bandit.yml
       gitleaks_config_path: .github/scan_tools_configs/gitleaks.toml
       trivy_config_path: .github/scan_tools_configs/trivy.yml
