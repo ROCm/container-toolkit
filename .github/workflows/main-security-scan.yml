@@ -1,27 +1,39 @@
 # Copyright Advanced Micro Devices, Inc.
 # SPDX-License-Identifier: Apache-2.0
 #
-# Nightly security scan: scans the whole repository every night and pushes
-# SARIF findings to the repository's code-scanning Security tab.
-# Complements `pr-security-scan.yml`, which scans only what changed in a
-# pull request.
+# Main branch security scan: scans the whole repository on every push to
+# main and every night, and pushes SARIF findings to the repository's
+# code-scanning Security tab. Complements `pr-security-scan.yml`, which
+# scans only what changed in a pull request.
+#
+# Every event uses scan_mode `all`. Code scanning treats each upload as the
+# complete result for its category, so a partial scan of main would close
+# every alert outside the files it covered.
 #
 # `security-events: write` is granted on the `uses:` job itself, not just
 # the top-level `permissions:` block above it, since a `permissions:`
 # block (wherever declared) implicitly zeroes out anything it doesn't
 # list.
 
-name: Security scan (Nightly)
+name: Security scan (main)
 
 on:
-  # Run every day at 02:17 UTC. Runs scheduled on the hour are more likely
-  # to be delayed or dropped.
+  push:
+    branches: [main]
+  # Run every day at 02:17 UTC, so new advisories surface without a commit.
+  # Runs scheduled on the hour are more likely to be delayed or dropped.
   schedule:
     - cron: "17 2 * * *"
   workflow_dispatch:
 
 permissions:
   contents: read
+
+# A newer push supersedes an in-flight push scan. Scheduled and manual runs
+# have their own groups and are never cancelled by a push.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
   security:
