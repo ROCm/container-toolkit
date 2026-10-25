@@ -11,7 +11,7 @@
 # pull requests in public repositories even though their token is
 # read-only. On pull requests from branches of this repository, the
 # baseline also emits JSON reports for its findings comment; those reach
-# the job log, job summary and artifacts. See nightly-security-scan.yml for
+# the job log, job summary and artifacts. See main-security-scan.yml for
 # the full-repository scan.
 
 name: Security scan (PR)
