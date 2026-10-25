@@ -18,9 +18,9 @@ RUN yum install -y gcc gcc-c++ \
 RUN rm -rf /usr/local/go
 
 # Install Go 1.26
-RUN wget https://go.dev/dl/go1.26.9.linux-amd64.tar.gz
-RUN tar -C /usr/local -xzf go1.26.9.linux-amd64.tar.gz
-RUN rm go1.26.9.linux-amd64.tar.gz
+RUN wget https://go.dev/dl/go1.26.10.linux-amd64.tar.gz
+RUN tar -C /usr/local -xzf go1.26.10.linux-amd64.tar.gz
+RUN rm go1.26.10.linux-amd64.tar.gz
 ENV PATH="/usr/local/go/bin:${PATH}"
 
 #RUN localedef -i en_US -f UTF-8 en_US.UTF-8

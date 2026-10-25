@@ -29,9 +29,9 @@ RUN echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://downlo
 #  git && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Download Go 1.26
-RUN wget https://go.dev/dl/go1.26.9.linux-amd64.tar.gz && \
-    tar -C /usr/local -xzf go1.26.9.linux-amd64.tar.gz && \
-    rm go1.26.9.linux-amd64.tar.gz
+RUN wget https://go.dev/dl/go1.26.10.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.26.10.linux-amd64.tar.gz && \
+    rm go1.26.10.linux-amd64.tar.gz
 
 ARG INSECURE_REGISTRY
 RUN echo "INSECURE_REGISTRY is: $INSECURE_REGISTRY" && \
