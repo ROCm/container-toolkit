@@ -58,6 +58,8 @@ func loadConfigFile(path string) (*dockerConfig, error) {
 		return nil, fmt.Errorf("error reading configuration file: %v | err: %v", path, err)
 	}
 
+	// Windows editors may prepend a UTF-8 BOM, which encoding/json rejects.
+	readB = bytes.TrimPrefix(readB, []byte("\xef\xbb\xbf"))
 	reader := bytes.NewReader(readB)
 	err = json.NewDecoder(reader).Decode(&config)
 	if err != nil {

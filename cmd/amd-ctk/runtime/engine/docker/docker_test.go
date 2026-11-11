@@ -2,10 +2,24 @@ package docker
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestLoadConfigFile_StripsBOM(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "daemon.json")
+	assert.NoError(t, os.WriteFile(path, []byte("\xef\xbb\xbf{\"default-runtime\": \"amd\"}"), 0644))
+
+	cfg, err := loadConfigFile(path)
+
+	assert.NoError(t, err)
+	if assert.NotNil(t, cfg) {
+		assert.Equal(t, dockerConfig{"default-runtime": "amd"}, *cfg)
+	}
+}
 
 func TestRemoveRuntime(t *testing.T) {
 	tests := []struct {
