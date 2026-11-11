@@ -37,11 +37,14 @@ case "$pkg" in
         make rpm-pkg-only CONTAINER_WORKDIR="$PWD" RPM_TOPDIR="$workdir/rpm"
         rpm -ivh "$workdir"/rpm/RPMS/*/*.rpm
         rpm -q amd-container-toolkit
-        rpm -q --qf '%{LICENSE}\n' amd-container-toolkit | grep -qx 'Apache-2.0'
-        rpm -ql amd-container-toolkit | grep -qx '/usr/share/doc/amd-container-toolkit'
-        rpm -ql amd-container-toolkit | grep -qx '/usr/share/doc/amd-container-toolkit/README.md'
-        rpm -ql amd-container-toolkit | grep -qx '/usr/share/licenses/amd-container-toolkit'
-        rpm -qL amd-container-toolkit | grep -qx '/usr/share/licenses/amd-container-toolkit/LICENSE'
+        # Capture rpm output before grep -q: grep exits on the first match,
+        # and under pipefail a SIGPIPE on rpm's next write fails the test.
+        files=$(rpm -ql amd-container-toolkit)
+        grep -qx 'Apache-2.0' <<< "$(rpm -q --qf '%{LICENSE}\n' amd-container-toolkit)"
+        grep -qx '/usr/share/doc/amd-container-toolkit' <<< "$files"
+        grep -qx '/usr/share/licenses/amd-container-toolkit' <<< "$files"
+        grep -qx '/usr/share/doc/amd-container-toolkit/README.md' <<< "$(rpm -qd amd-container-toolkit)"
+        grep -qx '/usr/share/licenses/amd-container-toolkit/LICENSE' <<< "$(rpm -qL amd-container-toolkit)"
         ;;
     deb)
         make deb-pkg-only UBUNTU_VERSION="${UBUNTU_VERSION:-jammy}"
