@@ -19,8 +19,8 @@ RUN rm -rf /usr/local/go
 
 # Install Go 1.26. The checksum comes from https://go.dev/dl/ and changes
 # with the version.
-ARG GO_VERSION=1.26.10
-ARG GO_SHA256=ccfe7ae822d2c2f41f4fe7c956199967a4dac22d0ee0d2b2bfdb440aab3b20c5
+ARG GO_VERSION=1.26.11
+ARG GO_SHA256=9849f4e04ee35303714e34fbc3ac8ab44ea3e448a95aa182f91e3b9b79c710ec
 RUN wget -q -O /tmp/go.tar.gz "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" && \
     echo "${GO_SHA256}  /tmp/go.tar.gz" | sha256sum -c - && \
     tar -C /usr/local -xzf /tmp/go.tar.gz && \
