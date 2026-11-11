@@ -18,6 +18,7 @@ package cdi
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -32,6 +33,8 @@ import (
 const (
 	// Default full CDI spec path
 	CDI_SPEC_PATH = "/var/run/cdi/amd.json"
+
+	specKind = "amd.com/gpu"
 )
 
 // GetGPUs is the type for functions that return the lists of all the GPU devices on the system
@@ -211,6 +214,38 @@ func (cdi *cdi_t) ValidateSpec() (bool, error) {
 	return reflect.DeepEqual(*savedCDISpec, cdi.spec), nil
 }
 
+// ErrNotAMDSpec is returned by RemoveSpec when the file is not an AMD CDI spec.
+var ErrNotAMDSpec = errors.New("not an AMD CDI spec")
+
+// RemoveSpec deletes the AMD CDI spec at path and reports whether a file was
+// removed. A missing file is not an error. The CDI directory is shared with
+// other vendors, so a file without the AMD kind is left alone and
+// ErrNotAMDSpec is returned.
+func RemoveSpec(path string) (bool, error) {
+	data, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("reading %v: %w", path, err)
+	}
+
+	var spec struct {
+		Kind string `json:"kind"`
+	}
+	if json.Unmarshal(data, &spec) != nil || spec.Kind != specKind {
+		return false, ErrNotAMDSpec
+	}
+
+	if err := os.Remove(path); err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("removing %v: %w", path, err)
+	}
+	return true, nil
+}
+
 func New(sp string) (Interface, error) {
 	if sp == "" {
 		sp = CDI_SPEC_PATH
@@ -218,7 +253,7 @@ func New(sp string) (Interface, error) {
 
 	spec := specs.Spec{
 		Version: "0.6.0",
-		Kind:    "amd.com/gpu",
+		Kind:    specKind,
 		Devices: []specs.Device{},
 	}
 

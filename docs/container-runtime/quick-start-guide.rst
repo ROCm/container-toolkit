@@ -42,12 +42,6 @@ If you are on an earlier Docker version, please upgrade to at least Docker 25 be
 
 - **Other container runtimes:** If you plan to use a container runtime other than Docker, ensure your runtime version supports device injection through CDI.
 
-**jq** - Required during uninstallation to parse configuration settings cleanly.
-
-.. code-block:: bash
-
-   sudo apt-get install jq
-
 Step 1: Update System and Group Settings
 ----------------------------------------
 - Update your system:
@@ -316,13 +310,7 @@ By leveraging GPU partitioning, you can achieve fine-grained resource allocation
 Uninstallation Guide
 --------------------
 
-To remove the `amd-container-toolkit`, you must have `jq` installed. The uninstallation script relies on it to parse configuration files.
-
-.. code-block:: bash
-
-   sudo apt-get install jq
-
-Then proceed with the removal:
+To remove the `amd-container-toolkit`:
 
 .. code-block:: bash
 

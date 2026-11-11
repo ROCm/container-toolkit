@@ -175,6 +175,54 @@ func TestWriteSpec_OverwritesExisting(t *testing.T) {
 	assert.Equal(t, second, *read, "file should contain second spec after overwrite")
 }
 
+func TestRemoveSpec(t *testing.T) {
+	const (
+		amdSpec     = `{"cdiVersion": "0.6.0", "kind": "amd.com/gpu", "devices": []}`
+		foreignSpec = `{"cdiVersion": "0.6.0", "kind": "vendor.example/device", "devices": []}`
+	)
+
+	tests := []struct {
+		name        string
+		amdJSON     string
+		createAMD   bool
+		wantRemoved bool
+		wantErr     error
+	}{
+		{name: "AMD spec is removed", amdJSON: amdSpec, createAMD: true, wantRemoved: true},
+		{name: "foreign spec named amd.json is kept", amdJSON: foreignSpec, createAMD: true, wantErr: ErrNotAMDSpec},
+		{name: "malformed amd.json is kept", amdJSON: "not json", createAMD: true, wantErr: ErrNotAMDSpec},
+		{name: "missing amd.json is not an error"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			other := filepath.Join(dir, "acme.json")
+			assert.NoError(t, os.WriteFile(other, []byte(foreignSpec), 0644))
+			amd := filepath.Join(dir, "amd.json")
+			if tt.createAMD {
+				assert.NoError(t, os.WriteFile(amd, []byte(tt.amdJSON), 0644))
+			}
+
+			removed, err := RemoveSpec(amd)
+
+			assert.Equal(t, tt.wantRemoved, removed, "removed")
+			assert.ErrorIs(t, err, tt.wantErr)
+			assert.FileExists(t, other, "third-party spec must survive")
+			if tt.createAMD {
+				_, statErr := os.Stat(amd)
+				assert.Equal(t, tt.wantRemoved, os.IsNotExist(statErr), "amd.json removed")
+			}
+		})
+	}
+}
+
+func TestRemoveSpec_MissingDir(t *testing.T) {
+	removed, err := RemoveSpec(filepath.Join(t.TempDir(), "absent", "amd.json"))
+	assert.False(t, removed)
+	assert.NoError(t, err)
+}
+
 func Assert(t *testing.T, b bool, errString string) {
 	if !b {
 		t.Error(errString)

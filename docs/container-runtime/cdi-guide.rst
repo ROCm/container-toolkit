@@ -66,11 +66,36 @@ To validate a specification at a different location, use the ``--path`` flag:
 
     amd-ctk cdi validate --path /path/to/custom/amd.json
 
+Removing CDI Specifications
+===========================
+
+To remove the CDI specification for AMD GPUs, run:
+
+.. code-block:: bash
+
+    sudo amd-ctk cdi remove
+
+This command:
+
+* Removes ``/etc/cdi/amd.json`` if it is an AMD GPU specification (kind ``amd.com/gpu``)
+* Leaves other files in ``/etc/cdi``, including other vendors' specifications, untouched
+* Succeeds without changes if the file does not exist
+
+Uninstalling the ``amd-container-toolkit`` package runs this command automatically.
+
+**Custom Specification Path**
+
+To remove a specification at a different location, use the ``--path`` flag:
+
+.. code-block:: bash
+
+    amd-ctk cdi remove --path /path/to/custom/amd.json
+
 .. note::
 
     The ``amd-ctk`` tool requires appropriate permissions to read and write CDI specification files. When operating on the default location (``/etc/cdi``), it requires elevated privileges, hence ``sudo`` is typically needed.
 
-    If you want to operate on a different user-owned location (using the ``--output`` or ``--path`` flags for generation or validation respectively), ``sudo`` can be omitted, provided the user has necessary read/write permissions for that location.
+    If you want to operate on a different user-owned location (using the ``--output`` flag for generation, or the ``--path`` flag for validation and removal), ``sudo`` can be omitted, provided the user has necessary read/write permissions for that location.
 
     When using a custom output location, ensure your container runtime is configured to read CDI specifications from that directory. Most runtimes default to ``/etc/cdi`` and ``/var/run/cdi``.
 

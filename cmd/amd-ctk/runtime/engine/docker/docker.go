@@ -24,10 +24,10 @@ import (
 )
 
 const (
-	runtimesKey        = "runtimes"
-	defaultRuntimeKey  = "default-runtime"
-	featuresKey        = "features"
-	defaultCDISpecPath = "/etc/cdi"
+	runtimesKey       = "runtimes"
+	defaultRuntimeKey = "default-runtime"
+	featuresKey       = "features"
+	cdiFeatureKey     = "cdi"
 )
 
 type dockerConfig map[string]interface{}
@@ -58,6 +58,8 @@ func loadConfigFile(path string) (*dockerConfig, error) {
 		return nil, fmt.Errorf("error reading configuration file: %v | err: %v", path, err)
 	}
 
+	// Windows editors may prepend a UTF-8 BOM, which encoding/json rejects.
+	readB = bytes.TrimPrefix(readB, []byte("\xef\xbb\xbf"))
 	reader := bytes.NewReader(readB)
 	err = json.NewDecoder(reader).Decode(&config)
 	if err != nil {
@@ -116,31 +118,29 @@ func (d *dockerConfig) UnsetDefaultRuntime() error {
 // an error and a do not update flag in case daemon.json doesn't need
 // to be updated
 func (d *dockerConfig) RemoveRuntime(name string) (error, bool) {
-	_ = os.RemoveAll(defaultCDISpecPath)
-
 	if d == nil {
 		return fmt.Errorf("configuration is empty"), true
 	}
 
-	updated := false
 	currentCfg := *d
+	updated := false
 
-	//check any existing "runtimes"
-	if _, exists := currentCfg[runtimesKey]; exists {
-		runtimes := currentCfg[runtimesKey].(map[string]interface{})
-		delete(runtimes, name)
-		delete(currentCfg, featuresKey)
-		_, defExists := currentCfg[defaultRuntimeKey]
-		if defExists {
-			defCfg := currentCfg[defaultRuntimeKey].(string)
-			if defCfg == name {
-				delete(currentCfg, defaultRuntimeKey)
-			}
-		}
-		if len(runtimes) == 0 {
-			delete(currentCfg, runtimesKey)
-		}
+	if defCfg, ok := currentCfg[defaultRuntimeKey].(string); ok && defCfg == name {
+		delete(currentCfg, defaultRuntimeKey)
 		updated = true
+	}
+
+	for _, entry := range []struct{ section, key string }{
+		{runtimesKey, name},
+		{featuresKey, cdiFeatureKey},
+	} {
+		// Keep going past a malformed section: leaving default-runtime pointing
+		// at an uninstalled runtime would break every container start.
+		removed, err := removeNestedKey(currentCfg, entry.section, entry.key)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Skipping %v: %v\n", entry.section, err)
+		}
+		updated = updated || removed
 	}
 
 	if updated {
@@ -148,6 +148,27 @@ func (d *dockerConfig) RemoveRuntime(name string) (error, bool) {
 		return nil, false
 	}
 	return nil, true
+}
+
+// removeNestedKey deletes cfg[section][key] and drops the section once it is
+// empty, leaving other entries of the section in place.
+func removeNestedKey(cfg dockerConfig, section, key string) (bool, error) {
+	raw := cfg[section]
+	if raw == nil {
+		return false, nil
+	}
+	entries, ok := raw.(map[string]interface{})
+	if !ok {
+		return false, fmt.Errorf("%q in the docker config is not an object", section)
+	}
+	if _, exists := entries[key]; !exists {
+		return false, nil
+	}
+	delete(entries, key)
+	if len(entries) == 0 {
+		delete(cfg, section)
+	}
+	return true, nil
 }
 
 func (d dockerConfig) Update(path string) (int, error) {
