@@ -7,13 +7,12 @@ License: GPLv3
 URL: https://github.com/ROCm/container-toolkit/
 
 BuildArch: x86_64
-Requires: jq
 
 %description
 This package contains pre-built binaries for AMD containter toolkit
 
 %preun
-/bin/bash /usr/share/amd-container-toolkit/cleanup.sh
+/bin/bash /usr/share/amd-container-toolkit/cleanup.sh "$1"
 
 %install
 base_dir=${CONTAINER_WORKDIR}

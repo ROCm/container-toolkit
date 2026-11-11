@@ -5,4 +5,3 @@ Maintainer: AMD Inc.
 Architecture: amd64
 Description: AMD Container Toolkit for Ubuntu
 Version: BUILD_VER_ENV
-Depends: jq
