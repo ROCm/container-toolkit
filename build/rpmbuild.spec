@@ -15,6 +15,9 @@ This package contains pre-built binaries for AMD containter toolkit
 %preun
 /bin/bash /usr/share/amd-container-toolkit/cleanup.sh
 
+%posttrans
+rmdir /usr/share/doc/my-binary-package 2>/dev/null || :
+
 %install
 base_dir=${CONTAINER_WORKDIR}
 install -D -m 0755 ${base_dir}/bin/rpmbuild/amd-ctk  %{buildroot}/usr/bin/amd-ctk
