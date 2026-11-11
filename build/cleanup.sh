@@ -14,8 +14,10 @@ if [ "$1" = "0" ]; then
 fi
 
 # A failed step must not block uninstall.
-if ! /usr/bin/amd-ctk cdi remove; then
-    echo "Could not remove /etc/cdi/amd.json; remove it manually." >&2
+if [ -e /etc/cdi/amd.json ] || [ -L /etc/cdi/amd.json ]; then
+    if ! /usr/bin/amd-ctk cdi remove; then
+        echo "Could not remove /etc/cdi/amd.json; remove it manually." >&2
+    fi
 fi
 if ! /usr/bin/amd-ctk runtime configure --remove; then
     echo "Could not remove the amd runtime from /etc/docker/daemon.json; remove it manually." >&2
