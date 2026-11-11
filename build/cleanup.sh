@@ -15,6 +15,6 @@ fi
 
 # A malformed daemon.json must not block uninstall.
 if ! /usr/bin/amd-ctk runtime configure --remove; then
-    echo "Could not clean up /etc/docker/daemon.json; remove the amd runtime from it manually." >&2
+    echo "Cleanup did not finish. Check /etc/docker/daemon.json for the amd runtime and /etc/cdi/amd.json, and remove them manually." >&2
 fi
 exit 0

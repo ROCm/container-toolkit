@@ -55,22 +55,42 @@ esac
 /usr/bin/amd-ctk runtime configure --config-path="$workdir/daemon.json"
 jq -e '.runtimes.amd.path == "amd-container-runtime"' "$workdir/daemon.json"
 
-# An upgrade must not touch CDI specs, the Docker config or GPU tracker state.
-mkdir -p /etc/cdi /etc/docker
-echo '{"cdiVersion": "0.5.0", "kind": "vendor.example/device", "devices": []}' > /etc/cdi/acme.json
-echo '{"cdiVersion": "0.5.0", "kind": "amd.com/gpu", "devices": []}' > /etc/cdi/amd.json
-echo '{}' > /var/log/gpu-tracker.json
-/usr/bin/amd-ctk runtime configure
-
 # Reinstalling the same version runs the old package's prerm/%preun as an upgrade.
-case "$pkg" in
-    rpm) rpm -Uvh --replacepkgs "$workdir"/rpm/RPMS/*/*.rpm ;;
-    deb) dpkg -i bin/amd-container-toolkit_*_amd64.deb ;;
-esac
+install_pkg() {
+    case "$pkg" in
+        rpm) rpm -Uvh --replacepkgs "$workdir"/rpm/RPMS/*/*.rpm ;;
+        deb) dpkg -i bin/amd-container-toolkit_*_amd64.deb ;;
+    esac
+}
+
+remove_pkg() {
+    case "$pkg" in
+        rpm) rpm -e amd-container-toolkit ;;
+        deb) dpkg -r amd-container-toolkit ;;
+    esac
+}
+
+plant_specs() {
+    mkdir -p /etc/cdi
+    echo '{"cdiVersion": "0.5.0", "kind": "vendor.example/device", "devices": []}' > /etc/cdi/acme.json
+    echo '{"cdiVersion": "0.5.0", "kind": "amd.com/gpu", "devices": []}' > /etc/cdi/amd.json
+}
+
+# An upgrade must not touch CDI specs, the Docker config or GPU tracker state.
+plant_specs
+mkdir -p /etc/docker
+echo '{"runtimes": {"other": {"path": "other-runtime"}}}' > /etc/docker/daemon.json
+echo '{}' > /var/log/gpu-tracker.json
+/usr/bin/amd-ctk runtime configure --set-as-default
+# configure replaces the whole features map, so add the extra feature afterwards.
+jq '.features["containerd-snapshotter"] = true' /etc/docker/daemon.json > "$workdir/daemon.json.new"
+mv "$workdir/daemon.json.new" /etc/docker/daemon.json
+
+install_pkg
 test -f /etc/cdi/acme.json
 test -f /etc/cdi/amd.json
 test -f /var/log/gpu-tracker.json
-jq -e '.runtimes.amd' /etc/docker/daemon.json
+jq -e '.["default-runtime"] == "amd" and .runtimes.amd' /etc/docker/daemon.json
 
 case "$pkg" in
     rpm) deps=$(rpm -qR amd-container-toolkit) ;;
@@ -82,15 +102,22 @@ if grep -qw jq <<< "$deps"; then
 fi
 
 # Removal takes away only what the toolkit owns.
-case "$pkg" in
-    rpm) rpm -e amd-container-toolkit ;;
-    deb) dpkg -r amd-container-toolkit ;;
-esac
+remove_pkg
 test -f /etc/cdi/acme.json
 test ! -e /etc/cdi/amd.json
-jq -e '.runtimes.amd == null and .features.cdi == null' /etc/docker/daemon.json
+jq -e '. == {"runtimes": {"other": {"path": "other-runtime"}}, "features": {"containerd-snapshotter": true}}' /etc/docker/daemon.json
 case "$pkg" in
     # RPM has no purge, so erase drops tracker state; deb keeps it until purge.
     rpm) test ! -e /var/log/gpu-tracker.json ;;
     deb) test -f /var/log/gpu-tracker.json ;;
 esac
+
+# A daemon.json that cannot be parsed must neither block removal nor keep the
+# AMD CDI spec behind.
+install_pkg
+plant_specs
+echo '{bad' > /etc/docker/daemon.json
+remove_pkg
+test -f /etc/cdi/acme.json
+test ! -e /etc/cdi/amd.json
+test "$(cat /etc/docker/daemon.json)" = '{bad'

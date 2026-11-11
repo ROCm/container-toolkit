@@ -21,46 +21,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 )
 
 const (
-	runtimesKey        = "runtimes"
-	defaultRuntimeKey  = "default-runtime"
-	featuresKey        = "features"
-	cdiFeatureKey      = "cdi"
-	defaultCDISpecPath = "/etc/cdi"
-	amdCDISpecFile     = "amd.json"
-	amdCDIKind         = "amd.com/gpu"
+	runtimesKey       = "runtimes"
+	defaultRuntimeKey = "default-runtime"
+	featuresKey       = "features"
+	cdiFeatureKey     = "cdi"
 )
-
-var cdiSpecDir = defaultCDISpecPath
-
-// removeAMDSpec deletes the AMD CDI spec from dir. The CDI directory is shared
-// with other vendors, so nothing else is touched, and an amd.json that does not
-// carry the AMD kind is left alone.
-func removeAMDSpec(dir string) error {
-	path := filepath.Join(dir, amdCDISpecFile)
-	data, err := os.ReadFile(path)
-	if os.IsNotExist(err) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("reading %v: %w", path, err)
-	}
-
-	var spec struct {
-		Kind string `json:"kind"`
-	}
-	if json.Unmarshal(data, &spec) != nil || spec.Kind != amdCDIKind {
-		return nil
-	}
-
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("removing %v: %w", path, err)
-	}
-	return nil
-}
 
 type dockerConfig map[string]interface{}
 
@@ -148,10 +116,6 @@ func (d *dockerConfig) UnsetDefaultRuntime() error {
 // an error and a do not update flag in case daemon.json doesn't need
 // to be updated
 func (d *dockerConfig) RemoveRuntime(name string) (error, bool) {
-	if err := removeAMDSpec(cdiSpecDir); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to remove the AMD CDI spec: %v\n", err)
-	}
-
 	if d == nil {
 		return fmt.Errorf("configuration is empty"), true
 	}
@@ -168,9 +132,11 @@ func (d *dockerConfig) RemoveRuntime(name string) (error, bool) {
 		{runtimesKey, name},
 		{featuresKey, cdiFeatureKey},
 	} {
+		// Keep going past a malformed section: leaving default-runtime pointing
+		// at an uninstalled runtime would break every container start.
 		removed, err := removeNestedKey(currentCfg, entry.section, entry.key)
 		if err != nil {
-			return err, true
+			fmt.Fprintf(os.Stderr, "Skipping %v: %v\n", entry.section, err)
 		}
 		updated = updated || removed
 	}
@@ -185,8 +151,8 @@ func (d *dockerConfig) RemoveRuntime(name string) (error, bool) {
 // removeNestedKey deletes cfg[section][key] and drops the section once it is
 // empty, leaving other entries of the section in place.
 func removeNestedKey(cfg dockerConfig, section, key string) (bool, error) {
-	raw, exists := cfg[section]
-	if !exists {
+	raw := cfg[section]
+	if raw == nil {
 		return false, nil
 	}
 	entries, ok := raw.(map[string]interface{})

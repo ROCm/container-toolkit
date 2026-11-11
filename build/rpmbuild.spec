@@ -12,7 +12,11 @@ BuildArch: x86_64
 This package contains pre-built binaries for AMD containter toolkit
 
 %preun
-/bin/bash /usr/share/amd-container-toolkit/cleanup.sh "$1"
+# On upgrade or downgrade, cleanup.sh on disk already belongs to the other
+# package version, so only run it on erase.
+if [ "$1" -eq 0 ]; then
+    /bin/bash /usr/share/amd-container-toolkit/cleanup.sh 0
+fi
 
 %install
 base_dir=${CONTAINER_WORKDIR}

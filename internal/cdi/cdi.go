@@ -32,6 +32,9 @@ import (
 const (
 	// Default full CDI spec path
 	CDI_SPEC_PATH = "/var/run/cdi/amd.json"
+
+	specKind     = "amd.com/gpu"
+	specFileName = "amd.json"
 )
 
 // GetGPUs is the type for functions that return the lists of all the GPU devices on the system
@@ -211,6 +214,32 @@ func (cdi *cdi_t) ValidateSpec() (bool, error) {
 	return reflect.DeepEqual(*savedCDISpec, cdi.spec), nil
 }
 
+// RemoveSpec deletes the AMD CDI spec from dir. The CDI directory is shared
+// with other vendors, so nothing else is touched, and an amd.json that does not
+// carry the AMD kind is left alone.
+func RemoveSpec(dir string) error {
+	path := filepath.Join(dir, specFileName)
+	data, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("reading %v: %w", path, err)
+	}
+
+	var spec struct {
+		Kind string `json:"kind"`
+	}
+	if json.Unmarshal(data, &spec) != nil || spec.Kind != specKind {
+		return nil
+	}
+
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("removing %v: %w", path, err)
+	}
+	return nil
+}
+
 func New(sp string) (Interface, error) {
 	if sp == "" {
 		sp = CDI_SPEC_PATH
@@ -218,7 +247,7 @@ func New(sp string) (Interface, error) {
 
 	spec := specs.Spec{
 		Version: "0.6.0",
-		Kind:    "amd.com/gpu",
+		Kind:    specKind,
 		Devices: []specs.Device{},
 	}
 
