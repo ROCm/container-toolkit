@@ -186,10 +186,11 @@ func TestRemoveSpec(t *testing.T) {
 		amdJSON     string
 		createAMD   bool
 		wantRemoved bool
+		wantErr     error
 	}{
 		{name: "AMD spec is removed", amdJSON: amdSpec, createAMD: true, wantRemoved: true},
-		{name: "foreign spec named amd.json is kept", amdJSON: foreignSpec, createAMD: true},
-		{name: "malformed amd.json is kept", amdJSON: "not json", createAMD: true},
+		{name: "foreign spec named amd.json is kept", amdJSON: foreignSpec, createAMD: true, wantErr: ErrNotAMDSpec},
+		{name: "malformed amd.json is kept", amdJSON: "not json", createAMD: true, wantErr: ErrNotAMDSpec},
 		{name: "missing amd.json is not an error"},
 	}
 
@@ -203,19 +204,23 @@ func TestRemoveSpec(t *testing.T) {
 				assert.NoError(t, os.WriteFile(amd, []byte(tt.amdJSON), 0644))
 			}
 
-			assert.NoError(t, RemoveSpec(dir))
+			removed, err := RemoveSpec(amd)
 
+			assert.Equal(t, tt.wantRemoved, removed, "removed")
+			assert.ErrorIs(t, err, tt.wantErr)
 			assert.FileExists(t, other, "third-party spec must survive")
 			if tt.createAMD {
-				_, err := os.Stat(amd)
-				assert.Equal(t, tt.wantRemoved, os.IsNotExist(err), "amd.json removed")
+				_, statErr := os.Stat(amd)
+				assert.Equal(t, tt.wantRemoved, os.IsNotExist(statErr), "amd.json removed")
 			}
 		})
 	}
 }
 
 func TestRemoveSpec_MissingDir(t *testing.T) {
-	assert.NoError(t, RemoveSpec(filepath.Join(t.TempDir(), "absent")))
+	removed, err := RemoveSpec(filepath.Join(t.TempDir(), "absent", "amd.json"))
+	assert.False(t, removed)
+	assert.NoError(t, err)
 }
 
 func Assert(t *testing.T, b bool, errString string) {

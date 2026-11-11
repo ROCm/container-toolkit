@@ -13,8 +13,11 @@ if [ "$1" = "0" ]; then
     rm -f /var/log/gpu-tracker.json /var/log/gpu-tracker.lock
 fi
 
-# A malformed daemon.json must not block uninstall.
+# A failed step must not block uninstall.
+if ! /usr/bin/amd-ctk cdi remove; then
+    echo "Could not remove /etc/cdi/amd.json; remove it manually." >&2
+fi
 if ! /usr/bin/amd-ctk runtime configure --remove; then
-    echo "Cleanup did not finish. Check /etc/docker/daemon.json for the amd runtime and /etc/cdi/amd.json, and remove them manually." >&2
+    echo "Could not remove the amd runtime from /etc/docker/daemon.json; remove it manually." >&2
 fi
 exit 0

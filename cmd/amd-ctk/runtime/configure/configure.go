@@ -18,12 +18,9 @@ package configure
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/ROCm/container-toolkit/cmd/amd-ctk/runtime/engine"
 	"github.com/ROCm/container-toolkit/cmd/amd-ctk/runtime/engine/docker"
-	"github.com/ROCm/container-toolkit/internal/cdi"
 	"github.com/urfave/cli/v2"
 )
 
@@ -32,11 +29,6 @@ const (
 	defaultAmdRuntimeName       = "amd"
 	defaultAmdRuntimeExecutable = "amd-container-runtime"
 	defaultDockerConfigFilePath = "/etc/docker/daemon.json"
-)
-
-var (
-	cdiSpecDir             = "/etc/cdi"
-	systemDockerConfigPath = defaultDockerConfigFilePath
 )
 
 type configOptions struct {
@@ -72,7 +64,7 @@ func AddNewCommand() *cli.Command {
 		},
 		&cli.BoolFlag{
 			Name:        "remove",
-			Usage:       "remove from target runtimes; with the default --config-path also removes /etc/cdi/amd.json",
+			Usage:       "remove from target runtimes",
 			Destination: &cfgOptions.remove,
 		},
 		&cli.StringFlag{
@@ -118,15 +110,6 @@ func performAction(c *cli.Context, cfgOptions *configOptions) error {
 		runtimeEngine engine.Interface
 		doNotUpdate   bool
 	)
-
-	// Runs before the engine config is loaded so that a malformed daemon.json
-	// cannot keep the spec behind on uninstall. A custom --config-path targets a
-	// non-system engine config, so the system CDI directory is left alone.
-	if cfgOptions.remove && filepath.Clean(cfgOptions.configFilepath) == systemDockerConfigPath {
-		if err := cdi.RemoveSpec(cdiSpecDir); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to remove the AMD CDI spec: %v\n", err)
-		}
-	}
 
 	switch cfgOptions.runtime {
 	case "docker":
