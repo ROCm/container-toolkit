@@ -2,7 +2,7 @@ module github.com/ROCm/container-toolkit
 
 go 1.26.0
 
-toolchain go1.26.10
+toolchain go1.26.11
 
 require (
 	github.com/gofrs/flock v0.13.1
