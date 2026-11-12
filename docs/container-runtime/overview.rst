@@ -1,73 +1,47 @@
 Overview
 ========
 
-- The AMD Container Toolkit provides a robust and flexible framework to streamline the use of AMD Instinct GPUs with containerized applications.
-- It simplifies GPU access within Docker environments, enhances device discovery, and enables better integration with modern container technologies.
-- The toolkit is designed to work seamlessly with the ROCm software stack, allowing developers to leverage the full power of AMD GPUs for high-performance computing, machine learning, and other GPU-accelerated workloads.
-- The AMD Container Toolkit architecture integrates directly with the Docker daemon to manage GPU resources seamlessly.
+The AMD Container Toolkit gives containers access to AMD Instinct GPUs. It discovers the GPUs on a host and injects the device nodes a container needs, so ROCm workloads run in containers without manual ``--device`` flags.
 
+The toolkit consists of two components:
 
-The toolkit consists of two primary components:
+- **amd-ctk**: a command-line tool that lists GPUs, generates and validates CDI specifications, registers the AMD container runtime with Docker, and manages the :doc:`GPU Tracker <gpu-tracker>`.
+- **amd-container-runtime**: an OCI runtime for Docker (a wrapper around ``runc``) that adds the requested GPUs to each container's specification.
 
-- **amd-container-runtime**: A custom container runtime (wrapper around ``runc``) for injecting AMD GPUs into container specifications.
-- **amd-ctk (Container Toolkit CLI)**: A command-line utility for managing GPU configurations, runtime settings, and container orchestration integrations.
+Two Ways to Inject GPUs
+-----------------------
 
-Key Benefits:
--------------
+**Container Device Interface (CDI), recommended.** ``amd-ctk cdi generate`` writes a CDI specification (``/etc/cdi/amd.json``) that describes every GPU on the host. Any CDI-aware runtime (Docker, Podman, containerd) reads it and injects the requested devices, for example ``--device amd.com/gpu=0``. No AMD-specific runtime is involved at container start.
 
-- Seamless GPU access in containers with minimal configuration.
-- Simplified device management and discovery through CDI and environment variables.
-- Smooth integration with popular containerized machine learning, HPC, and data science frameworks.
-- Enables efficient image building and development workflows for AMD GPUs.
-
-Use Cases:
------------
-
-- Building machine learning applications with GPU acceleration.
-- Running ROCm-compatible containerized workloads.
-- Rapid experimentation in development environments.
-
-Core Concepts
-=============
-
-Architecture Overview
-----------------------
-The AMD Container Toolkit sits between Docker and the Linux container runtime, enabling GPU access by modifying the OCI specification before handing off to ``runc``.
-
-Visual Flow:
+**amd-container-runtime (Docker only).** Docker hands the container's OCI specification to ``amd-container-runtime``, which reads ``AMD_VISIBLE_DEVICES`` (or ``--gpus``), adds the matching GPU devices, and passes the updated specification to ``runc``. This path also supports the :doc:`GPU Tracker <gpu-tracker>` for shared and exclusive GPU access.
 
 .. code-block:: text
 
-   +------------+                       +---------------+             +-----------------------+
-   |            |                       |               |             |                       |
-   | Docker CLI |  AMD_VISIBLE_DEVICES  | Docker Daemon |  OCI SPEC   | AMD Container Runtime |
-   |            |          -->          |               |     -->     |                       |
-   +------------+                       +---------------+             +-----------------------+
-                                                                                  |
-                                                                            UPDATED OCI SPEC
-                                                                          INJECTED GPU DEVICES
-                                                                                  |
-                                                                                  v
-                                                                       +----------------------+
-                                                                       |         RUNC         +
-                                                                       +----------------------+
-                                                                                  |
-                                                                                  v
-                                                                       +----------------------+
-                                                                       |   CONTAINER PROCESS  +
-                                                                       +----------------------+
-                                                                                  |
-                                                                                  v
-                                                                       +----------------------+
-                                                                       |      GPU DRIVER      +
-                                                                       +----------------------+
+   CDI path
+   +-----------------+      +----------------------+      +-------------------+
+   | docker / podman | ---> | runtime reads        | ---> | container sees    |
+   | --device        |      | /etc/cdi/amd.json    |      | requested GPUs    |
+   | amd.com/gpu=0   |      | and injects devices  |      |                   |
+   +-----------------+      +----------------------+      +-------------------+
 
-Docker integration with amd-container-runtime
---------------------------------------------
+   amd-container-runtime path
+   +-----------------+      +---------------+      +-----------------------+      +------+
+   | docker run      | ---> | Docker daemon | ---> | amd-container-runtime | ---> | runc |
+   | --runtime=amd   |      |   OCI spec    |      | adds GPU devices to   |      |      |
+   | -e AMD_VISIBLE_ |      |               |      | the OCI spec          |      |      |
+   |   DEVICES=0     |      |               |      |                       |      |      |
+   +-----------------+      +---------------+      +-----------------------+      +------+
 
-For installation, configuration, and running GPU workloads with Docker using the amd-container-runtime, see the :doc:`Quick Start Guide <quick-start-guide>`.
+Use Cases
+---------
 
-Using CDI for GPU injection
----------------------------
+- Running ROCm machine learning and HPC containers on AMD Instinct GPUs.
+- Assigning specific GPUs or GPU partitions to different containers.
+- Scheduling GPU workloads with :doc:`Docker Compose <docker-compose>` and :doc:`Docker Swarm <docker-swarm>`.
 
-The toolkit also supports the Container Device Interface (CDI) for GPU injection. To set up and use CDI to run workloads, see the :doc:`CDI guide <cdi-guide>` and :doc:`Running Workloads <running-workloads>`.
+Where to Go Next
+----------------
+
+- :doc:`System Requirements <requirements>` and :doc:`Installation <installation>` to set up the toolkit.
+- :doc:`Quick Start <quick-start-guide>` to run your first GPU container with either method.
+- :doc:`Running Workloads <running-workloads>` for GPU selection with each container runtime.

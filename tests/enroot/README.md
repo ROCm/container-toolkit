@@ -6,6 +6,8 @@ This guide explains how to set up your environment and run Python tests using **
 
 ## Prerequisites
 
+For manual Slurm, Enroot, and Pyxis setup on AMD GPU nodes, see the [Enroot and Pyxis guide](https://instinct.docs.amd.com/projects/container-toolkit/en/latest/container-runtime/enroot-pyxis-installation.html).
+
 On the remote GPU host :
 
 - GPU drivers should be installed and GPUS should be detected
@@ -120,7 +122,7 @@ Test flow :
     * Launch sbatch to run the test
     * Once the test is complete, copy back all the results and logs to "results" folder
     * Validate the usage of IB/ROCe by the test  using rdma counters
-4. Run the *test_multi_node_rccl* test:
+4. Run the *test_multi_node_rccl* test (see [RCCL test details](rccl-test.md)):
     * Copy the sbatch file to the host
     * Launch sbatch to run the test
     * Once the test is complete, copy back all the results and logs to "results" folder

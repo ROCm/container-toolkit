@@ -1,21 +1,27 @@
 Troubleshooting
 ===============
 
-The AMD Container Toolkit is designed to integrate smoothly into Docker-based environments. However, issues may arise due to system configurations, driver installations, or runtime settings. This guide aims to provide detailed, step-by-step troubleshooting methods to identify and resolve common issues effectively.
+This page covers common problems with the AMD Container Toolkit, grouped by where they show up. Start with the host checks, then move to the section for the injection method you use.
 
-Common Issues:
---------------
+Host Checks
+-----------
 
-1. **Driver Not Loaded**
-------------------------
+Driver Not Loaded
+~~~~~~~~~~~~~~~~~
 
-If the AMD GPU driver is not detected, verify that the `amdgpu` module is loaded:
+If the AMD GPU driver is not detected, verify that the ``amdgpu`` module is loaded:
 
 .. code-block:: bash
 
    lsmod | grep amdgpu
 
-If the module is not present, attempt to load it manually:
+If the module is not present, check whether the driver package is installed:
+
+.. code-block:: bash
+
+   sudo dkms status
+
+If ``amdgpu`` is not listed, follow the `AMD GPU Driver installation guide <https://instinct.docs.amd.com/projects/amdgpu-docs/en/latest/install/package-manager-index.html>`_. If it is listed, load the module manually:
 
 .. code-block:: bash
 
@@ -27,107 +33,32 @@ If you encounter errors, check the kernel logs for driver loading issues:
 
    dmesg | grep amdgpu
 
-This will provide information about any problems during the driver initialization.
-
-2. **Permission Denied Errors**
---------------------------------
-
-If GPU devices are not visible inside containers:
-
-- Verify GPU accessibility using `rocm-smi` outside the container.
-- Ensure the user belongs to the following groups:
-
-  - `render`
-  - `video`
-
-Verify your group membership:
+Confirm that the toolkit can see the GPUs:
 
 .. code-block:: bash
 
-   groups $USER
+   amd-ctk gpu list
 
-If you are not a member, add yourself to the necessary groups:
+Permission Denied Errors
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. code-block:: bash
+If ROCm tools on the host or rootless Podman containers cannot access the GPUs:
 
-   sudo usermod -a -G render,video $USER
+- Verify GPU accessibility using ``rocm-smi`` or ``amd-smi`` outside the container.
+- Ensure the user belongs to the ``render`` and ``video`` groups:
 
-**Note:** Log out and back in for the changes to take effect.
+  .. code-block:: bash
 
-3. **Docker Daemon Restart Failure**
-------------------------------------
+     groups $USER
 
-If Docker fails to restart after configuring the AMD runtime, inspect the Docker logs:
+  If you are not a member, add yourself to the groups, then log out and back in:
 
-.. code-block:: bash
+  .. code-block:: bash
 
-   sudo journalctl -u docker
+     sudo usermod -a -G render,video $USER
 
-Look for errors related to:
-
-- Container runtime conflicts
-- GPU device issues
-- Improper `/etc/docker/daemon.json` configuration
-
-Verify that the runtime path is correctly set for AMD:
-
-.. code-block:: bash
-
-   cat /etc/docker/daemon.json
-
-4. **Runtime Configuration Issues**
-------------------------------------
-
-If Docker does not recognize the AMD runtime, validate the Docker configuration:
-
-.. code-block:: bash
-
-   cat /etc/docker/daemon.json
-
-Ensure the runtime is set correctly:
-
-.. code-block:: json
-
-   {
-      "runtimes": {
-          "amd": {
-              "path": "/usr/bin/amd-container-runtime",
-              "runtimeArgs": []
-          }
-      }
-   }
-
-If the configuration is missing or incorrect, regenerate it and restart Docker:
-
-.. code-block:: bash
-
-   sudo amd-ctk configure runtime
-   sudo systemctl restart docker
-
-
-5. **CDI Specification Not Applied**
--------------------------------------
-
-If Docker does not recognize the GPU under CDI specifications, regenerate the CDI configuration:
-
-.. code-block:: bash
-
-   sudo amd-ctk cdi generate --output=/etc/cdi/amd.json
-
-Check the integrity of the generated specification:
-
-.. code-block:: bash
-
-   cat /etc/cdi/amd.json
-
-If issues persist, restart Docker:
-
-.. code-block:: bash
-
-   sudo systemctl restart docker
-
-6. **Docker Desktop and /dev/kfd Access**
--------------------------------------------------
+Docker Desktop and /dev/kfd Access
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Docker Desktop on Linux is not supported for GPU workloads. You may see:
 
@@ -141,12 +72,142 @@ Docker Desktop on Linux is not supported for GPU workloads. You may see:
 
 This applies to any run that relies on host GPU devices (e.g. ``docker run --device=/dev/kfd --device=/dev/dri ...`` or ``docker run --runtime=amd -e AMD_VISIBLE_DEVICES=...``).
 
-Log File Reference
-------------------
+CDI Issues
+----------
 
-The AMD container runtime (``amd-container-runtime``) logs events and errors to the following location:
+CDI Not Enabled in Docker
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   **/var/log/amd-container-runtime.log**
+If Docker reports ``could not select device driver "cdi" with capabilities: []``, CDI is not enabled in Docker. Docker 28.2 and newer enable CDI by default. Docker 25.0 to 28.1 require ``"features": {"cdi": true}`` in ``/etc/docker/daemon.json``, which ``sudo amd-ctk runtime configure`` adds. Restart Docker after changing the file.
+
+Unresolvable CDI Devices
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+If Docker reports ``unresolvable CDI devices amd.com/gpu=...``, the CDI specification is missing or does not define that device.
+
+1. Check that you are using a valid device name. List the names with:
+
+   .. code-block:: bash
+
+      amd-ctk cdi list
+
+2. Regenerate the specification:
+
+   .. code-block:: bash
+
+      sudo amd-ctk cdi generate
+
+3. Ensure your container runtime reads CDI specifications from the directory containing ``amd.json``. Most runtimes default to ``/etc/cdi`` and ``/var/run/cdi``. If you generated the specification at a custom location, configure the runtime to read from it.
+
+4. If the error persists, restart Docker:
+
+   .. code-block:: bash
+
+      sudo systemctl restart docker
+
+Containers Do Not See the Expected GPUs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+1. Validate the specification against the hardware:
+
+   .. code-block:: bash
+
+      sudo amd-ctk cdi validate
+
+   If it prints ``CDI spec is invalid``, the specification no longer matches the GPUs on the host. This happens after adding or removing GPUs or changing the partitioning scheme. Regenerate it with ``sudo amd-ctk cdi generate``.
+
+2. Check that the container runtime process can read the specification:
+
+   .. code-block:: bash
+
+      ls -l /etc/cdi/amd.json
+
+   If you are using a custom location, ensure the permissions allow the runtime to access it.
+
+3. Inspect the generated specification:
+
+   .. code-block:: bash
+
+      cat /etc/cdi/amd.json
+
+CDI Validation Errors
+~~~~~~~~~~~~~~~~~~~~~
+
+If ``amd-ctk cdi validate`` fails with an error:
+
+* Check that GPU devices are properly detected by the system (verify with ``amd-ctk gpu list``, ``amd-smi``, or ``rocm-smi``).
+* Ensure GPU drivers are correctly installed.
+* Regenerate the specification to reflect the current system state.
+* Use the ``--debug`` flag for verbose output:
+
+  .. code-block:: bash
+
+     sudo amd-ctk --debug cdi validate
+
+AMD Container Runtime Issues
+----------------------------
+
+Docker Does Not Recognize the AMD Runtime
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If Docker reports ``unknown or invalid runtime name: amd``, validate the Docker configuration:
+
+.. code-block:: bash
+
+   cat /etc/docker/daemon.json
+
+``amd-ctk runtime configure`` writes the following entries:
+
+.. code-block:: json
+
+   {
+      "features": {
+          "cdi": true
+      },
+      "runtimes": {
+          "amd": {
+              "path": "amd-container-runtime",
+              "args": []
+          }
+      }
+   }
+
+If the configuration is missing or incorrect, regenerate it and restart Docker:
+
+.. code-block:: bash
+
+   sudo amd-ctk runtime configure
+   sudo systemctl restart docker
+
+Docker Daemon Restart Failure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If Docker fails to restart after configuring the AMD container runtime, inspect the Docker logs:
+
+.. code-block:: bash
+
+   sudo journalctl -u docker
+
+Look for errors related to:
+
+- Container runtime conflicts
+- GPU device issues
+- Invalid JSON or unknown keys in ``/etc/docker/daemon.json``
+
+Container Fails to Start with a Generic Runtime Error
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If ``docker run --runtime=amd`` fails with ``amd-container-runtime did not terminate successfully``, the specific cause is in the runtime log (see :ref:`log-file-reference`). Common causes:
+
+- ``Rootless mode is not supported``: the runtime was started by a non-root Docker daemon. In this case the log is written to ``$LOGDIR`` if set, otherwise to the home directory of the user the runtime runs as (``~/amd-container-runtime.log``), instead of ``/var/log``. Use rootful Docker, or use CDI instead.
+- ``GPUs [...] are exclusive and already in use``: the :doc:`GPU Tracker <gpu-tracker>` is enabled and another container holds an exclusive GPU. Check with ``sudo amd-ctk gpu-tracker status``.
+
+.. _log-file-reference:
+
+Logs and Debug Output
+---------------------
+
+The AMD container runtime (``amd-container-runtime``) logs events and errors to ``/var/log/amd-container-runtime.log``.
 
 You can view logs in real-time using:
 
@@ -161,55 +222,31 @@ This log captures detailed interactions between Docker and the AMD container run
 - OCI specification modifications
 - Exclusive GPU enforcement errors
 
-If a container fails to start with the AMD runtime, this log will contain the specific error (e.g. ``GPUs [0] are exclusive and already in use``), even when Docker only shows a generic runtime failure message.
+To write the log elsewhere, set ``LOGDIR`` in the Docker daemon's environment (for example, with a systemd drop-in for ``docker.service``).
 
-.. note::
+If a container fails to start with the AMD container runtime, this log contains the specific error (e.g. ``GPUs [0] are exclusive and already in use``), even when Docker only shows a generic runtime failure message.
 
-   The ``amd-ctk`` CLI tool prints errors directly to the terminal (not to a log file). For verbose debug output from ``amd-ctk``, use the ``--debug`` (or ``-d``) flag:
+The ``amd-ctk`` CLI tool prints errors directly to the terminal (not to a log file). For verbose debug output from ``amd-ctk``, use the ``--debug`` (or ``-d``) flag:
 
-   .. code-block:: bash
+.. code-block:: bash
 
-      amd-ctk --debug gpu-tracker status
-      amd-ctk --debug cdi validate
+   sudo amd-ctk --debug gpu-tracker status
+   sudo amd-ctk --debug cdi validate
 
-   This prints debug-level messages to stderr, which can help diagnose GPU enumeration, tracker state, or CDI specification issues.
+This prints debug-level messages to stderr, which can help diagnose GPU enumeration, tracker state, or CDI specification issues.
 
 Diagnostic Commands
 -------------------
 
-- **List Available Devices:**
+- List GPUs detected on the host: ``amd-ctk gpu list``
+- List CDI device names: ``amd-ctk cdi list``
+- Check the Docker configuration: ``cat /etc/docker/daemon.json``
+- Inspect Docker logs: ``sudo journalctl -u docker``
+- Check that the driver is loaded: ``lsmod | grep amdgpu``
+- Verify GPU access from a container: ``docker run --rm --device amd.com/gpu=all rocm/dev-ubuntu-24.04 amd-smi``
+- If ROCm is installed on the host: ``rocminfo`` and ``amd-smi``
 
-   .. code-block:: bash
+Getting Help
+------------
 
-      amd-ctk cdi list
-
-- **Check Runtime Configuration:**
-
-   .. code-block:: bash
-
-      cat /etc/docker/daemon.json
-
-- **Inspect Docker Logs:**
-
-   .. code-block:: bash
-
-      sudo journalctl -u docker
-
-Next Steps
-----------
-
-If the above steps do not resolve your issue:
-
-- Validate your amdgpu driver installation with:
-
-.. code-block:: bash
-
-   rocminfo
-
-- Verify GPU accessibility with:
-
-.. code-block:: bash
-
-   rocm-smi
-
-- Consult the official AMD Container Toolkit documentation or reach out to the support community for advanced troubleshooting.
+If these steps do not resolve your issue, open an issue on `GitHub <https://github.com/ROCm/container-toolkit/issues>`_ with the output of the diagnostic commands above and the relevant lines from ``/var/log/amd-container-runtime.log``.

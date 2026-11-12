@@ -1,150 +1,114 @@
-Migration Guide: NVIDIA to AMD
-==============================
+Migrating from NVIDIA
+=====================
 
-- Migrating from the NVIDIA Container Toolkit to the AMD Container Toolkit is a streamlined process that enables developers to leverage AMD Instinct GPUs in containerized environments with minimal modifications. This guide provides step-by-step instructions to make this transition smooth and efficient.
-- Migrating container workflows from NVIDIA GPUs (using `nvidia-docker`) to AMD Instinct GPUs (using AMD Container Toolkit) involves the following key changes:
+Migrating container workflows from the NVIDIA Container Toolkit to the AMD Container Toolkit mostly means renaming devices, runtimes, and environment variables, and switching to ROCm-enabled images. Install the toolkit first as described in :doc:`Installation <installation>`.
 
-Step 1: Environment Variable Updates
--------------------------------------
-NVIDIA GPUs are typically managed through the environment variable ``NVIDIA_VISIBLE_DEVICES``. In the AMD Container Toolkit, this is replaced with:
-
-.. code-block:: bash
-
-   export AMD_VISIBLE_DEVICES=all  # To enable all GPUs
-
-   export AMD_VISIBLE_DEVICES=0,1  # To enable specific GPUs
-
-The variable syntax remains consistent, but the prefix changes to ``AMD``. This environment variable is recognized by the AMD runtime to expose GPUs to your container workloads.
-
-Step 2: Update Runtime Configuration
--------------------------------------
-NVIDIA's container runtime is identified as ``nvidia`` in Docker commands. For AMD, the runtime flag needs to be updated to:
-
-.. code-block:: bash
-
-   sudo docker run --rm --runtime=amd <image-name>
-
-To set AMD as the default runtime:
-
-.. code-block:: bash
-
-   sudo amd-ctk runtime configure --runtime=docker --set-as-default
-
-If you previously used:
-
-.. code-block:: bash
-
-   sudo docker run --rm --runtime=nvidia <image-name>
-
-You would now use the equivalent:
-
-.. code-block:: bash
-
-   sudo docker run --rm --runtime=amd <image-name>
-
-Step 3: Command Line Utility Replacement
------------------------------------------
-NVIDIA provides ``nvidia-ctk`` for container configurations and runtime settings. In the AMD ecosystem, this is replaced with:
-
-.. code-block:: bash
-
-   amd-ctk
-
-For example, listing all available GPUs using NVIDIA would look like:
-
-.. code-block:: bash
-
-   nvidia-ctk list
-
-The AMD equivalent:
-
-.. code-block:: bash
-
-   amd-ctk list
-
-You can also generate CDI specifications with:
-
-.. code-block:: bash
-
-   amd-ctk cdi generate --output=/etc/cdi/amd.json
-
-Step 4: Container Images
+Step 1: CDI Device Names
 ------------------------
-Containers built for NVIDIA GPUs often rely on CUDA-based images. AMD's container toolkit is designed to work seamlessly with ROCm-enabled images:
 
-- TensorFlow: ``tensorflow/tensorflow:rocm-latest``
+If you use CDI with NVIDIA GPUs, generate the AMD CDI specification and change the device kind from ``nvidia.com/gpu`` to ``amd.com/gpu``:
+
+.. code-block:: bash
+
+   sudo amd-ctk cdi generate
+
+.. code-block:: diff
+
+   - docker run --rm --device nvidia.com/gpu=all <image-name>
+   + docker run --rm --device amd.com/gpu=all <image-name>
+
+CDI works with Docker, Podman, and containerd. Docker 25.0 to 28.1 need CDI enabled in Docker first; see :doc:`System Requirements <requirements>`.
+
+Step 2: Runtime and Environment Variable
+----------------------------------------
+
+If you use the NVIDIA runtime with Docker, register the AMD container runtime and switch the runtime name and environment variable. Unlike ``nvidia-ctk runtime configure``, ``amd-ctk runtime configure`` supports Docker only; for containerd or CRI-O, use CDI (Step 1).
+
+.. code-block:: bash
+
+   sudo amd-ctk runtime configure
+   sudo systemctl restart docker
+
+.. code-block:: diff
+
+   - docker run --rm --runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=0,1 <image-name>
+   + docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0,1 <image-name>
+
+``AMD_VISIBLE_DEVICES`` accepts ``all``, GPU indices, ranges such as ``0-3``, and GPU UUIDs. To set AMD as the default runtime:
+
+.. code-block:: bash
+
+   sudo amd-ctk runtime configure --set-as-default
+   sudo systemctl restart docker
+
+Step 3: Command Line Utility
+----------------------------
+
+``nvidia-ctk`` is replaced with ``amd-ctk``:
+
+.. code-block:: diff
+
+   - nvidia-ctk cdi list
+   + amd-ctk cdi list
+
+To list GPUs with their UUIDs, use:
+
+.. code-block:: bash
+
+   amd-ctk gpu list
+
+Step 4: Container Images and Frameworks
+---------------------------------------
+
+Containers built for NVIDIA GPUs often rely on CUDA-based images. Switch to ROCm-enabled images, for example:
+
+- TensorFlow: ``rocm/tensorflow:latest``
 - PyTorch: ``rocm/pytorch:latest``
-- Triton Inference Server: ``rocm/tritonserver:latest``
 
 For example, running PyTorch with AMD GPUs:
 
 .. code-block:: bash
 
-   sudo docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/pytorch:latest
+   docker run --rm --device amd.com/gpu=all rocm/pytorch:latest
 
-Step 5: Framework Adjustments
------------------------------
-To fully leverage AMD Instinct GPUs, frameworks like TensorFlow and PyTorch must use their ROCm-enabled versions. This ensures compatibility and optimized performance for machine learning workloads.
+Some CUDA-specific applications need minor modifications. ROCm supports most ML frameworks, but always validate with your application stack.
 
-Compatibility Notes
--------------------
-- Ensure Docker is version 25 or above for CDI compatibility.
-- Some CUDA-specific applications may require minor modifications.
-- ROCm supports a majority of ML frameworks, but always validate with your application stack.
+Comparison
+----------
 
-Comparison:
------------
-.. list-table:: Feature Comparison: NVIDIA Docker vs AMD Container Toolkit
+.. list-table:: Feature Comparison: NVIDIA Container Toolkit vs AMD Container Toolkit
    :header-rows: 1
    :widths: 20 40 40
 
    * - **Feature**
-     - **NVIDIA Docker**
+     - **NVIDIA Container Toolkit**
      - **AMD Container Toolkit**
    * - GPU Enumeration
-     - ``nvidia-smi`` - Lists available GPUs and their statuses.
-     - ``rocm-smi`` - Lists AMD GPUs and exposes detailed hardware information.
+     - ``nvidia-smi``
+     - ``amd-smi``, ``rocm-smi``, or ``amd-ctk gpu list``
+   * - CDI Device Kind
+     - ``nvidia.com/gpu``
+     - ``amd.com/gpu``
    * - Container Runtime
-     - ``nvidia-container-runtime`` - Manages container interactions with NVIDIA GPUs.
-     - ``amd-container-runtime`` - Integrates AMD Instinct GPUs seamlessly with Docker.
+     - ``nvidia-container-runtime``
+     - ``amd-container-runtime``
    * - Environment Variable
-     - ``NVIDIA_VISIBLE_DEVICES`` - Specifies which NVIDIA GPUs are visible inside containers.
-     - ``AMD_VISIBLE_DEVICES`` - Specifies which AMD GPUs are visible inside containers.
+     - ``NVIDIA_VISIBLE_DEVICES``
+     - ``AMD_VISIBLE_DEVICES``
+   * - Configuration CLI
+     - ``nvidia-ctk``
+     - ``amd-ctk``
    * - Framework Images
-     - NVIDIA-specific images optimized for CUDA.
-     - ROCm-optimized images designed for AMD GPUs.
-   * - TensorFlow Support
-     - CUDA TensorFlow - Supports TensorFlow operations on NVIDIA GPUs.
-     - ROCm TensorFlow - Optimized TensorFlow builds for AMD GPUs.
-   * - PyTorch Support
-     - CUDA PyTorch - Optimized for NVIDIA architectures.
-     - ROCm PyTorch - Optimized for AMD Instinct architectures.
-   * - Configuration Toolkit
-     - ``nvidia-ctk`` - NVIDIA's CLI for runtime configuration.
-     - ``amd-ctk`` - AMD's CLI for Docker runtime integration and device management.
-   * - Default Docker Runtime
-     - ``nvidia runtime`` - Configures Docker to use NVIDIA GPUs by default.
-     - ``amd runtime`` - Configures Docker to use AMD GPUs by default.
-
+     - CUDA-based images
+     - ROCm-based images
 
 Testing and Validation
------------------------
-After migration, it is crucial to validate workloads with:
+----------------------
+
+After migration, validate that the intended GPUs are visible:
 
 .. code-block:: bash
 
-   sudo docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/rocm-terminal rocm-smi
+   docker run --rm --device amd.com/gpu=all rocm/dev-ubuntu-24.04 amd-smi
 
-Ensure that all intended GPUs are detected and functioning as expected.
-
-
-Next Steps
-----------
-Once migration is complete:
-
-- Update your CI/CD pipelines to reflect runtime changes.
-- Adjust Dockerfiles if specific runtime flags were set for NVIDIA.
-- Monitor GPU usage using tools like ``rocm-smi`` and ``amd-ctk list``.
-
-This completes the NVIDIA to AMD migration process, enabling you to leverage the full power of AMD Instinct GPUs in containerized workflows.
-By following this migration guide, users can rapidly transition their GPU workloads to AMD Instinct platforms.
+Then update your CI/CD pipelines, Dockerfiles, and Compose files that set NVIDIA runtime flags. For Compose files, see :doc:`Docker Compose <docker-compose>`.

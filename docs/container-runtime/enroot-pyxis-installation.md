@@ -1,4 +1,12 @@
+---
+orphan: true
+---
+
 # Enroot and Pyxis 
+
+```{note}
+Enroot and Pyxis do not use the AMD Container Toolkit. This guide covers running AMD GPU containers on Slurm with them.
+```
 
 [Enroot](https://github.com/NVIDIA/enroot) and [Pyxis](https://github.com/NVIDIA/pyxis) are tools created to run containerized AI/HPC workloads on SLURM. These tools can now be used on a SLURM cluster  with AMD GPUs to make them run efficiently and achieve isolation for these  GPUs. Traditional runtimes like Docker/Podman bring additional overhead such as daemons, root privileges and extra storage layers. With Enroot, users can convert Docker images into a simple unpacked filesystem tree and run containers as a regular Linux process. Also, with Enroot and Pyxis, each job is granted exclusive GPU device files which prevents jobs from accidentally accessing the same GPU device.  
 
@@ -66,7 +74,7 @@ After this step, nvslurm-plugin-pyxis_0.20.0-1_amd64.deb will be created in the 
 
 ## Steps to install pyxis deb on all the compute nodes and also the slurm head-node 
 Install the same pyxis deb package on the headnode and all the compute nodes. 
-While installing pyxis on the headnode/controller node, it will throw error that enroot is not installed but we can ignore this error since we need not have enroot on the head-bode.  
+While installing pyxis on the headnode/controller node, it will throw error that enroot is not installed but we can ignore this error since we need not have enroot on the head-node.  
 
 ```bash
 sudo dpkg -i ./nvslurm-plugin-pyxis_0.20.0-1_amd64.deb 
@@ -103,13 +111,13 @@ Device  Node  IDs              Temp        Power     Partitions          SCLK   
 
 ========================================================================================================================== 
 
-0       2     0x74a1,   28851  45.0Â°C      137.0W    NPS1, SPX, 0        123Mhz  900Mhz  0%   auto  750.0W  0%     0% 
+0       2     0x74a1,   28851  45.0°C      137.0W    NPS1, SPX, 0        123Mhz  900Mhz  0%   auto  750.0W  0%     0% 
 
-1       3     0x74a1,   43178  41.0Â°C      133.0W    NPS1, SPX, 0        124Mhz  900Mhz  0%   auto  750.0W  0%     0% 
+1       3     0x74a1,   43178  41.0°C      133.0W    NPS1, SPX, 0        124Mhz  900Mhz  0%   auto  750.0W  0%     0% 
 
-2       4     0x74a1,   32898  44.0Â°C      133.0W    NPS1, SPX, 0        124Mhz  900Mhz  0%   auto  750.0W  0%     0% 
+2       4     0x74a1,   32898  44.0°C      133.0W    NPS1, SPX, 0        124Mhz  900Mhz  0%   auto  750.0W  0%     0% 
 
-3       5     0x74a1,   22683  40.0Â°C      136.0W    NPS1, SPX, 0        124Mhz  900Mhz  0%   auto  750.0W  0%     0% 
+3       5     0x74a1,   22683  40.0°C      136.0W    NPS1, SPX, 0        124Mhz  900Mhz  0%   auto  750.0W  0%     0% 
 
 ========================================================================================================================== 
 
@@ -132,9 +140,9 @@ Device  Node  IDs              Temp        Power     Partitions          SCLK   
 
 ========================================================================================================================== 
 
-0       2     0x74a1,   28851  45.0Â°C      137.0W    NPS1, SPX, 0        123Mhz  900Mhz  0%   auto  750.0W  0%     0% 
+0       2     0x74a1,   28851  45.0°C      137.0W    NPS1, SPX, 0        123Mhz  900Mhz  0%   auto  750.0W  0%     0% 
 
-1       3     0x74a1,   43178  41.0Â°C      133.0W    NPS1, SPX, 0        124Mhz  900Mhz  0%   auto  750.0W  0%     0% 
+1       3     0x74a1,   43178  41.0°C      133.0W    NPS1, SPX, 0        124Mhz  900Mhz  0%   auto  750.0W  0%     0% 
 
 ========================================================================================================================== 
 
@@ -161,12 +169,18 @@ Detected Devices:
     Capability: (9, 4) 
     Memory (GB): 191.98 
 --- End PyTorch CUDA Status --- 
+```
 
 The following command can be used to save the image locally to use for subsequent runs 
+
+```bash
 ubuntu@node-4:~$ srun --gres=gpu:8 --container-image=docker://rocm/pytorch:latest --container-save=/var/lib/ubuntu/enroot/rocm+pytorch+latest.sqsh rocm-smi 
 ubuntu@node-4:~$ srun --gres=gpu:8 --container-image=/var/lib/ubuntu/enroot/rocm+pytorch+latest.sqsh rocm-smi 
+```
 
-Following command shows the usage of --exclusive directive with 2 GPUS requested.  
+Following command shows the usage of `--exclusive` directive with 2 GPUs requested.  
+
+```bash
 root@head-node:~# srun --exclusive --gres=gpu:2 --container-image=./rocm+ubuntu.sqsh --pty bash 
 root@valid-prawn:/# rocm-smi 
 ============================================ ROCm System Management Interface ============================================ 
@@ -179,9 +193,9 @@ Device  Node  IDs              Temp        Power     Partitions          SCLK   
 
 ========================================================================================================================== 
 
-0       2     0x74a1,   28851  35.0Â°C      142.0W    NPS1, SPX, 0        132Mhz  900Mhz  0%   auto  750.0W  0%     0%     
+0       2     0x74a1,   28851  35.0°C      142.0W    NPS1, SPX, 0        132Mhz  900Mhz  0%   auto  750.0W  0%     0%     
 
-1       3     0x74a1,   44463  34.0Â°C      136.0W    NPS1, SPX, 0        134Mhz  900Mhz  0%   auto  750.0W  0%     0%     
+1       3     0x74a1,   44463  34.0°C      136.0W    NPS1, SPX, 0        134Mhz  900Mhz  0%   auto  750.0W  0%     0%     
 
 ========================================================================================================================== 
 

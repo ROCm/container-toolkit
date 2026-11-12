@@ -2,7 +2,7 @@
 
 AMD Container Toolkit offers tools to streamline the use of AMD GPUs with containers. The toolkit includes the following packages:
 
-- `amd-container-runtime` — The AMD Container Runtime
+- `amd-container-runtime` — The AMD container runtime
 - `amd-ctk` — The AMD Container Toolkit CLI
 
 ## Key Features
@@ -19,7 +19,7 @@ For comprehensive documentation including installation, configuration, CDI, Swar
 
 ## Requirements
 
-- Ubuntu 22.04, 24.04, or 26.04, or RHEL/CentOS 9
+- Ubuntu 22.04, 24.04, or 26.04, or RHEL 9
 - Docker version 25 or later
 - All `amd-ctk runtime configure` commands should be run as root/sudo
 
@@ -27,11 +27,12 @@ For comprehensive documentation including installation, configuration, CDI, Swar
 
 ## Quick Start
 
-Install the toolkit on Ubuntu (for RHEL/CentOS and full details, see the [Quick Start Guide](docs/container-runtime/quick-start-guide.rst)):
+Install the toolkit on Ubuntu (for RHEL 9, the AMDGPU driver, and full details, see [Installation](docs/container-runtime/installation.rst)):
 
 1. Install prerequisites and add the repository:
    ```bash
-   sudo apt update && sudo apt install -y wget gnupg2
+   sudo apt update && sudo apt install -y wget gpg
+   sudo mkdir --parents --mode=0755 /etc/apt/keyrings
    wget https://repo.radeon.com/rocm/rocm.gpg.key -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/rocm.gpg > /dev/null
    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/amd-container-toolkit/apt/ $(. /etc/os-release && echo $VERSION_CODENAME) main" | sudo tee /etc/apt/sources.list.d/amd-container-toolkit.list
    ```
@@ -43,26 +44,26 @@ Install the toolkit on Ubuntu (for RHEL/CentOS and full details, see the [Quick 
 
 3. Configure Runtime and run a GPU container:
 
-   **Option A — CDI (runtime-agnostic, no runtime configure needed):**
+   **Option A: CDI (recommended, runtime-agnostic, no runtime configure needed on Docker 28.2+):**
    ```bash
-   sudo amd-ctk cdi generate --output=/etc/cdi/amd.json
-   sudo amd-ctk cdi validate --path=/etc/cdi/amd.json
+   sudo amd-ctk cdi generate
+   sudo amd-ctk cdi validate
    ```
    Verify by running a container with all AMD GPUs:
    ```bash
-   docker run --rm --device amd.com/gpu=all rocm/rocm-terminal rocm-smi
+   docker run --rm --device amd.com/gpu=all rocm/dev-ubuntu-24.04 amd-smi
    ```
 
-   > **Note:** CDI is supported by many container runtimes including Docker, Podman, and containerd.
+   > **Note:** CDI is supported by many container runtimes including Docker, Podman, and containerd. Docker 28.2 and newer enable CDI by default. On Docker 25.0 to 28.1, add `"features": {"cdi": true}` to `/etc/docker/daemon.json` (or run `sudo amd-ctk runtime configure`) and restart Docker.
 
-   **Option B — AMD container runtime (Docker only):**
+   **Option B: AMD container runtime (Docker only):**
    ```bash
    sudo amd-ctk runtime configure
    sudo systemctl restart docker
    ```
    Verify by running a container with all AMD GPUs:
    ```bash
-   docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/rocm-terminal rocm-smi
+   docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/dev-ubuntu-24.04 amd-smi
    ```
 
 ## Usage
@@ -78,8 +79,8 @@ amd-ctk cdi list
 Select GPUs by index using `--device amd.com/gpu=<entry>`:
 
 ```bash
-docker run --rm --device amd.com/gpu=0 rocm/rocm-terminal rocm-smi
-docker run --rm --device amd.com/gpu=all rocm/rocm-terminal rocm-smi
+docker run --rm --device amd.com/gpu=0 rocm/dev-ubuntu-24.04 amd-smi
+docker run --rm --device amd.com/gpu=all rocm/dev-ubuntu-24.04 amd-smi
 ```
 
 ### Using amd-container-runtime (Docker only)
@@ -87,9 +88,9 @@ docker run --rm --device amd.com/gpu=all rocm/rocm-terminal rocm-smi
 Select GPUs by index, range, or UUID with `AMD_VISIBLE_DEVICES`:
 
 ```bash
-docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0,1,2 rocm/rocm-terminal rocm-smi
-docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0-3,5,8 rocm/rocm-terminal rocm-smi
-docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0xEF2C1799A1F3E2ED rocm/rocm-terminal rocm-smi
+docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0,1,2 rocm/dev-ubuntu-24.04 amd-smi
+docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0-3,5,8 rocm/dev-ubuntu-24.04 amd-smi
+docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0xEF2C1799A1F3E2ED rocm/dev-ubuntu-24.04 amd-smi
 ```
 
 List available GPUs and their UUIDs:
@@ -108,15 +109,17 @@ GPU Id    UUID                     DRM Devices
 1         0x1234567890ABCDEF       /dev/dri/renderD129
 ```
 
-Set the AMD runtime as Docker's default (avoids needing `--runtime=amd`):
+Set the AMD container runtime as Docker's default (avoids needing `--runtime=amd`):
 
 ```bash
-sudo amd-ctk runtime configure --runtime=docker --set-as-default
+sudo amd-ctk runtime configure --set-as-default
+sudo systemctl restart docker
 ```
 
 For more on specific topics, see the detailed documentation:
 
-- [Running Workloads](docs/container-runtime/running-workloads.rst) — CDI, `--gpus` flag, explicit device paths, GPU partitioning
+- [Running Workloads](docs/container-runtime/running-workloads.rst) — CDI with each runtime, `AMD_VISIBLE_DEVICES`, `--gpus` flag
+- [GPU Partitioning](docs/container-runtime/gpu-partitioning.rst) — Running containers on GPU partitions
 - [CDI Guide](docs/container-runtime/cdi-guide.rst) — Generating, validating, and managing CDI specs
 - [Docker Compose](docs/container-runtime/docker-compose.rst) — Multi-service GPU access
 - [Docker Swarm](docs/container-runtime/docker-swarm.md) — UUID-based GPU scheduling across nodes

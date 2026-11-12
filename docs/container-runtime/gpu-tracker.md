@@ -12,6 +12,8 @@ GPU Tracker provides CLIs that can be used to control the accessibility of GPUs 
 
 GPU Tracker status can be queried at any point of time using the `status` command and reset using the `reset` CLIs.
 
+All `amd-ctk gpu-tracker` commands must be run as root.
+
 ```text
 > sudo amd-ctk gpu-tracker -h
 NAME:
@@ -69,7 +71,7 @@ Device  Node  IDs              Temp    Power  Partitions          SCLK    MCLK  
       The GPU Tracker status can be queried using the `status` CLI. If GPU Tracker is enabled, by default it can be seen that GPUs are granted the `shared` accessibility.
 
       ```text
-      > amd-ctk gpu-tracker status
+      > sudo amd-ctk gpu-tracker status
       ------------------------------------------------------------------------------------------------------------------------
       GPU Id    UUID                     Accessibility       Container Ids
       ------------------------------------------------------------------------------------------------------------------------
@@ -79,10 +81,10 @@ Device  Node  IDs              Temp    Power  Partitions          SCLK    MCLK  
       3         0x12FE4F7FDAF06B9        Shared              -
       ```
 
-      If GPU Tracked feature is not enabled, then a message indicating this is printed.
+      If GPU Tracker feature is not enabled, then a message indicating this is printed.
 
       ```text
-      > amd-ctk gpu-tracker status
+      > sudo amd-ctk gpu-tracker status
       GPU Tracker is disabled
       ```
 
@@ -91,13 +93,13 @@ Device  Node  IDs              Temp    Power  Partitions          SCLK    MCLK  
       GPU Tracker can be enabled using the `enable` CLI. When GPU Tracker is newly enabled, it starts tracking usage of GPUs in containers with no prior knowledge of GPUs state. If GPU Tracker is already currently enabled, then nothing happens and a message indicating this is printed.
 
       ```text
-      > amd-ctk gpu-tracker status
+      > sudo amd-ctk gpu-tracker status
       GPU Tracker is disabled
 
-      > amd-ctk gpu-tracker enable
+      > sudo amd-ctk gpu-tracker enable
       GPU Tracker has been enabled
 
-      > amd-ctk gpu-tracker enable
+      > sudo amd-ctk gpu-tracker enable
       GPU Tracker is already enabled
       ```
 
@@ -106,10 +108,10 @@ Device  Node  IDs              Temp    Power  Partitions          SCLK    MCLK  
       GPU Tracker can be disabled using the `disable` CLI. If GPU Tracker is again enabled in the future, all the GPUs state related information will be lost.
 
       ```text
-      > amd-ctk gpu-tracker disable
+      > sudo amd-ctk gpu-tracker disable
       GPU Tracker has been disabled
 
-      > amd-ctk gpu-tracker status
+      > sudo amd-ctk gpu-tracker status
       GPU Tracker is disabled
       ```
 
@@ -124,7 +126,7 @@ Device  Node  IDs              Temp    Power  Partitions          SCLK    MCLK  
       > docker run --runtime=amd -itd -e AMD_VISIBLE_DEVICES=1,3 rocm/rocm-terminal bash
       90cb29e11e83aa3ae497c68c90e1f0894b85262188c1ef9c7284457a9bc35ffd
 
-      > amd-ctk gpu-tracker status
+      > sudo amd-ctk gpu-tracker status
       ------------------------------------------------------------------------------------------------------------------------
       GPU Id    UUID                     Accessibility       Container Ids
       ------------------------------------------------------------------------------------------------------------------------
@@ -137,7 +139,7 @@ Device  Node  IDs              Temp    Power  Partitions          SCLK    MCLK  
       > docker rm -f 36b012bb34c96149a6ef5b28623e6e75cf9f71eb2b824b2c8f44e0449c7a1aa8
       36b012bb34c96149a6ef5b28623e6e75cf9f71eb2b824b2c8f44e0449c7a1aa8
 
-      > amd-ctk gpu-tracker status
+      > sudo amd-ctk gpu-tracker status
       ------------------------------------------------------------------------------------------------------------------------
       GPU Id    UUID                     Accessibility       Container Ids
       ------------------------------------------------------------------------------------------------------------------------
@@ -152,10 +154,10 @@ Device  Node  IDs              Temp    Power  Partitions          SCLK    MCLK  
       If GPU Tracker is enabled, GPUs can be set to have exclusive access in containers. If the user tries to make GPUs exclusive when GPU Tracker is disabled, nothing happens and a message indicating that GPU Tracker is disabled is printed.
 
       ```text
-      > amd-ctk gpu-tracker 1-3 exclusive
+      > sudo amd-ctk gpu-tracker 1-3 exclusive
       GPUs [1 2 3] have been made exclusive
 
-      > amd-ctk gpu-tracker status
+      > sudo amd-ctk gpu-tracker status
       ------------------------------------------------------------------------------------------------------------------------
       GPU Id    UUID                     Accessibility       Container Ids
       ------------------------------------------------------------------------------------------------------------------------
@@ -167,14 +169,16 @@ Device  Node  IDs              Temp    Power  Partitions          SCLK    MCLK  
       > docker run --runtime=amd -itd -e AMD_VISIBLE_DEVICES=0-2 rocm/rocm-terminal bash
       d23ff3dce1839cbf8ce7ad362641ab85e80b315c319edf73b269c460e348053a
       docker: Error response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: unable to retrieve OCI runtime error: amd-container-runtime did not terminate successfully: exit status 1
+      ```
 
-      The runtime log at /var/log/amd-container-runtime.log will contain details about the failure:
+      The runtime log at `/var/log/amd-container-runtime.log` contains details about the failure:
 
+      ```text
       > grep -E "allocated|exclusive" /var/log/amd-container-runtime.log
       time=... level=INFO msg="amd-container-runtime GPUs allocated" gpus=[0 2]
       time=... level=ERROR msg="amd-container-runtime Failed to run container runtime" error="update OCI spec (add GPU devices): GPUs [1] are exclusive and already in use"
 
-      > amd-ctk gpu-tracker status
+      > sudo amd-ctk gpu-tracker status
       ------------------------------------------------------------------------------------------------------------------------
       GPU Id    UUID                     Accessibility       Container Ids
       ------------------------------------------------------------------------------------------------------------------------
@@ -189,7 +193,7 @@ Device  Node  IDs              Temp    Power  Partitions          SCLK    MCLK  
       When a new container `d23ff3dce1839cbf8ce7ad362641ab85e80b315c319edf73b269c460e348053a` that requests access to GPUs 0,1 and 2 is launched, the following happens:
       - The new container is created.
       - The new container is granted access to GPU 0 as no container is currently using GPU 0.
-      - GPUs 1 is already being used by container `90cb29e11e83aa3ae497c68c90e1f0894b85262188c1ef9c7284457a9bc35ffd`. Hence, the new container is not granted access to it as GPU 1 has `exclusive` accessibility.
+      - GPU 1 is already being used by container `90cb29e11e83aa3ae497c68c90e1f0894b85262188c1ef9c7284457a9bc35ffd`. Hence, the new container is not granted access to it as GPU 1 has `exclusive` accessibility.
       - The new container is granted access to GPU 2 as no container is currently using GPU 2 though GPU 2 has `exclusive` accessibility.
       - The container is not started since it has not been granted access to the required GPU resources.
       - The resources that have been granted to the new container are released.
@@ -220,7 +224,7 @@ Device  Node  IDs              Temp    Power  Partitions          SCLK    MCLK  
       - Only GPUs that are currently not being used by more than 1 container can be set to have `exclusive` accessibility.
 
           ```text
-          > amd-ctk gpu-tracker status
+          > sudo amd-ctk gpu-tracker status
           ------------------------------------------------------------------------------------------------------------------------
           GPU Id    UUID                     Accessibility       Container Ids
           ------------------------------------------------------------------------------------------------------------------------
@@ -230,7 +234,7 @@ Device  Node  IDs              Temp    Power  Partitions          SCLK    MCLK  
           2         0x6E32F10EFC982B4C       Exclusive           8463b475b55b104b30edec8ddf6249b6214b27127106aa0ff4a8a514b856810e
           3         0x12FE4F7FDAF06B9        Exclusive           90cb29e11e83aa3ae497c68c90e1f0894b85262188c1ef9c7284457a9bc35ffd
 
-          > amd-ctk gpu-tracker 1 exclusive
+          > sudo amd-ctk gpu-tracker 1 exclusive
           GPUs [1] have not been made exclusive because more than one container is currently using it
           ```
 
@@ -239,7 +243,7 @@ Device  Node  IDs              Temp    Power  Partitions          SCLK    MCLK  
       If GPU Tracker is enabled, GPUs can be set to have shared access in containers. If the user tries to make GPUs shared when GPU Tracker is disabled, nothing happens and a message indicating that GPU Tracker is disabled is printed. By default when GPU Tracker is disabled, GPUs have shared accessibility.
 
       ```text
-      > amd-ctk gpu-tracker status
+      > sudo amd-ctk gpu-tracker status
       ------------------------------------------------------------------------------------------------------------------------
       GPU Id    UUID                     Accessibility       Container Ids
       ------------------------------------------------------------------------------------------------------------------------
@@ -248,13 +252,13 @@ Device  Node  IDs              Temp    Power  Partitions          SCLK    MCLK  
       2         0x6E32F10EFC982B4C       Exclusive           -
       3         0x12FE4F7FDAF06B9        Exclusive           90cb29e11e83aa3ae497c68c90e1f0894b85262188c1ef9c7284457a9bc35ffd
 
-      > amd-ctk gpu-tracker 1 shared
+      > sudo amd-ctk gpu-tracker 1 shared
       GPUs [1] have been made shared
 
       > docker run --runtime=amd -itd -e AMD_VISIBLE_DEVICES=0-2 rocm/rocm-terminal bash
       a8ce87c99727107ab467508bd431a170b148001fe8a866fcf96d5cc6af9a7f5e
 
-      > amd-ctk gpu-tracker status
+      > sudo amd-ctk gpu-tracker status
       ------------------------------------------------------------------------------------------------------------------------
       GPU Id    UUID                     Accessibility       Container Ids
       ------------------------------------------------------------------------------------------------------------------------
@@ -270,7 +274,7 @@ Device  Node  IDs              Temp    Power  Partitions          SCLK    MCLK  
       When a new container `a8ce87c99727107ab467508bd431a170b148001fe8a866fcf96d5cc6af9a7f5e` that requests access to GPUs 0,1 and 2 is launched, the following happens:
       - The new container is created.
       - The new container is granted access to GPU 0 as no container is currently using GPU 0.
-      - GPUs 1 is already being used by container `90cb29e11e83aa3ae497c68c90e1f0894b85262188c1ef9c7284457a9bc35ffd`. However, the new container is granted access to GPU 1 as GPU 1 has `shared` accessibility.
+      - GPU 1 is already being used by container `90cb29e11e83aa3ae497c68c90e1f0894b85262188c1ef9c7284457a9bc35ffd`. However, the new container is granted access to GPU 1 as GPU 1 has `shared` accessibility.
       - The new container is granted access to GPU 2 as no container is currently using GPU 2 though GPU 2 has `exclusive` accessibility.
       - The container is successfully started since it has been granted access to the required GPU resources.
 
@@ -278,19 +282,15 @@ Device  Node  IDs              Temp    Power  Partitions          SCLK    MCLK  
 
       Resetting GPU Tracker clears the GPU Tracker state, i.e. the accessibility of all GPUs is set to `shared` and all information about which GPUs have been made accessible in containers is cleared. If GPU Tracker is enabled, then after the reset operation also the GPU Tracker is enabled. Conversely, if GPU Tracker is disabled, then after the reset operation also the GPU Tracker remains disabled.
 
-      Resetting GPU Tracker is primarily useful in cases where GPU Tracker is enabled and the partitioning scheme of the GPUs has been altered. Changing the partitioning scheme of the GPUs invalidated the CDI Spec and GPU Tracker state. In these cases, it is required to:
-      - Stop all running containers
-      - Reset GPU Tracker
-      - Regenerate CDI Spec
-      - Restart containers
+      Resetting GPU Tracker is primarily useful in cases where GPU Tracker is enabled and the partitioning scheme of the GPUs has been altered. Changing the partitioning scheme invalidates the CDI specification and the GPU Tracker state. Follow the steps in [GPU Partitioning](gpu-partitioning.rst) under "After Changing the Partitioning Scheme", which include the reset.
 
-      If GPU Tracker is disabled when the partitioning scheme of the GPUs have been altered, then GPU Tracker need not be reset. However, it is recommended to still perform the other actions. It makes no difference if GPU Tracker is reset when it is disabled.
+      If GPU Tracker is disabled when the partitioning scheme of the GPUs has been altered, then GPU Tracker need not be reset. It makes no difference if GPU Tracker is reset when it is disabled.
 
       ```text
-      > amd-ctk gpu-tracker status
-      showing GPU status: GPU info mismatch: please reset GPU Tracker
+      > sudo amd-ctk gpu-tracker status
+      failed to show GPU Tracker status: GPU info mismatch: please reset GPU Tracker
 
-      > amd-ctk gpu-tracker reset
+      > sudo amd-ctk gpu-tracker reset
       GPU Tracker has been reset
       Since GPU Tracker was enabled, it is recommended to stop and restart running containers to get the most accurate GPU Tracker status
 
@@ -315,7 +315,7 @@ Device  Node  IDs              Temp    Power  Partitions          SCLK    MCLK  
 For verbose debug output when troubleshooting GPU Tracker issues, use the `--debug` (or `-d`) flag:
 
 ```text
-> amd-ctk --debug gpu-tracker status
+> sudo amd-ctk --debug gpu-tracker status
 ```
 
 This prints debug-level log messages to stderr, which can help diagnose GPU enumeration or tracker state issues.

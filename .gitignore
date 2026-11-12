@@ -8,3 +8,4 @@ pkg/bin
 .venv
 _build
 *.swp
+docs/sphinx/_toc.yml
