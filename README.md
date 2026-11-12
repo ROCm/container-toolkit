@@ -1,150 +1,72 @@
 # AMD Container Toolkit
 
-AMD Container Toolkit offers tools to streamline the use of AMD GPUs with containers. The toolkit includes the following packages:
+The AMD Container Toolkit gives containers access to AMD Instinct GPUs. It generates Container Device Interface (CDI) specifications for Docker, Podman, and containerd, and provides an OCI runtime for Docker.
 
-- `amd-container-runtime` — The AMD container runtime
-- `amd-ctk` — The AMD Container Toolkit CLI
+[![CI](https://github.com/ROCm/container-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/ROCm/container-toolkit/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/ROCm/container-toolkit)](https://github.com/ROCm/container-toolkit/releases)
+[![Docs](https://img.shields.io/badge/docs-instinct.docs.amd.com-blue)](https://instinct.docs.amd.com/projects/container-toolkit/en/latest/)
 
-## Key Features
+The `amd-container-toolkit` package installs two binaries:
 
-- **Docker runtime integration** — Inject AMD GPUs into containers via the `amd-container-runtime` OCI runtime
-- **CDI support** — Generate and manage [Container Device Interface](docs/container-runtime/cdi-guide.rst) specs for runtime-agnostic GPU access
-- **GPU selection** — Target GPUs by index, range, or UUID using `AMD_VISIBLE_DEVICES`
-- **Docker Swarm & Compose** — Orchestrate GPU workloads across nodes with UUID-based scheduling
-- **GPU Tracker** — Lightweight opt-in tracking of container-to-GPU assignments with shared/exclusive access modes
+- `amd-ctk`: the command-line tool that lists GPUs, manages CDI specifications, configures Docker, and controls the GPU Tracker.
+- `amd-container-runtime`: the AMD container runtime for Docker.
 
-## Documentation
+## Features
 
-For comprehensive documentation including installation, configuration, CDI, Swarm, troubleshooting, and migration guides, see the [official documentation](https://instinct.docs.amd.com/projects/container-toolkit/en/latest).
+- **CDI specifications**: `amd-ctk cdi generate` describes every GPU for any CDI-aware runtime.
+- **AMD container runtime**: select GPUs in Docker by index, range, or UUID with `AMD_VISIBLE_DEVICES` or `--gpus`.
+- **GPU partitioning**: assign individual GPU partitions to containers.
+- **GPU Tracker**: opt-in shared or exclusive GPU access across containers.
+- **Orchestration**: Docker Compose and Docker Swarm support.
 
 ## Requirements
 
 - Ubuntu 22.04, 24.04, or 26.04, or RHEL 9
-- Docker version 25 or later
-- All `amd-ctk runtime configure` commands should be run as root/sudo
+- AMDGPU driver installed on the host
+- Docker 25.0 or newer, or another CDI-aware runtime
 
-> **Note:** Docker Desktop on Linux is not supported for GPU workloads; see [troubleshooting](docs/container-runtime/troubleshooting.rst) for details.
+See [System Requirements](https://instinct.docs.amd.com/projects/container-toolkit/en/latest/container-runtime/requirements.html) for container runtime versions and limits.
 
 ## Quick Start
 
-Install the toolkit on Ubuntu (for RHEL 9, the AMDGPU driver, and full details, see [Installation](docs/container-runtime/installation.rst)):
-
-1. Install prerequisites and add the repository:
-   ```bash
-   sudo apt update && sudo apt install -y wget gpg
-   sudo mkdir --parents --mode=0755 /etc/apt/keyrings
-   wget https://repo.radeon.com/rocm/rocm.gpg.key -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/rocm.gpg > /dev/null
-   echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/amd-container-toolkit/apt/ $(. /etc/os-release && echo $VERSION_CODENAME) main" | sudo tee /etc/apt/sources.list.d/amd-container-toolkit.list
-   ```
-
-2. Install the container toolkit:
-   ```bash
-   sudo apt update && sudo apt install amd-container-toolkit
-   ```
-
-3. Configure Runtime and run a GPU container:
-
-   **Option A: CDI (recommended, runtime-agnostic, no runtime configure needed on Docker 28.2+):**
-   ```bash
-   sudo amd-ctk cdi generate
-   sudo amd-ctk cdi validate
-   ```
-   Verify by running a container with all AMD GPUs:
-   ```bash
-   docker run --rm --device amd.com/gpu=all rocm/dev-ubuntu-24.04 amd-smi
-   ```
-
-   > **Note:** CDI is supported by many container runtimes including Docker, Podman, and containerd. Docker 28.2 and newer enable CDI by default. On Docker 25.0 to 28.1, add `"features": {"cdi": true}` to `/etc/docker/daemon.json` (or run `sudo amd-ctk runtime configure`) and restart Docker.
-
-   **Option B: AMD container runtime (Docker only):**
-   ```bash
-   sudo amd-ctk runtime configure
-   sudo systemctl restart docker
-   ```
-   Verify by running a container with all AMD GPUs:
-   ```bash
-   docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=all rocm/dev-ubuntu-24.04 amd-smi
-   ```
-
-## Usage
-
-### Using CDI
-
-List available CDI device entries:
+On Ubuntu with Docker 28.2 or newer:
 
 ```bash
-amd-ctk cdi list
-```
+sudo apt update && sudo apt install -y wget gpg
+sudo mkdir --parents --mode=0755 /etc/apt/keyrings
+wget https://repo.radeon.com/rocm/rocm.gpg.key -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/rocm.gpg > /dev/null
+echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/amd-container-toolkit/apt/ $(. /etc/os-release && echo $VERSION_CODENAME) main" | sudo tee /etc/apt/sources.list.d/amd-container-toolkit.list
+sudo apt update && sudo apt install amd-container-toolkit
 
-Select GPUs by index using `--device amd.com/gpu=<entry>`:
-
-```bash
-docker run --rm --device amd.com/gpu=0 rocm/dev-ubuntu-24.04 amd-smi
+sudo amd-ctk cdi generate
 docker run --rm --device amd.com/gpu=all rocm/dev-ubuntu-24.04 amd-smi
 ```
 
-### Using amd-container-runtime (Docker only)
+For RHEL, Docker 25.0 to 28.1, the AMD container runtime, and other container runtimes, see [Installation](https://instinct.docs.amd.com/projects/container-toolkit/en/latest/container-runtime/installation.html) and [Quick Start](https://instinct.docs.amd.com/projects/container-toolkit/en/latest/container-runtime/quick-start-guide.html).
 
-Select GPUs by index, range, or UUID with `AMD_VISIBLE_DEVICES`:
+## Documentation
 
-```bash
-docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0,1,2 rocm/dev-ubuntu-24.04 amd-smi
-docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0-3,5,8 rocm/dev-ubuntu-24.04 amd-smi
-docker run --rm --runtime=amd -e AMD_VISIBLE_DEVICES=0xEF2C1799A1F3E2ED rocm/dev-ubuntu-24.04 amd-smi
-```
-
-List available GPUs and their UUIDs:
-
-```bash
-amd-ctk gpu list
-```
-
-This will display output similar to:
-```
-Found 2 AMD GPU devices
----------------------------------------------------------------------------
-GPU Id    UUID                     DRM Devices
----------------------------------------------------------------------------
-0         0xEF2C1799A1F3E2ED       /dev/dri/renderD128
-1         0x1234567890ABCDEF       /dev/dri/renderD129
-```
-
-Set the AMD container runtime as Docker's default (avoids needing `--runtime=amd`):
-
-```bash
-sudo amd-ctk runtime configure --set-as-default
-sudo systemctl restart docker
-```
-
-For more on specific topics, see the detailed documentation:
-
-- [Running Workloads](docs/container-runtime/running-workloads.rst) — CDI with each runtime, `AMD_VISIBLE_DEVICES`, `--gpus` flag
-- [GPU Partitioning](docs/container-runtime/gpu-partitioning.rst) — Running containers on GPU partitions
-- [CDI Guide](docs/container-runtime/cdi-guide.rst) — Generating, validating, and managing CDI specs
-- [Docker Compose](docs/container-runtime/docker-compose.rst) — Multi-service GPU access
-- [Docker Swarm](docs/container-runtime/docker-swarm.md) — UUID-based GPU scheduling across nodes
-- [GPU Tracker](docs/container-runtime/gpu-tracker.md) — Shared/exclusive GPU access tracking
+- [Running Workloads](https://instinct.docs.amd.com/projects/container-toolkit/en/latest/container-runtime/running-workloads.html): GPU selection with Docker, Podman, nerdctl, and ctr
+- [GPU Partitioning](https://instinct.docs.amd.com/projects/container-toolkit/en/latest/container-runtime/gpu-partitioning.html)
+- [Docker Compose](https://instinct.docs.amd.com/projects/container-toolkit/en/latest/container-runtime/docker-compose.html) and [Docker Swarm](https://instinct.docs.amd.com/projects/container-toolkit/en/latest/container-runtime/docker-swarm.html)
+- [Migrating from NVIDIA](https://instinct.docs.amd.com/projects/container-toolkit/en/latest/container-runtime/migration-guide.html)
+- [Troubleshooting](https://instinct.docs.amd.com/projects/container-toolkit/en/latest/container-runtime/troubleshooting.html)
+- [Release Notes](https://instinct.docs.amd.com/projects/container-toolkit/en/latest/container-runtime/release-notes.html)
 
 ## Building from Source
 
-To build a Debian package:
-
 ```bash
-make && make pkg-deb
+make            # build the binaries in the builder container
+make pkg-deb    # build the Debian package into bin/
+make test       # run the unit tests (needs Go on the host)
 ```
 
-To build an RPM package:
+See the [Developer Guide](https://instinct.docs.amd.com/projects/container-toolkit/en/latest/container-runtime/developer-guide.html) for RPM builds and contribution guidelines.
 
-```bash
-make build-dev-container-rpm && make pkg-rpm
-```
+## Support
 
-Packages are generated in the `bin` folder.
-
-## Release Notes
-
-See the [Release Notes](docs/container-runtime/release-notes.rst) for version history, compatibility matrix, and upgrade notes.
+Report bugs and request features in [GitHub Issues](https://github.com/ROCm/container-toolkit/issues). To report a security vulnerability, see [SECURITY.md](SECURITY.md).
 
 ## License
 
-This project is licensed under the Apache 2.0 License — see the [LICENSE](https://github.com/ROCm/container-toolkit/blob/main/LICENSE) file for details.
+Apache 2.0. See [LICENSE](LICENSE).
