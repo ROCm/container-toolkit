@@ -7,7 +7,7 @@ myst:
 
 # AMD Container Toolkit Documentation
 
-The AMD Container Toolkit gives containers access to AMD Instinct GPUs. It generates Container Device Interface (CDI) specifications for any CDI-aware runtime and provides an OCI runtime for Docker, so ROCm workloads run in containers without manual device setup.
+The AMD Container Toolkit gives containers access to AMD GPUs. It generates Container Device Interface (CDI) specifications for any CDI-aware runtime and provides an OCI runtime for Docker, so ROCm workloads run in containers without manual device setup.
 
 ## Get started
 
