@@ -1,7 +1,7 @@
 Overview
 ========
 
-The AMD Container Toolkit gives containers access to AMD Instinct GPUs. It discovers the GPUs on a host and injects the device nodes a container needs, so ROCm workloads run in containers without manual ``--device`` flags.
+The AMD Container Toolkit gives containers access to AMD GPUs. It discovers the GPUs on a host and injects the device nodes a container needs, so ROCm workloads run in containers without manual ``--device`` flags.
 
 The toolkit consists of two components:
 
@@ -35,7 +35,7 @@ Two Ways to Inject GPUs
 Use Cases
 ---------
 
-- Running ROCm machine learning and HPC containers on AMD Instinct GPUs.
+- Running ROCm machine learning and HPC containers on AMD GPUs.
 - Assigning specific GPUs or GPU partitions to different containers.
 - Scheduling GPU workloads with :doc:`Docker Compose <docker-compose>` and :doc:`Docker Swarm <docker-swarm>`.
 
