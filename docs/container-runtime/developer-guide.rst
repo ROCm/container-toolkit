@@ -1,80 +1,95 @@
 Developer Guide
 ===============
 
-The AMD Container Toolkit can be built and customized from the source code. This guide provides step-by-step instructions to set up your environment, install necessary dependencies, and build the toolkit packages for deployment.
+The AMD Container Toolkit is written in Go and can be built from source. Packages are built inside builder containers, so the build host only needs Docker, ``make``, and ``git``.
 
 System Preparation
 ------------------
 
-To successfully build the AMD Container Toolkit from source, you need the following build dependencies installed:
-
-1. **Build Essentials**
+Install the build host dependencies:
 
 .. code-block:: bash
 
    sudo apt update
-   sudo apt install build-essential cmake pkg-config
+   sudo apt install docker.io make git
 
-2. **Kernel Headers and Modules** (Required for DKMS module compilation)
-
-.. code-block:: bash
-
-   sudo apt install "linux-headers-$(uname -r)" "linux-modules-extra-$(uname -r)"
-
-   **Note:** These are necessary for integrating the ROCm GPU drivers with your Linux kernel. Ensure the version matches your current kernel.
-
-3. **Development Libraries**
+Start Docker and enable it on boot:
 
 .. code-block:: bash
 
-   sudo apt install libssl-dev libelf-dev libudev-dev
+   sudo systemctl enable --now docker
 
-4. **Docker CLI and Daemon** (Required for container runtime testing)
+To build the binaries directly on the host instead of in a builder container, also install Go at the version listed in ``go.mod``.
 
-.. code-block:: bash
+No GPU, AMDGPU driver, or ROCm installation is needed to build the toolkit.
 
-   sudo apt install docker.io
-
-   # Start Docker and enable it on boot
-   sudo systemctl enable docker
-   sudo systemctl start docker
-
-5. **ROCm Dependencies**
-
-Ensure that ROCm is properly installed and configured:
-
-.. code-block:: bash
-
-   sudo apt update
-   sudo apt install rocm-dev rocm-utils
-
-Building the Toolkit
+Building the Binaries
 ---------------------
 
-To build Debian packages:
+Build the binaries inside the Debian builder container:
+
+.. code-block:: bash
+
+   make
+
+This builds the builder image from ``tools/deb/base-image`` and places ``amd-container-runtime`` and ``amd-ctk`` in ``bin/deb/``.
+
+To build directly on the host with a local Go toolchain:
+
+.. code-block:: bash
+
+   make container-toolkit container-toolkit-ctk
+
+Building the Packages
+---------------------
+
+To build a Debian package, run ``make`` first so the builder image exists, then:
 
 .. code-block:: bash
 
    make pkg-deb
 
-The generated `.deb` files will be available under the `bin/` directory. These can be installed using:
+The target Ubuntu release defaults to 22.04 (``jammy``). Set ``UBUNTU_VERSION`` to ``noble`` (24.04) or ``resolute`` (26.04) to build for another release:
 
 .. code-block:: bash
 
-   sudo dpkg -i bin/amd-container-toolkit-<version>.deb
+   make pkg-deb UBUNTU_VERSION=noble
 
-
-To build RPM packages:
+The package is written to ``bin/amd-container-toolkit_<ubuntu-version>_amd64.deb`` and can be installed with:
 
 .. code-block:: bash
 
+   sudo apt install ./bin/amd-container-toolkit_22.04_amd64.deb
+
+To build an RPM package, first build the RPM builder image, then the package:
+
+.. code-block:: bash
+
+   make build-dev-container-rpm
    make pkg-rpm
 
-The RPM packages will also be located in the `bin/` directory. For installation:
+The RPM is copied to ``bin/`` and can be installed with:
 
 .. code-block:: bash
 
-   sudo rpm -i bin/amd-container-toolkit-<version>.rpm
+   sudo dnf install ./bin/amd-container-toolkit-*.x86_64.rpm
+
+Testing
+-------
+
+``make test`` and ``make lint`` run on the host and need Go at the version listed in ``go.mod``. ``make test`` also needs ``bin/deb/amd-ctk``, so run ``make`` or ``make container-toolkit-ctk`` first.
+
+Run the unit tests:
+
+.. code-block:: bash
+
+   make test
+
+Run the linter:
+
+.. code-block:: bash
+
+   make lint
 
 Contribution Guidelines
 ------------------------
@@ -82,40 +97,17 @@ Contribution Guidelines
 Contributions to the AMD Container Toolkit are welcomed and encouraged. Follow these guidelines to ensure smooth collaboration:
 
 1. **Coding Standards**:
-   - Adhere to the coding conventions outlined in the `developer README`.
+
+   - Format code with ``gofmt`` and keep ``make lint`` clean.
    - Maintain clear, concise, and well-structured code.
 
 2. **Testing Requirements**:
-   - All changes must be tested with Docker and ROCm environments.
-   - Use `amd-ctk list` and Docker integration tests to validate GPU access.
+
+   - Add or update unit tests for code changes and run ``make test``.
+   - For runtime or CDI changes, validate GPU access on a GPU host with ``amd-ctk gpu list``, ``amd-ctk cdi validate``, and a container run.
 
 3. **Pull Request Requirements**:
+
    - Include detailed descriptions of changes.
    - Reference any related issues or bug fixes.
    - Attach testing logs or screenshots if applicable.
-
-Advanced Configuration
-----------------------
-
-For developers looking to extend the runtime or integrate custom modules, make sure you:
-
-- Rebuild the kernel modules if kernel headers are updated.
-
-.. code-block:: bash
-
-   sudo dkms install -m amdgpu -v <version>
-
-- Restart Docker to load new configurations:
-
-.. code-block:: bash
-
-   sudo systemctl restart docker
-
-Next Steps
-----------
-
-- Deploy the built packages in a development environment for further testing.
-- Validate compatibility with your ROCm-based applications.
-- Document any discrepancies or runtime anomalies.
-
-By following these steps, you will have a robust, production-ready build of the AMD Container Toolkit, optimized for high-performance containerized workloads.

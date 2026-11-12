@@ -18,7 +18,7 @@ Before using CDI with AMD GPUs, ensure:
 
 * AMD GPU drivers are properly installed on the host system
 * The ``amd-ctk`` tool is installed
-* Your container runtime supports CDI
+* Your container runtime supports CDI and has it enabled. Docker 25.0 to 28.1 need CDI enabled first; see :doc:`System Requirements <requirements>`.
 
 Generating CDI Specifications
 ==============================
@@ -33,7 +33,7 @@ This command:
 
 * Scans the system for available AMD GPU devices
 * Creates a CDI specification file at ``/etc/cdi/amd.json``
-* Defines device nodes, mount points, and environment variables needed for each GPU
+* Defines the device nodes for each GPU, plus an ``all`` entry that includes every GPU
 
 **Custom Output Location**
 
@@ -114,53 +114,4 @@ Once your CDI specification is generated and validated, you can run containers w
 Troubleshooting
 ===============
 
-Containers Cannot Access GPUs
-------------------------------
-
-If containers do not see the expected GPU devices:
-
-1. **Validate the specification:**
-
-   .. code-block:: bash
-
-       sudo amd-ctk cdi validate
-
-   If the validation fails, it indicates a mismatch between the CDI specification and the actual hardware. You may need to regenerate the specification in such cases. 
-
-2. **Verify runtime configuration:**
-
-   Ensure your container runtime is configured to read CDI specifications from the directory containing ``amd.json``. Check the runtime's CDI configuration settings.
-
-3. **Check file permissions:**
-
-   .. code-block:: bash
-
-       ls -l /etc/cdi/amd.json
-
-   The file should be readable by the container runtime process. If you're using a custom location, ensure the permissions allow the runtime to access it.
-
-4. **Regenerate if hardware changed:**
-
-   If you've added, removed, or reconfigured GPUs, regenerate the specification:
-
-   .. code-block:: bash
-
-       sudo amd-ctk cdi generate
-
-5. **Verify device names:**
-
-   Ensure you're using the correct CDI device names (e.g., ``amd.com/gpu=0``) while requesting devices.
-
-Validation Errors
------------------
-
-If ``amd-ctk cdi validate`` reports errors:
-
-* Check that GPU devices are properly detected by the system (verify with ``rocm-smi``, ``amd-smi`` or similar tools)
-* Ensure GPU drivers are correctly installed
-* Regenerate the specification to reflect the current system state
-* Use the ``--debug`` flag for verbose output to help diagnose the issue:
-
-  .. code-block:: bash
-
-      amd-ctk --debug cdi validate
+For CDI issues such as containers not seeing GPUs or validation errors, see :doc:`Troubleshooting <troubleshooting>`.

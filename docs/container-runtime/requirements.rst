@@ -1,68 +1,64 @@
 System Requirements
-====================
+===================
 
-Before installing or using the AMD Container Toolkit, ensure your environment meets the following prerequisites:
+This page lists what the AMD Container Toolkit needs on the host.
 
 Supported Operating Systems
 ---------------------------
+
 - Ubuntu 22.04 LTS (Jammy Jellyfish)
 - Ubuntu 24.04 LTS (Noble Numbat)
 - Ubuntu 26.04 LTS (Resolute Raccoon)
-- RHEL 9.5
+- RHEL 9
+
+Ubuntu uses the Debian package and RHEL uses the RPM package. See :doc:`Installation <installation>` for both.
+
+AMDGPU Driver and ROCm
+----------------------
+
+- The **AMDGPU driver** must be installed and loaded on the host. See the `AMD GPU Driver installation prerequisites <https://instinct.docs.amd.com/projects/amdgpu-docs/en/latest/install/detailed-install/prerequisites.html>`_ for supported kernels and the kernel headers DKMS needs.
+- ROCm user-space libraries come from the container image and do not need to be installed on the host. The host driver must be compatible with the ROCm version in your container images; a mismatch can cause runtime failures.
+- ROCm 6.4.1 or newer is required inside the container to view and verify partitioned GPUs. See :doc:`GPU Partitioning <gpu-partitioning>`.
+
+Container Runtimes
+------------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 50 50
+
+   * - Feature
+     - Minimum version
+   * - CDI with Docker
+     - Docker 25.0. Docker 25.0 to 28.1 also need ``"features": {"cdi": true}`` in ``/etc/docker/daemon.json``, which ``sudo amd-ctk runtime configure`` adds. Docker 28.2 and newer enable CDI by default.
+   * - ``amd-container-runtime`` with Docker
+     - Docker 25.0
+   * - ``--gpus`` with ``--runtime=amd``
+     - Docker 28.3.0
+   * - ``--gpus`` with CDI, without ``--runtime=amd``
+     - Docker 29.3.0
+   * - Other runtimes (Podman, nerdctl, containerd)
+     - Any version with CDI support. See :doc:`Running Workloads <running-workloads>` for ``--gpus`` support in each.
+
+Install Docker from the ``docker.io`` package or Docker's official repositories. Check your version with ``docker --version``.
 
 .. note::
-   - RHEL 9.5 support is new in v1.1.0 and requires the RPM-based installation flow.
-   - Follow the installation instructions in the Quick Start Guide document for these platforms.
-
-Docker Compatibility
---------------------
-- Docker 25.0+ is required for all features.
-- Docker 28.3.0+ is required to use the standardized ``--gpus`` flag for AMD GPU selection.
-
-.. note::
-   **Docker Desktop on Linux:** Docker Desktop on Linux is not supported for GPU workloads. See the :doc:`troubleshooting` guide for details.
+   Docker Desktop on Linux is not supported for GPU workloads. See :doc:`Troubleshooting <troubleshooting>` for details.
 
 .. important::
-   **Rootless mode is not supported.** The AMD Container Runtime must be run as root. Rootless container runtimes are not supported and will result in a runtime error.
+   The ``amd-container-runtime`` must run as root, so it requires rootful Docker. Rootless Docker is not supported. CDI does not have this restriction; for example, rootless Podman can use the CDI specification.
 
-ROCm and Driver Compatibility
------------------------------
-- ROCm 6.4.1 or newer is required to view and verify partitioned GPUs inside containers.
-
-Note
-----
-A mismatch between ROCm and driver versions may lead to runtime failures.
-
-System Prerequisites
----------------------
-
-The following packages and configurations are required on the host system:
-
-- **Kernel Headers** and **Extra Kernel Modules** for your running kernel.
-- **Docker** (preferably installed via the `docker.io` package or Docker’s official repositories).
-- **User Permissions**:
-  - The user running containers must belong to the `render` and `video` groups.
-  - Example:
-
-    .. code-block:: bash
-
-       sudo usermod -aG render,video $USER
-       newgrp render && newgrp video
-- For RHEL 9.5, ensure the AMD Container Toolkit YUM repository is configured as described in the installation guide.
-
-GPU Partitioning Requirements
------------------------------
-- To use GPU partitioning, ensure your ROCm version is 6.4.1 or newer.
-- After any partitioning change, you must regenerate the CDI spec to reflect the new GPU topology.
-- The `amd-smi` tool can be used to inspect partition status and details from within containers.
-
-Important Notes
+User Permissions
 ----------------
 
-- **Rootless mode is not supported.** The AMD Container Runtime requires root privileges. Running the runtime as a non-root user will fail immediately with an error.
-- ROCm must be installed on the host system and must match the expected version compatibility with your container images.
-- Using mismatched amdgpu driver and runtime versions may result in runtime errors or undefined behavior.
-- Ensure CDI specs are kept up to date in environments where GPU topology can change frequently (e.g., partitioned systems or multi-GPU deployments).
-- Always refer to the latest documentation for platform-specific installation and configuration steps.
+Users running ROCm tools on the host, or running rootless Podman containers, must belong to the ``render`` and ``video`` groups:
 
-Failure to meet these requirements may result in incomplete functionality or runtime errors. For troubleshooting and advanced configuration, consult the relevant sections of the documentation.
+.. code-block:: bash
+
+   sudo usermod -aG render,video $USER
+
+Log out and back in for the group change to take effect.
+
+Examples run ``docker`` without ``sudo`` and assume your user is in the ``docker`` group. Otherwise, prefix ``docker`` with ``sudo``.
+
+Commands that write to system locations (``/etc/cdi``, ``/etc/docker/daemon.json``) and all ``amd-ctk gpu-tracker`` commands must be run as root.

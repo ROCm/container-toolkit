@@ -1,32 +1,38 @@
 root: index.md
 subtrees:
-  - caption: AMD Container Toolkit
+  - caption: Get started
     entries:
       - file: container-runtime/overview.rst
         title: Overview
       - file: container-runtime/requirements.rst
-        title: Requirements
+        title: System Requirements
+      - file: container-runtime/installation.rst
+        title: Installation
       - file: container-runtime/quick-start-guide.rst
-        title: Quick Start Guide
-      - file: container-runtime/cdi-guide.rst
-        title: Container Device Interface
+        title: Quick Start
+  - caption: Run workloads
+    entries:
       - file: container-runtime/running-workloads.rst
         title: Running Workloads
+      - file: container-runtime/cdi-guide.rst
+        title: Container Device Interface
+      - file: container-runtime/gpu-partitioning.rst
+        title: GPU Partitioning
+      - file: container-runtime/gpu-tracker.md
+        title: GPU Tracker
+      - file: container-runtime/docker-compose.rst
+        title: Docker Compose
+      - file: container-runtime/docker-swarm.md
+        title: Docker Swarm
       - file: container-runtime/framework-integration.rst
         title: Framework Integration
+  - caption: Help and reference
+    entries:
       - file: container-runtime/troubleshooting.rst
         title: Troubleshooting
       - file: container-runtime/migration-guide.rst
-        title: Migration Guide
+        title: Migrating from NVIDIA
       - file: container-runtime/developer-guide.rst
         title: Developer Guide
-      - file: container-runtime/docker-compose.rst
-        title: Docker Compose Usage
-      - file: container-runtime/enroot-pyxis-installation.md
-        title: Enroot Pyxis Installation
-      - file: container-runtime/docker-swarm.md
-        title: Support for Docker Swarm
-      - file: container-runtime/gpu-tracker
-        title: GPU Tracker
       - file: container-runtime/release-notes.rst
         title: Release Notes

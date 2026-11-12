@@ -79,7 +79,7 @@ class HelperLib():
             if match:
                 rocm_version = match.group(1)
                 if float(rocm_version) < 6.4 :
-                    result['stderr'] = f"Rocm-smi version ({rocm_version}) is lesser than 6.4 ! Please use rocm-verson 6.4 or above for amd-ctk usage !"
+                    result['stderr'] = f"Rocm-smi version ({rocm_version}) is lesser than 6.4 ! Please use ROCm 6.4 or above !"
                     return 1, result['stderr']
                 else :
                     return 0, rocm_version
