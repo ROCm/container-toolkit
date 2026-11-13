@@ -170,13 +170,9 @@ func objectSection(cfg dockerConfig, section string) (map[string]interface{}, er
 // removeNestedKey deletes cfg[section][key] and drops the section once it is
 // empty, leaving other entries of the section in place.
 func removeNestedKey(cfg dockerConfig, section, key string) (bool, error) {
-	raw := cfg[section]
-	if raw == nil {
-		return false, nil
-	}
-	entries, ok := raw.(map[string]interface{})
-	if !ok {
-		return false, fmt.Errorf("%q in the docker config is not an object", section)
+	entries, err := objectSection(cfg, section)
+	if err != nil {
+		return false, err
 	}
 	if _, exists := entries[key]; !exists {
 		return false, nil

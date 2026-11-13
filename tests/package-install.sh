@@ -87,12 +87,10 @@ plant_specs() {
 # An upgrade must not touch CDI specs, the Docker config or GPU tracker state.
 plant_specs
 mkdir -p /etc/docker
-echo '{"runtimes": {"other": {"path": "other-runtime"}}}' > /etc/docker/daemon.json
+echo '{"runtimes": {"other": {"path": "other-runtime"}}, "features": {"containerd-snapshotter": true}}' > /etc/docker/daemon.json
 echo '{}' > /var/log/gpu-tracker.json
 /usr/bin/amd-ctk runtime configure --set-as-default
-# configure replaces the whole features map, so add the extra feature afterwards.
-jq '.features["containerd-snapshotter"] = true' /etc/docker/daemon.json > "$workdir/daemon.json.new"
-mv "$workdir/daemon.json.new" /etc/docker/daemon.json
+jq -e '.features == {"containerd-snapshotter": true, "cdi": true}' /etc/docker/daemon.json
 
 install_pkg
 test -f /etc/cdi/acme.json
