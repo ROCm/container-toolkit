@@ -7,7 +7,7 @@ if os.environ.get("READTHEDOCS", "") == "True":
     html_context["READTHEDOCS"] = True
 project = "AMD Container Toolkit"
 
-version = "1.3.0"
+version = "1.4.0"
 release = version
 html_title = project
 author = "Advanced Micro Devices, Inc."
