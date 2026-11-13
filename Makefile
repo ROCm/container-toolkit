@@ -50,7 +50,7 @@ ifeq (${UBUNTU_VERSION}, resolute)
 UBUNTU_VERSION_NUMBER = 26.04
 endif
 
-DEBIAN_VERSION := "1.3.0"
+DEBIAN_VERSION := "1.4.0"
 
 DEBIAN_CONTROL = ${TOP_DIR}/build/debian/DEBIAN/control
 DEBIAN_PRERM = ${TOP_DIR}/build/debian/DEBIAN/prerm

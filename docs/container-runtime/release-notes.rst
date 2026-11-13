@@ -12,6 +12,9 @@ Compatibility Matrix
    * - AMD Container Toolkit
      - Docker Version
      - Supported OS
+   * - 1.4.0
+     - 25.0+
+     - Ubuntu 22.04, Ubuntu 24.04, Ubuntu 26.04, RHEL 9
    * - 1.3.0
      - 25.0+
      - Ubuntu 22.04, Ubuntu 24.04, Ubuntu 26.04, RHEL 9
@@ -34,6 +37,9 @@ Versioning Information
    * - Version
      - Release Date
      - Highlights
+   * - v1.4.0
+     - November 2026
+     - Installation without a loaded driver, scoped uninstall, ``amd-ctk cdi remove``, Docker configuration fixes
    * - v1.3.0
      - May 2026
      - ``amd-ctk gpu list``, GPU partition grouping, CDI and runtime improvements
@@ -46,6 +52,51 @@ Versioning Information
    * - v1.0.0
      - June 2025
      - Initial Release with ``amd-ctk``, CDI, Docker Integration, Ubuntu 22.04/24.04 Support
+
+v1.4.0 (November 2026)
+----------------------
+
+Overview
+~~~~~~~~
+
+This release makes the toolkit safer to install, configure, and remove on shared hosts, and reorganizes the documentation.
+
+- **Installation without a loaded driver:** The packages install on hosts and images where the AMDGPU driver is not loaded yet.
+- **Scoped uninstall:** Removing the package cleans up only what the toolkit owns, and only on removal.
+- **Docker configuration fixes:** ``amd-ctk runtime configure`` keeps existing Docker settings and handles malformed configuration files.
+
+New Features
+~~~~~~~~~~~~
+
+- ``amd-ctk cdi remove``
+
+  - Removes ``/etc/cdi/amd.json``, or a specification given with ``--path``, only if it is an AMD GPU specification (kind ``amd.com/gpu``).
+  - Leaves other vendors' specifications untouched and succeeds if the file does not exist.
+
+Improvements
+~~~~~~~~~~~~
+
+- **Installation without a loaded driver:** The Debian and RPM packages no longer check for the AMDGPU driver at install time, so container and immutable OS images can install the toolkit before the driver is loaded.
+- **GPU Tracker initialization:** The GPU Tracker initializes on the first ``amd-ctk gpu-tracker`` command or GPU container launch instead of at package install.
+- **Install location:** The Debian package installs ``amd-ctk`` and ``amd-container-runtime`` to ``/usr/bin``, matching the RPM package, with compatibility symlinks in ``/usr/local/bin``.
+- **Scoped uninstall:** Cleanup runs only on package removal and deletes only ``/etc/cdi/amd.json`` and the AMD entries in ``/etc/docker/daemon.json``. A failed step no longer blocks removal, and ``jq`` is no longer a dependency.
+- **Docker configuration:** ``amd-ctk runtime configure`` keeps existing ``features`` entries such as ``containerd-snapshotter``, and it reports an error instead of crashing or overwriting when ``daemon.json`` is malformed. ``--remove`` also accepts files with a byte order mark.
+- **Packaging:** The RPM package declares the Apache-2.0 license and installs its documentation and license to the standard locations.
+- **Documentation:** The documentation is reorganized with new Installation and GPU Partitioning pages, corrected commands and Docker version requirements, and a link to the AMD GPU Driver guide for driver installation.
+- **Security:** Builds use Go 1.26.11, and CI runs dependency, code, and supply chain security scans.
+
+Known Issues
+~~~~~~~~~~~~
+
+- ``amd-ctk runtime configure --remove`` deletes ``features.cdi`` even if you set it before configuring the AMD container runtime.
+
+Upgrade Notes
+~~~~~~~~~~~~~
+
+- ``amd-ctk`` and ``amd-container-runtime`` move from ``/usr/local/bin`` to ``/usr/bin`` on Ubuntu. The symlinks in ``/usr/local/bin`` remain, so existing scripts keep working.
+- Uninstalling no longer deletes other files in ``/etc/cdi``. Remove them manually if needed.
+- ``amd-ctk runtime configure --remove``, and package removal, delete ``features.cdi`` from ``/etc/docker/daemon.json``. On Docker 25.0 to 28.1 this disables CDI. Add the entry back if you still use CDI with Docker.
+- ``jq`` is no longer installed with the toolkit. Remove it manually if nothing else needs it.
 
 v1.3.0 (May 2026)
 -----------------

@@ -2,11 +2,13 @@
 
 ## Supported Versions
 
-Security fixes are applied to the `main` branch.
+Security fixes are applied to `main` and to the latest release branch.
 
 | Version | Supported |
 |---------|-----------|
 | `main`  | Yes       |
+| 1.4.x   | Yes       |
+| < 1.4   | No        |
 
 ## Reporting a Vulnerability
 
