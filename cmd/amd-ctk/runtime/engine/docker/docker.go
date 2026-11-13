@@ -76,10 +76,15 @@ func (d *dockerConfig) ConfigRuntime(name string, path string, isDefault bool) e
 
 	currentCfg := *d
 
-	//check any existing "runtimes"
-	runtimes := map[string]interface{}{}
-	if _, exists := currentCfg[runtimesKey]; exists {
-		runtimes = currentCfg[runtimesKey].(map[string]interface{})
+	// Validate both sections before touching either, so a malformed file is
+	// left exactly as the user wrote it.
+	runtimes, err := objectSection(currentCfg, runtimesKey)
+	if err != nil {
+		return err
+	}
+	features, err := objectSection(currentCfg, featuresKey)
+	if err != nil {
+		return err
 	}
 
 	runtimes[name] = map[string]interface{}{
@@ -88,10 +93,8 @@ func (d *dockerConfig) ConfigRuntime(name string, path string, isDefault bool) e
 	}
 	currentCfg[runtimesKey] = runtimes
 
-	// Enable CDI by default
-	currentCfg[featuresKey] = map[string]interface{}{
-		"cdi": true,
-	}
+	features[cdiFeatureKey] = true
+	currentCfg[featuresKey] = features
 
 	if isDefault {
 		currentCfg[defaultRuntimeKey] = name
@@ -148,6 +151,20 @@ func (d *dockerConfig) RemoveRuntime(name string) (error, bool) {
 		return nil, false
 	}
 	return nil, true
+}
+
+// objectSection returns cfg[section] for in-place edits, or a new empty map
+// when the section is absent or null.
+func objectSection(cfg dockerConfig, section string) (map[string]interface{}, error) {
+	raw := cfg[section]
+	if raw == nil {
+		return map[string]interface{}{}, nil
+	}
+	entries, ok := raw.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("%q in the docker config is not an object", section)
+	}
+	return entries, nil
 }
 
 // removeNestedKey deletes cfg[section][key] and drops the section once it is
