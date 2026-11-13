@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -172,6 +174,55 @@ func TestConfigureRunTimeDefault(t *testing.T) {
 	verifyConfigFile(t, false, true)
 	cleanUp()
 
+}
+
+func TestConfigurePreservesUserSettings(t *testing.T) {
+	setup(t)
+	cfgPath := filepath.Join(t.TempDir(), "daemon.json")
+	cfgPathArg := "--config-path=" + cfgPath
+	original := `{
+		"features": {"containerd-snapshotter": true},
+		"runtimes": {"nvidia": {"path": "nvidia-container-runtime"}},
+		"log-level": "debug"
+	}`
+	if err := os.WriteFile(cfgPath, []byte(original), 0644); err != nil {
+		t.Fatalf("writing config: %v", err)
+	}
+
+	readConfig := func() map[string]interface{} {
+		t.Helper()
+		b, err := os.ReadFile(cfgPath)
+		if err != nil {
+			t.Fatalf("reading config: %v", err)
+		}
+		cfg := map[string]interface{}{}
+		if err := json.Unmarshal(b, &cfg); err != nil {
+			t.Fatalf("decoding config: %v", err)
+		}
+		return cfg
+	}
+
+	_, outErr, err := runCLI("runtime", "configure", "--runtime=docker", cfgPathArg)
+	Assert(t, err == nil, fmt.Sprintf("amd-ctk runtime configure failed: %v, stderr: %v", err, outErr))
+
+	cfg := readConfig()
+	features, _ := cfg["features"].(map[string]interface{})
+	runtimes, _ := cfg["runtimes"].(map[string]interface{})
+	Assert(t, features["containerd-snapshotter"] == true, fmt.Sprintf("containerd-snapshotter was not kept: %v", cfg))
+	Assert(t, features["cdi"] == true, fmt.Sprintf("cdi was not enabled: %v", cfg))
+	Assert(t, runtimes["nvidia"] != nil, fmt.Sprintf("nvidia runtime was not kept: %v", cfg))
+	Assert(t, runtimes["amd"] != nil, fmt.Sprintf("amd runtime was not added: %v", cfg))
+	Assert(t, cfg["log-level"] == "debug", fmt.Sprintf("log-level was not kept: %v", cfg))
+
+	_, outErr, err = runCLI("runtime", "configure", "--runtime=docker", cfgPathArg, "--remove")
+	Assert(t, err == nil, fmt.Sprintf("amd-ctk runtime configure --remove failed: %v, stderr: %v", err, outErr))
+
+	want := map[string]interface{}{}
+	if err := json.Unmarshal([]byte(original), &want); err != nil {
+		t.Fatalf("decoding original config: %v", err)
+	}
+	cfg = readConfig()
+	Assert(t, reflect.DeepEqual(want, cfg), fmt.Sprintf("config after remove is %v, want %v", cfg, want))
 }
 
 func TestConfigureRuntimeMultiFlags(t *testing.T) {
