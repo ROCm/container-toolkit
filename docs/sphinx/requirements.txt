@@ -19,7 +19,7 @@ babel==2.17.0
     # via
     #   pydata-sphinx-theme
     #   sphinx
-beartype==0.20.0
+beartype==0.23.1
     # via sphinx-substitution-extensions
 beautifulsoup4==4.13.3
     # via pydata-sphinx-theme
@@ -240,7 +240,7 @@ sphinx-notfound-page==1.1.0
     # via rocm-docs-core
 sphinx-reredirects==0.1.6
     # via -r requirements.in
-sphinx-substitution-extensions==2025.11.17
+sphinx-substitution-extensions==2026.10.9
     # via -r requirements.in
 sphinxcontrib-applehelp==2.0.0
     # via sphinx
@@ -287,6 +287,7 @@ typing-extensions==4.16.0
     #   pydata-sphinx-theme
     #   pygithub
     #   referencing
+    #   sphinx-substitution-extensions
     #   sqlalchemy
 urllib3==2.8.0
     # via
