@@ -5,7 +5,7 @@ go 1.26.0
 toolchain go1.26.11
 
 require (
-	github.com/gofrs/flock v0.13.1
+	github.com/gofrs/flock v0.13.2
 	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/stretchr/testify v1.12.1
 	github.com/urfave/cli/v2 v2.27.7
@@ -18,5 +18,5 @@ require (
 	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
 )
