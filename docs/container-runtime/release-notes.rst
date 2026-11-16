@@ -79,7 +79,7 @@ Improvements
 - **Installation without a loaded driver:** The Debian and RPM packages no longer check for the AMDGPU driver at install time, so container and immutable OS images can install the toolkit before the driver is loaded.
 - **GPU Tracker initialization:** The GPU Tracker initializes on the first ``amd-ctk gpu-tracker`` command or GPU container launch instead of at package install.
 - **Install location:** The Debian package installs ``amd-ctk`` and ``amd-container-runtime`` to ``/usr/bin``, matching the RPM package, with compatibility symlinks in ``/usr/local/bin``.
-- **Scoped uninstall:** Cleanup runs only on package removal and deletes only ``/etc/cdi/amd.json`` and the AMD entries in ``/etc/docker/daemon.json``. A failed step no longer blocks removal, and ``jq`` is no longer a dependency.
+- **Scoped uninstall:** Starting with this release, cleanup runs only on package removal and deletes only ``/etc/cdi/amd.json`` and the AMD entries in ``/etc/docker/daemon.json``. Upgrades no longer touch them. A failed step no longer blocks removal, and ``jq`` is no longer a dependency.
 - **Docker configuration:** ``amd-ctk runtime configure`` keeps existing ``features`` entries such as ``containerd-snapshotter``, and it reports an error instead of crashing or overwriting when ``daemon.json`` is malformed. ``--remove`` also accepts files with a byte order mark.
 - **Packaging:** The RPM package declares the Apache-2.0 license and installs its documentation and license to the standard locations.
 - **Documentation:** The documentation is reorganized with new Installation and GPU Partitioning pages, corrected commands and Docker version requirements, and a link to the AMD GPU Driver guide for driver installation.
@@ -93,8 +93,27 @@ Known Issues
 Upgrade Notes
 ~~~~~~~~~~~~~
 
+- **Upgrading from 1.3.0 or earlier deletes /etc/cdi and the AMD Docker configuration.** The uninstall script in those versions runs during the upgrade, removes the whole ``/etc/cdi`` directory (including other vendors' CDI specifications), and removes the ``amd`` runtime and ``features.cdi`` from ``/etc/docker/daemon.json``. This release cannot prevent it, because the old package's script runs before the new one is installed.
+
+  Back up before upgrading if you need these files:
+
+  .. code-block:: bash
+
+     sudo cp -a /etc/cdi /etc/cdi.bak
+     sudo cp -a /etc/docker/daemon.json /etc/docker/daemon.json.bak
+
+  After upgrading, restore other vendors' specifications from the backup, then regenerate the AMD configuration. Run ``amd-ctk runtime configure`` only if you use the AMD container runtime or need CDI enabled on Docker 25.0 to 28.1:
+
+  .. code-block:: bash
+
+     sudo amd-ctk cdi generate
+     sudo amd-ctk runtime configure
+     sudo systemctl restart docker
+
+  Upgrades from 1.4.0 onward keep ``/etc/cdi`` and ``daemon.json`` as they are.
+
 - ``amd-ctk`` and ``amd-container-runtime`` move from ``/usr/local/bin`` to ``/usr/bin`` on Ubuntu. The symlinks in ``/usr/local/bin`` remain, so existing scripts keep working.
-- Uninstalling no longer deletes other files in ``/etc/cdi``. Remove them manually if needed.
+- From this release on, uninstalling no longer deletes other files in ``/etc/cdi``. Remove them manually if needed.
 - ``amd-ctk runtime configure --remove``, and package removal, delete ``features.cdi`` from ``/etc/docker/daemon.json``. On Docker 25.0 to 28.1 this disables CDI. Add the entry back if you still use CDI with Docker.
 - ``jq`` is no longer installed with the toolkit. Remove it manually if nothing else needs it.
 
