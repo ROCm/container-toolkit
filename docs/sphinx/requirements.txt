@@ -154,7 +154,7 @@ ptyprocess==0.7.0
     # via pexpect
 pure-eval==0.2.3
     # via stack-data
-pycparser==3.11
+pycparser==3.12
     # via cffi
 pydata-sphinx-theme==0.15.4
     # via
@@ -195,7 +195,7 @@ requests==2.34.2
     #   pygithub
     #   rocm-docs-core
     #   sphinx
-rocm-docs-core[llms]==1.41.0
+rocm-docs-core[llms]==1.42.0
     # via -r requirements.in
 rpds-py==0.23.1
     # via
